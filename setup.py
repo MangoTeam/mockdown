@@ -19,6 +19,12 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
 
-    install_requires=['burdock'],
+    install_requires=[
+        'burdock',
+        'dominate',
+        'intervaltree',
+        'more-itertools',
+        'pyswip'
+    ],
     include_package_data=True
 )

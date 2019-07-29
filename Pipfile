@@ -10,9 +10,9 @@ pylint = "*"
 jupyterlab = "*"
 dominate = "*"
 burdock = "==0.1.2"
-pydatalog = "*"
 intervaltree = "*"
 more-itertools = "*"
+pyswip = "*"
 
 [requires]
 python_version = "3.7"
