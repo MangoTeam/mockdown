@@ -1,0 +1,18 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pylint = "*"
+
+[packages]
+jupyterlab = "*"
+dominate = "*"
+burdock = "==0.1.2"
+pydatalog = "*"
+intervaltree = "*"
+more-itertools = "*"
+
+[requires]
+python_version = "3.7"
