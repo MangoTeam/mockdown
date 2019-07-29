@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 from enum import Enum
+from importlib import resources
 from itertools import chain
 from typing import List, Tuple
 
@@ -18,17 +19,16 @@ class ConstraintPair:
     anchor1: Anchor
     anchor2: Anchor
 
-def constraint_pairs(root: View, visible_pairs: List[Tuple[Anchor, Anchor]]) -> [ConstraintPair]:
+def constraint_pairs(root: View, visible_pairs: List[Tuple[Anchor, Anchor]]) -> [dict]:
     """
     Computes the valid ((view, attr), (view, attr)) pairs for various
     types of constraints.
     """
     try:
-        pl_path = os.path.join(os.path.dirname(__file__), 'mockdown.pl')
-
         # Load static terms/predicates.
         prolog = Prolog()
-        prolog.consult(pl_path)
+        with resources.path(__package__, 'mockdown.pl') as path:
+            prolog.consult(str(path))
 
         # Add dynamic terms/predicates.
         prolog.dynamic('view/1')
@@ -45,6 +45,8 @@ def constraint_pairs(root: View, visible_pairs: List[Tuple[Anchor, Anchor]]) -> 
             a1_term = f"anchor('{a1.view.name}', '{a1.attribute}')"
             a2_term = f"anchor('{a2.view.name}', '{a2.attribute}')"
             prolog.assertz(f"visible({a1_term}, {a2_term})")
+
+        # todo: Post-process output? Necessary?
 
         return list(prolog.query("spacing(V, A, W, B)"))
     finally:
