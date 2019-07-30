@@ -9,11 +9,15 @@ class Anchor:
     attribute: str
 
     @property
+    def name(self):
+        return f"{self.view.name}.{self.attribute}"
+
+    @property
     def value(self):
         return getattr(self.view, self.attribute)
 
     def __repr__(self):
-        return f"{self.view.name}.{self.attribute} @ {self.value}"
+        return f"{self.name} @ {self.value}"
 
 
 @dataclass

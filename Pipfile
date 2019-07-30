@@ -13,6 +13,7 @@ burdock = "==0.1.2"
 intervaltree = "*"
 more-itertools = "*"
 pyswip = "*"
+pandas = "*"
 
 [requires]
 python_version = "3.7"

@@ -1,41 +1,14 @@
-from dataclasses import dataclass
-from enum import Enum
 from importlib import resources
-from typing import List, Tuple, Optional, Generator
+from typing import List, Tuple, Generator
 
 from pyswip import Prolog
 
-from ..view import View, Anchor
+from mockdown.constrainable import ConstrainablePair
+from .view import View, Anchor
 
 
-@dataclass
-class ConstrainablePair:
-    """
-    A constraint of the form:
-    anchor1 = a * anchor_2 + b
-
-    anchor2 can potentially be None, e.g. for size assignments:
-        foo.width = 100
-    """
-
-    class Kind(Enum):
-        SPACING = 'spacing'
-        ALIGNMENT = 'alignment'
-
-    kind: Kind
-    anchor1: Anchor
-    anchor2: Optional[Anchor]
-
-    @staticmethod
-    def spacing(anchor1: Anchor, anchor2: Anchor) -> 'ConstrainablePair':
-        return ConstrainablePair(ConstrainablePair.Kind.SPACING, anchor1, anchor2)
-
-    @staticmethod
-    def alignment(anchor1: Anchor, anchor2: Anchor) -> 'ConstrainablePair':
-        return ConstrainablePair(ConstrainablePair.Kind.ALIGNMENT, anchor1, anchor2)
-
-
-def constraint_pairs(root: View, visibilities: List[Tuple[Anchor, Anchor]]) -> Generator[ConstrainablePair, None, None]:
+def constrainable_pairs(root: View, visibilities: List[Tuple[Anchor, Anchor]]) \
+        -> Generator[ConstrainablePair, None, None]:
     """
     Computes the valid ((view, attr), (view, attr)) pairs for various
     types of constraints.
@@ -83,7 +56,7 @@ def constraint_pairs(root: View, visibilities: List[Tuple[Anchor, Anchor]]) -> G
             yield ConstrainablePair.alignment(anchor1, anchor2)
 
     finally:
-        # Cleanup dynamic predicates to avoid subsequent calls running in a 
+        # Cleanup dynamic predicates to avoid subsequent calls running in a
         # polluted Prolog namespace.
         prolog.retractall('view(_)')
         prolog.retractall('parent(_,_)')
