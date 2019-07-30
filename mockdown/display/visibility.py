@@ -16,23 +16,21 @@ def visible_pair_style(pair: Tuple[Edge, Edge], scale=1):
         "border: 0.5px dashed red;"
     ]
 
+    overlap = (max(e1.interval[0], e2.interval[0]),
+               min(e1.interval[1], e2.interval[1]))
+
+    midpoint = (overlap[0] + overlap[1]) / 2
+
     if e1.attribute in ['left', 'right']:
         assert e2.attribute in ['left', 'right']
 
         width = e2.position - e1.position
 
-        if v1 in v2.children:
-            y_pos = v1.center_y
-        elif v2 in v1.children:
-            y_pos = v2.center_y
-        else:  # siblings
-            y_pos = (v1.center_y + v2.center_y) / 2
-
         style += [
             f"left: {scale * e1.position}px;"
             f"right: {scale * e2.position}px;"
-            f"top: {scale * y_pos}px;"
-            f"bottom: {scale * y_pos}px;"
+            f"top: {scale * midpoint}px;"
+            f"bottom: {scale * midpoint}px;"
             f"width: {scale * width}px;"
             "height: 1px;"
         ]
@@ -50,8 +48,8 @@ def visible_pair_style(pair: Tuple[Edge, Edge], scale=1):
             x_pos = (v1.center_x + v2.center_x) / 2
 
         style += [
-            f"left: {scale * x_pos}px;"
-            f"right: {scale * x_pos}px;"
+            f"left: {scale * midpoint}px;"
+            f"right: {scale * midpoint}px;"
             f"top: {scale * e1.position}px;"
             f"bottom: {scale * e2.position}px;"
             "width: 1px;"

@@ -37,6 +37,9 @@ class Edge:
     def position(self) -> int:
         return self.anchor.value
 
+    def __post_init__(self):
+        assert self.interval[0] <= self.interval[1]
+
     def __repr__(self):
         return f"{self.view.name}.{self.attribute} {self.interval} @ {self.position}"
 
