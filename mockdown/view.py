@@ -17,7 +17,7 @@ class Anchor:
         return getattr(self.view, self.attribute)
 
     @property
-    def edge(self):
+    def edge(self) -> 'Edge':
         return getattr(self.view, f"{self.attribute}_edge")
 
     def __repr__(self):

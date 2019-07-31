@@ -26,10 +26,12 @@ def visible_pair_style(pair: Tuple[Edge, Edge], scale=1):
     if e1.attribute in ['left', 'right']:
         assert e2.attribute in ['left', 'right']
         style.append(horizontal_line_style(*style_args, **style_kwargs))
-
-    if e1.attribute in ['top', 'bottom']:
+    elif e1.attribute in ['top', 'bottom']:
         assert e2.attribute in ['top', 'bottom']
         style.append(vertical_line_style(*style_args, **style_kwargs))
+    else:
+        # center_x, center_y?
+        raise NotImplementedError()
 
     return "".join(style)
 
