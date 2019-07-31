@@ -21,7 +21,6 @@ def alignment_constrainable_pair_style(pair: ConstrainablePair, scale=1):
 
     assert e1.attribute == e2.attribute
 
-    position = e1.position
     union = (min(e1.interval[0], e2.interval[0]),
              max(e1.interval[1], e2.interval[1]))
 
