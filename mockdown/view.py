@@ -16,6 +16,10 @@ class Anchor:
     def value(self):
         return getattr(self.view, self.attribute)
 
+    @property
+    def edge(self):
+        return getattr(self.view, f"{self.attribute}_edge")
+
     def __repr__(self):
         return f"{self.name} @ {self.value}"
 

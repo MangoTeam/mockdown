@@ -70,7 +70,7 @@ def visible_pairs(view: View, deep=True) -> List[Tuple[Edge, Edge]]:
         # Cast a vertical line through horizontal intervals.        
         data = sorted(map(attrgetter('data'), x_itree[x_ev]), key=get_pos)
         for pair in pairwise(data):
-            if (pair[0].view.name == pair[1].view.name):
+            if pair[0].view.name == pair[1].view.name:
                 continue
             pairs.append(pair)
 

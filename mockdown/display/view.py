@@ -1,5 +1,6 @@
 import dominate.tags as html
 
+from mockdown.display.constrainable import constrainable_pair_to_html
 from mockdown.display.visibility import visible_pair_to_html
 from ..view import View
 
@@ -34,9 +35,12 @@ def view_to_html(view: View, scale=1) -> html.div:
     return div
 
 
-def display_view(view: View, visible_pairs=None, scale=1) -> html.div:
+def display_view(view: View, visible_pairs=None, constrainable_pairs=None, scale=1) -> html.div:
     if visible_pairs is None:
         visible_pairs = []
+
+    if constrainable_pairs is None:
+        constrainable_pairs = []
 
     style = (
         "font-size: 10px;"
@@ -52,5 +56,8 @@ def display_view(view: View, visible_pairs=None, scale=1) -> html.div:
 
     for pair in visible_pairs:
         container.add(visible_pair_to_html(pair, scale=scale))
+
+    for pair in constrainable_pairs:
+        container.add(constrainable_pair_to_html(pair, scale=scale))
 
     return container

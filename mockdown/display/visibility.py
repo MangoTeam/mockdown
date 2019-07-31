@@ -2,13 +2,12 @@ from typing import Tuple
 
 import dominate.tags as html
 
+from .util import horizontal_line_style, vertical_line_style
 from ..view import Edge
 
 
 def visible_pair_style(pair: Tuple[Edge, Edge], scale=1):
     [e1, e2] = pair
-    v1 = e1.view
-    v2 = e2.view
 
     style = [
         "position: absolute;"
@@ -21,40 +20,16 @@ def visible_pair_style(pair: Tuple[Edge, Edge], scale=1):
 
     midpoint = (overlap[0] + overlap[1]) / 2
 
+    style_args = (e1.position, e2.position, midpoint)
+    style_kwargs = {'scale': scale}
+
     if e1.attribute in ['left', 'right']:
         assert e2.attribute in ['left', 'right']
-
-        width = e2.position - e1.position
-
-        style += [
-            f"left: {scale * e1.position}px;"
-            f"right: {scale * e2.position}px;"
-            f"top: {scale * midpoint}px;"
-            f"bottom: {scale * midpoint}px;"
-            f"width: {scale * width}px;"
-            "height: 1px;"
-        ]
+        style.append(horizontal_line_style(*style_args, **style_kwargs))
 
     if e1.attribute in ['top', 'bottom']:
         assert e2.attribute in ['top', 'bottom']
-
-        height = e2.position - e1.position
-
-        if v1 in v2.children:
-            x_pos = v1.center_x
-        elif v2 in v1.children:
-            x_pos = v2.center_x
-        else:  # siblings
-            x_pos = (v1.center_x + v2.center_x) / 2
-
-        style += [
-            f"left: {scale * midpoint}px;"
-            f"right: {scale * midpoint}px;"
-            f"top: {scale * e1.position}px;"
-            f"bottom: {scale * e2.position}px;"
-            "width: 1px;"
-            f"height: {scale * height}px;"
-        ]
+        style.append(vertical_line_style(*style_args, **style_kwargs))
 
     return "".join(style)
 
