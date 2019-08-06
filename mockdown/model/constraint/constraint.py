@@ -1,3 +1,4 @@
+import operator
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
@@ -19,6 +20,8 @@ class IConstraint(metaclass=ABCMeta):
     a: float = field(default=1.0)
     b: int = field(default=0)
 
+    op: {operator.eq, operator.le, operator.ge} = field(default=operator.eq)
+
     priority: int = field(default=1000)
     sample_count: int = field(default=0)
 
@@ -26,12 +29,22 @@ class IConstraint(metaclass=ABCMeta):
         self.validate_constants()
 
     def __str__(self):
-        return (f"{str(self.y)} = {self.a} * {str(self.x)} + {self.b}"
-                f" (priority={self.priority}, samples={self.sample_count})")
+        op_str = {
+            operator.eq: '=',
+            operator.le: '≤',
+            operator.ge: '≥'
+        }[self.op]
+
+        return (f"{str(self.y)} {op_str} {self.a} * {str(self.x)} + {self.b}"
+                f" (priority={self.priority}, samples={self.sample_count}, kind={self.kind})")
 
     @property
     def is_abstract(self):
         return self.sample_count == 0
+
+    @property
+    @abstractmethod
+    def kind(self): ...
 
     @abstractmethod
     def validate_constants(self): ...
@@ -53,6 +66,10 @@ class IConstraint(metaclass=ABCMeta):
 
 
 class PositionConstraint(IConstraint):
+    @property
+    def kind(self):
+        return "position"
+
     def validate_constants(self):
         assert self.a == 1.0, \
             "Position constraints may not have not a non-identity multiplier."
@@ -65,8 +82,12 @@ class PositionConstraint(IConstraint):
 
 
 class SpacingConstraint(PositionConstraint):
-    pass
+    @property
+    def kind(self):
+        return "spacing"
 
 
 class AlignmentConstraint(PositionConstraint):
-    pass
+    @property
+    def kind(self):
+        return "alignment"

@@ -1,3 +1,4 @@
+import operator
 from importlib import resources
 from typing import List, Tuple, Generator
 
@@ -42,11 +43,13 @@ def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) 
 
         for answer in prolog.query("spacing(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-            yield SpacingConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)))
+            yield SpacingConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)), op=operator.le)
+            yield SpacingConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)), op=operator.ge)
 
         for answer in prolog.query("alignment(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-            yield AlignmentConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)))
+            yield AlignmentConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)), op=operator.le)
+            yield AlignmentConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)), op=operator.ge)
 
     finally:
         # Cleanup dynamic predicates to avoid subsequent calls running in a
