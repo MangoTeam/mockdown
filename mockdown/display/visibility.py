@@ -3,10 +3,10 @@ from typing import Tuple
 import dominate.tags as html
 
 from .util import horizontal_line_style, vertical_line_style
-from ..view import Edge
+from mockdown.model import IEdge
 
 
-def visible_pair_style(pair: Tuple[Edge, Edge], scale=1):
+def visible_pair_style(pair: Tuple[IEdge, IEdge], scale=1):
     [e1, e2] = pair
 
     style = [
@@ -36,7 +36,7 @@ def visible_pair_style(pair: Tuple[Edge, Edge], scale=1):
     return "".join(style)
 
 
-def visible_pair_to_html(pair: Tuple[Edge, Edge], scale=1):
+def visible_pair_to_html(pair: Tuple[IEdge, IEdge], scale=1):
     [e1, e2] = pair
 
     div_id = f"{e1.view.name}.{e1.attribute}-{e2.view.name}.{e2.attribute}"

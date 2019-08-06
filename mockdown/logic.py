@@ -3,12 +3,12 @@ from typing import List, Tuple, Generator
 
 from pyswip import Prolog
 
-from mockdown.constrainable import ConstrainablePair
-from .view import View, Anchor
+from mockdown.model.constraint.base import SpacingConstraint, AlignmentConstraint, IConstraint
+from mockdown.model import IView, IAnchor
 
 
-def constrainable_pairs(root: View, visibilities: List[Tuple[Anchor, Anchor]]) \
-        -> Generator[ConstrainablePair, None, None]:
+def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) \
+        -> Generator[IConstraint, None, None]:
     """
     Computes the valid ((view, attr), (view, attr)) pairs for various
     types of constraints.
@@ -41,19 +41,11 @@ def constrainable_pairs(root: View, visibilities: List[Tuple[Anchor, Anchor]]) \
 
         for answer in prolog.query("spacing(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-
-            anchor1 = getattr(root.get(v, include_self=True, deep=True), f"{a}_anchor")
-            anchor2 = getattr(root.get(w, include_self=True, deep=True), f"{b}_anchor")
-
-            yield ConstrainablePair.spacing(anchor1, anchor2)
+            yield SpacingConstraint((v, a), (w, b))
 
         for answer in prolog.query("alignment(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-
-            anchor1 = getattr(root.get(v, include_self=True, deep=True), f"{a}_anchor")
-            anchor2 = getattr(root.get(w, include_self=True, deep=True), f"{b}_anchor")
-
-            yield ConstrainablePair.alignment(anchor1, anchor2)
+            yield AlignmentConstraint((v, a), (w, b))
 
     finally:
         # Cleanup dynamic predicates to avoid subsequent calls running in a

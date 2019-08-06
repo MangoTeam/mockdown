@@ -1,13 +1,16 @@
 from dominate import tags as html
 
-from .util import horizontal_line_style, vertical_line_style
-from ..constrainable import ConstrainablePair
-from ..display.visibility import visible_pair_to_html
+from mockdown.model.constraint.base import IConstraint, SpacingConstraint, AlignmentConstraint
+from mockdown.display.util import horizontal_line_style, vertical_line_style
+from mockdown.display.visibility import visible_pair_to_html
+from mockdown.model import IView
 
 
-def spacing_constrainable_pair_to_html(pair: ConstrainablePair, scale=1):
-    e1 = pair.anchor1.edge
-    e2 = pair.anchor2.edge
+# todo: rewrite to use new Constraint class
+
+def spacing_constraint_to_html(constraint: IConstraint, view: IView, scale=1):
+    e1 = view.get_anchor(constraint.x).edge
+    e2 = view.get_anchor(constraint.y).edge
 
     # todo: does not handle center_x/center_y.
     # todo: is that an alignment concern..?
@@ -15,9 +18,9 @@ def spacing_constrainable_pair_to_html(pair: ConstrainablePair, scale=1):
     return visible_pair_to_html((e1, e2), scale=scale)
 
 
-def alignment_constrainable_pair_style(pair: ConstrainablePair, scale=1):
-    e1 = pair.anchor1.edge
-    e2 = pair.anchor2.edge
+def alignment_constraint_style(constraint: IConstraint, view: IView, scale=1):
+    e1 = view.get_anchor(constraint.x).edge
+    e2 = view.get_anchor(constraint.y).edge
 
     assert e1.attribute == e2.attribute
 
@@ -55,11 +58,11 @@ def alignment_constrainable_pair_style(pair: ConstrainablePair, scale=1):
     return "".join(style)
 
 
-def alignment_constrainable_pair_to_html(pair: ConstrainablePair, scale=1):
-    a1 = pair.anchor1
-    a2 = pair.anchor2
+def alignment_constraint_to_html(constraint: IConstraint, view: IView, scale=1):
+    a1 = view.get_anchor(constraint.x)
+    a2 = view.get_anchor(constraint.y)
 
-    style = alignment_constrainable_pair_style(pair, scale=scale)
+    style = alignment_constraint_style(constraint, view, scale=scale)
     div_id = f"{a1.name}-{a2.name}"
 
     div = html.div(id=div_id, style=style)
@@ -67,10 +70,10 @@ def alignment_constrainable_pair_to_html(pair: ConstrainablePair, scale=1):
     return div
 
 
-def constrainable_pair_to_html(pair: ConstrainablePair, scale=1):
-    if pair.kind == 'spacing':
-        return spacing_constrainable_pair_to_html(pair, scale=scale)
-    elif pair.kind == 'alignment':
-        return alignment_constrainable_pair_to_html(pair, scale=scale)
+def constraint_to_html(pair: IConstraint, view: IView, scale=1):
+    if isinstance(pair, SpacingConstraint):
+        return spacing_constraint_to_html(pair, view, scale=scale)
+    elif isinstance(pair, AlignmentConstraint):
+        return alignment_constraint_to_html(pair, view, scale=scale)
     else:
         raise NotImplementedError()

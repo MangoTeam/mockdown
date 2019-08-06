@@ -1,73 +1,38 @@
-from dataclasses import dataclass, field
 from itertools import chain
-from typing import List, Tuple
+
+from mockdown.model.anchor import Anchor
+from mockdown.model.edge import Edge
+from mockdown.model.typing import IView, AnchorID
 
 
-@dataclass
-class Anchor:
-    view: 'View'
-    attribute: str
-
-    @property
-    def name(self):
-        return f"{self.view.name}.{self.attribute}"
-
-    @property
-    def value(self):
-        return getattr(self.view, self.attribute)
-
-    @property
-    def edge(self) -> 'Edge':
-        return getattr(self.view, f"{self.attribute}_edge")
-
-    def __repr__(self):
-        return f"{self.name} @ {self.value}"
-
-
-@dataclass
-class Edge:
-    anchor: Anchor
-    interval: Tuple[int, int]
-
-    @property
-    def view(self) -> 'View':
-        return self.anchor.view
-
-    @property
-    def attribute(self) -> str:
-        return self.anchor.attribute
-
-    @property
-    def position(self) -> int:
-        return self.anchor.value
-
+class View(IView):
     def __post_init__(self):
-        assert self.interval[0] <= self.interval[1]
+        for child in self.children:
+            child.parent = self
 
-    def __repr__(self):
-        return f"{self.view.name}.{self.attribute} {self.interval} @ {self.position}"
+    def is_parent_of(self, view):
+        return view.parent == self
 
+    def is_child_of(self, view):
+        return self.parent == view
 
-@dataclass
-class View:
-    name: str
-    rect: Tuple[int, int, int, int]
-    children: List['View'] = field(default_factory=list)
+    def is_sibling_of(self, view):
+        return self.parent == view.parent
 
     @property
-    def left(self) -> int:
+    def left(self):
         return self.rect[0]
 
     @property
-    def left_anchor(self) -> Anchor:
+    def left_anchor(self):
         return Anchor(self, 'left')
 
     @property
-    def left_edge(self) -> Edge:
+    def left_edge(self):
         return Edge(self.left_anchor, (self.top, self.bottom))
 
     @property
-    def top(self) -> int:
+    def top(self):
         return self.rect[1]
 
     @property
@@ -107,7 +72,7 @@ class View:
         return (self.left + self.right) / 2
 
     @property
-    def center_x_anchor(self) -> Anchor:
+    def center_x_anchor(self):
         return Anchor(self, 'center_x')
 
     @property
@@ -115,7 +80,7 @@ class View:
         return (self.top + self.bottom) / 2
 
     @property
-    def center_y_anchor(self) -> Anchor:
+    def center_y_anchor(self):
         return Anchor(self, 'center_y')
 
     @property
@@ -123,7 +88,7 @@ class View:
         return self.right - self.left
 
     @property
-    def width_anchor(self) -> Anchor:
+    def width_anchor(self):
         return Anchor(self, 'width')
 
     @property
@@ -142,7 +107,7 @@ class View:
                  "width", "height"]
         return [f"{self.name}.{attr}" for attr in attrs]
 
-    def get(self, name: str, default=None, include_self=False, deep=False):
+    def get(self, name: str, default=None, include_self=False, deep=False) -> IView:
         """
         Get the first child element with the given name, or return the default.
         :param name: the name of the view to get.
@@ -159,6 +124,12 @@ class View:
                 return next(child for child in self.children if child.name == name)
         except StopIteration:
             return default
+
+    def get_anchor(self, anchor_id: AnchorID):
+        [view_name, attr] = anchor_id
+
+        view = self.get(view_name, include_self=True, deep=True)
+        return getattr(view, f"{attr}_anchor")
 
     def __getitem__(self, name: str):
         """Get the immediate child with the given `name`, if it exists."""

@@ -5,10 +5,10 @@ from typing import List, Tuple
 from intervaltree import IntervalTree
 from more_itertools import pairwise
 
-from .view import View, Edge
+from mockdown.model import IView, IEdge
 
 
-def interval_tree(root: View, primary_axis: str):
+def interval_tree(root: IView, primary_axis: str):
     """
     Compute an interval tree for the given root view
     and it's immediate children. The primary axis is
@@ -38,9 +38,10 @@ def interval_tree(root: View, primary_axis: str):
     return tree
 
 
-def visible_pairs(view: View, deep=True) -> List[Tuple[Edge, Edge]]:
+def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
     """
     Compute visible (view, attr) pairs for the given view. 
+    :param view: the root view from which to compute pairs.
     :param deep controls whether visible_pairs calls recursively or not.
     """
     root = view
