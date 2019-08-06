@@ -1,4 +1,4 @@
-from mockdown.model.constraint.base import IConstraint, SpacingConstraint, AlignmentConstraint
+from mockdown.model.constraint.constraint import IConstraint, SpacingConstraint, AlignmentConstraint
 
 __all__ = [
     IConstraint,

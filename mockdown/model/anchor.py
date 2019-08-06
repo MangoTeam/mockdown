@@ -17,11 +17,11 @@ class Anchor(IAnchor):
 
     @property
     def value(self):
-        return getattr(self.view, self.attribute)
+        return getattr(self.view, self.attribute.value)
 
     @property
     def edge(self):
-        return getattr(self.view, f"{self.attribute}_edge")
+        return getattr(self.view, f"{self.attribute.value}_edge")
 
     def __repr__(self):
         return f"{self.name} @ {self.value}"

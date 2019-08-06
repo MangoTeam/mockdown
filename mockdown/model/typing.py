@@ -4,13 +4,25 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
 from typing import Tuple, List, Optional, Iterator
 
-AnchorID = Tuple[str, str]
+from mockdown.model.attribute import Attribute
+
+
+@dataclass(frozen=True)
+class AnchorID:
+    view_name: str
+    attribute: Attribute
+
+    def __str__(self):
+        return f"{self.view_name}.{self.attribute.value}"
+
+    def __iter__(self):
+        return iter([self.view_name, self.attribute])
 
 
 @dataclass(frozen=True)
 class IAnchor(metaclass=ABCMeta):
     view: IView
-    attribute: str
+    attribute: Attribute
 
     @property
     @abstractmethod
@@ -40,7 +52,7 @@ class IEdge(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def attribute(self) -> str: ...
+    def attribute(self) -> Attribute: ...
 
     @property
     @abstractmethod

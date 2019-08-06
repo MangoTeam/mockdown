@@ -2,8 +2,9 @@ from typing import Tuple
 
 import dominate.tags as html
 
-from .util import horizontal_line_style, vertical_line_style
 from mockdown.model import IEdge
+from mockdown.model.attribute import Attribute
+from .util import horizontal_line_style, vertical_line_style
 
 
 def visible_pair_style(pair: Tuple[IEdge, IEdge], scale=1):
@@ -23,11 +24,14 @@ def visible_pair_style(pair: Tuple[IEdge, IEdge], scale=1):
     style_args = (e1.position, e2.position, midpoint)
     style_kwargs = {'scale': scale}
 
-    if e1.attribute in ['left', 'right']:
-        assert e2.attribute in ['left', 'right']
+    lr_attrs = {Attribute.LEFT, Attribute.RIGHT}
+    tb_attrs = {Attribute.TOP, Attribute.BOTTOM}
+
+    if e1.attribute in lr_attrs:
+        assert e2.attribute in lr_attrs
         style.append(horizontal_line_style(*style_args, **style_kwargs))
-    elif e1.attribute in ['top', 'bottom']:
-        assert e2.attribute in ['top', 'bottom']
+    elif e1.attribute in tb_attrs:
+        assert e2.attribute in tb_attrs
         style.append(vertical_line_style(*style_args, **style_kwargs))
     else:
         # center_x, center_y?

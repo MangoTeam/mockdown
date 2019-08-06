@@ -1,9 +1,10 @@
 from dominate import tags as html
 
-from mockdown.model.constraint.base import IConstraint, SpacingConstraint, AlignmentConstraint
 from mockdown.display.util import horizontal_line_style, vertical_line_style
 from mockdown.display.visibility import visible_pair_to_html
 from mockdown.model import IView
+from mockdown.model.attribute import Attribute
+from mockdown.model.constraint import IConstraint, SpacingConstraint, AlignmentConstraint
 
 
 # todo: rewrite to use new Constraint class
@@ -36,21 +37,25 @@ def alignment_constraint_style(constraint: IConstraint, view: IView, scale=1):
     style_args = [union[0], union[1]]
     style_kwargs = {'scale': scale}
 
-    if e1.attribute in ['left', 'right']:
-        if e1.attribute == 'left':
+    if e1.attribute in {Attribute.LEFT, Attribute.RIGHT}:
+        if e1.attribute is Attribute.LEFT:
             position = min(e1.position, e2.position)
             style_args.append(position)
-        if e1.attribute == 'right':
+
+        if e1.attribute is Attribute.RIGHT:
             position = max(e1.position, e2.position)
             style_args.append(position)
+
         style.append(vertical_line_style(*style_args, **style_kwargs))
-    elif e1.attribute in ['top', 'bottom']:
-        if e1.attribute == 'top':
+    elif e1.attribute in {Attribute.TOP, Attribute.BOTTOM}:
+        if e1.attribute is Attribute.TOP:
             position = min(e1.position, e2.position)
             style_args.append(position)
-        if e1.attribute == 'bottom':
+
+        if e1.attribute is Attribute.BOTTOM:
             position = max(e1.position, e2.position)
             style_args.append(position)
+
         style.append(horizontal_line_style(*style_args, **style_kwargs))
     else:
         raise NotImplementedError()

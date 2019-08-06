@@ -19,10 +19,15 @@ class IConstraint(metaclass=ABCMeta):
     a: float = field(default=1.0)
     b: int = field(default=0)
 
+    priority: int = field(default=1000)
     sample_count: int = field(default=0)
 
     def __post_init__(self):
         self.validate_constants()
+
+    def __str__(self):
+        return (f"{str(self.y)} = {self.a} * {str(self.x)} + {self.b}"
+                f" (priority={self.priority}, samples={self.sample_count})")
 
     @property
     def is_abstract(self):

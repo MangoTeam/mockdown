@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from itertools import chain
 
 from mockdown.model.anchor import Anchor
+from mockdown.model.attribute import Attribute
 from mockdown.model.edge import Edge
 from mockdown.model.typing import IView, AnchorID
 
@@ -23,7 +24,7 @@ class View(IView):
 
     @property
     def left_anchor(self):
-        return Anchor(self, 'left')
+        return Anchor(self, Attribute.LEFT)
 
     @property
     def left_edge(self):
@@ -35,7 +36,7 @@ class View(IView):
 
     @property
     def top_anchor(self) -> Anchor:
-        return Anchor(self, 'top')
+        return Anchor(self, Attribute.TOP)
 
     @property
     def top_edge(self) -> Edge:
@@ -47,7 +48,7 @@ class View(IView):
 
     @property
     def right_anchor(self) -> Anchor:
-        return Anchor(self, 'right')
+        return Anchor(self, Attribute.RIGHT)
 
     @property
     def right_edge(self) -> Edge:
@@ -59,7 +60,7 @@ class View(IView):
 
     @property
     def bottom_anchor(self) -> Anchor:
-        return Anchor(self, 'bottom')
+        return Anchor(self, Attribute.BOTTOM)
 
     @property
     def bottom_edge(self) -> Edge:
@@ -71,7 +72,7 @@ class View(IView):
 
     @property
     def center_x_anchor(self):
-        return Anchor(self, 'center_x')
+        return Anchor(self, Attribute.CENTER_X)
 
     @property
     def center_y(self):
@@ -79,7 +80,7 @@ class View(IView):
 
     @property
     def center_y_anchor(self):
-        return Anchor(self, 'center_y')
+        return Anchor(self, Attribute.CENTER_Y)
 
     @property
     def width(self):
@@ -87,7 +88,7 @@ class View(IView):
 
     @property
     def width_anchor(self):
-        return Anchor(self, 'width')
+        return Anchor(self, Attribute.WIDTH)
 
     @property
     def height(self):
@@ -95,7 +96,7 @@ class View(IView):
 
     @property
     def height_anchor(self) -> Anchor:
-        return Anchor(self, 'height')
+        return Anchor(self, Attribute.HEIGHT)
 
     @property
     def anchor_labels(self):
@@ -127,7 +128,7 @@ class View(IView):
         [view_name, attr] = anchor_id
 
         view = self.get(view_name, include_self=True, deep=True)
-        return getattr(view, f"{attr}_anchor")
+        return getattr(view, f"{attr.value}_anchor")
 
     def __getitem__(self, name: str):
         """Get the immediate child with the given `name`, if it exists."""
