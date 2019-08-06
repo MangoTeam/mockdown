@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from itertools import chain
 
 from mockdown.model.anchor import Anchor
@@ -5,11 +6,8 @@ from mockdown.model.edge import Edge
 from mockdown.model.typing import IView, AnchorID
 
 
+@dataclass(frozen=True)
 class View(IView):
-    def __post_init__(self):
-        for child in self.children:
-            child.parent = self
-
     def is_parent_of(self, view):
         return view.parent == self
 

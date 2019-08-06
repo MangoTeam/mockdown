@@ -1,6 +1,9 @@
+from dataclasses import dataclass
+
 from .typing import IEdge
 
 
+@dataclass(frozen=True)
 class Edge(IEdge):
     @property
     def view(self):

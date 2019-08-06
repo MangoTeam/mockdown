@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from .typing import IAnchor
 
 
+@dataclass(frozen=True)
 class Anchor(IAnchor):
     @property
     def identifier(self):

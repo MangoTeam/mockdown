@@ -41,7 +41,7 @@ class IConstraint(metaclass=ABCMeta):
         xa = x.attribute
         ya = y.attribute
 
-        # todo: validation
+        # todo: attribute validation
 
     def train(self, x: Optional[IAnchor], y: IAnchor):
         self.validate(x, y)

@@ -7,7 +7,7 @@ from typing import Tuple, List, Optional, Iterator
 AnchorID = Tuple[str, str]
 
 
-@dataclass
+@dataclass(frozen=True)
 class IAnchor(metaclass=ABCMeta):
     view: IView
     attribute: str
@@ -29,7 +29,7 @@ class IAnchor(metaclass=ABCMeta):
     def edge(self) -> IEdge: ...
 
 
-@dataclass
+@dataclass(frozen=True)
 class IEdge(metaclass=ABCMeta):
     anchor: IAnchor
     interval: Tuple[int, int]
@@ -47,7 +47,7 @@ class IEdge(metaclass=ABCMeta):
     def position(self) -> int: ...
 
 
-@dataclass
+@dataclass(frozen=True)
 class IView(metaclass=ABCMeta):
     name: str
     rect: Tuple[int, int, int, int]
