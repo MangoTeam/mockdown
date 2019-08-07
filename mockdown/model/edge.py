@@ -1,20 +1,21 @@
 from dataclasses import dataclass
 
-from .typing import IEdge
+from mockdown.model.attribute import Attribute
+from mockdown.model.typing import IEdge, IView
 
 
 @dataclass(frozen=True)
 class Edge(IEdge):
     @property
-    def view(self):
+    def view(self) -> IView:
         return self.anchor.view
 
     @property
-    def attribute(self):
+    def attribute(self) -> Attribute:
         return self.anchor.attribute
 
     @property
-    def position(self):
+    def position(self) -> int:
         return self.anchor.value
 
     def __post_init__(self):

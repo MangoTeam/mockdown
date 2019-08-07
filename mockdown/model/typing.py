@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
-from typing import Tuple, List, Optional, Iterator
+from typing import Tuple, List, Optional, Iterator, NamedTuple
 
 from mockdown.model.attribute import Attribute
+
+
+class Rect(NamedTuple):
+    left: int
+    right: int
+    top: int
+    bottom: int
 
 
 @dataclass(frozen=True)
@@ -62,7 +69,7 @@ class IEdge(metaclass=ABCMeta):
 @dataclass(frozen=True)
 class IView(metaclass=ABCMeta):
     name: str
-    rect: Tuple[int, int, int, int]
+    rect: Rect
 
     children: List[IView] = field(default_factory=list)
     parent: Optional[IView] = field(default=None)
