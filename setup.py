@@ -24,7 +24,8 @@ setup(
         'dominate',
         'intervaltree',
         'more-itertools',
-        'pyswip'
+        'pyswip',
+        ''
     ],
     include_package_data=True
 )

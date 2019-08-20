@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import operator
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass, field, replace
-from typing import Optional
+from dataclasses import dataclass, field, replace, asdict
+from typing import Optional, Iterable, Tuple
+
+import pandas as pd
 
 from mockdown.model import AnchorID, IAnchor, IView
 
@@ -39,7 +43,7 @@ class IConstraint(metaclass=ABCMeta):
         b_str = "" if self.b == 0 else f" {'+' if self.b >= 0 else '-'} {abs(self.b)}"
 
         return (f"{str(self.y)} {op_str} {a_str}{str(self.x)}{b_str}"
-                f" (priority={self.priority}, samples={self.sample_count}, kind={self.kind})")
+                f"(priority={self.priority}, samples={self.sample_count}, kind={self.kind})")
 
     @property
     def is_abstract(self):
@@ -69,12 +73,49 @@ class IConstraint(metaclass=ABCMeta):
     def train(self, x: Optional[IAnchor], y: IAnchor):
         self.validate(x, y)
 
-    def train_view(self, view: IView):
-        """A convenience method that also does the lookup."""
+    def train_many(self, *pairs: Iterable[Tuple[Optional[IAnchor], IAnchor]]):
+        constraint = self
+        for x, y in pairs:
+            constraint = constraint.train(x, y)
+        return constraint
+
+    def _anchors_in_view(self, view):
         x_anchor = view.get_anchor(self.x) if self.x else None
         y_anchor = view.get_anchor(self.y)
 
-        return self.train(x_anchor, y_anchor)
+        return x_anchor, y_anchor
+
+    def train_view(self, view: IView):
+        """A convenience training method that also does the lookup."""
+        return self.train(*self._anchors_in_view(view))
+
+    def train_view_many(self, *views: IView):
+        """Like `train_view`, but accepts multiple views."""
+        return self.train_many(*map(self._anchors_in_view, views))
+
+    def to_dict(self) -> dict:
+        return {
+            'y': str(self.y),
+            'op': {
+                operator.eq: '=',
+                operator.le: '≤',
+                operator.ge: '≥'
+            }[self.op],
+            'a': self.a,
+            'x': str(self.x),
+            'b': self.b,
+            'sample_count': self.sample_count,
+            'priority': self.priority
+        }
+
+    def to_series(self) -> pd.Series:
+        return pd.Series(self.to_dict)
+
+    @staticmethod
+    def set_to_dataframe(*constraints: IConstraint):
+        rows = map(lambda c: c.to_dict(), constraints)
+        df = pd.DataFrame(rows)
+        return df
 
 
 class PositionConstraint(IConstraint):

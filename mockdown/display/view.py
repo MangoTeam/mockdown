@@ -35,7 +35,7 @@ def view_to_html(view: IView, scale=1) -> html.div:
     return div
 
 
-def display_view(view: IView, visible_pairs=None, constraints=None, scale=1) -> html.div:
+def display_view(view: IView, visible_pairs=None, constraints=None, extra_styles=None, scale=1) -> html.div:
     if visible_pairs is None:
         visible_pairs = []
 
@@ -49,6 +49,9 @@ def display_view(view: IView, visible_pairs=None, constraints=None, scale=1) -> 
         f"height: {scale * view.height}px;"
     )
 
+    if extra_styles:
+        style += extra_styles
+
     container = html.div(id="container", style=style)
 
     for child in view:
@@ -61,3 +64,6 @@ def display_view(view: IView, visible_pairs=None, constraints=None, scale=1) -> 
         container.add(constraint_to_html(constraint, view, scale=scale))
 
     return container
+
+def multi_view_container() -> html.div:
+    container = html.div(*layout_divs, style="display: flex; flex-direction: row; align-content: space-around;")
