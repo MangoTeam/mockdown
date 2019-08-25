@@ -4,10 +4,12 @@ requires building both child and parent links.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
-from typing import Tuple, List, Optional, Union
+from pathlib import Path
+from typing import Tuple, List, Optional, Union, Iterable
 
-from mockdown.model import IView
+from mockdown.model.typing import IView, Rect
 from mockdown.model.view.view import View
 
 
@@ -15,12 +17,12 @@ from mockdown.model.view.view import View
 class ViewBuilder:
     name: str
     rect: Tuple[int, int, int, int]
-    children: List[Union[ViewBuilder, Tuple]] = field(default_factory=list)
+    children: List[Union[ViewBuilder, Iterable]] = field(default_factory=list)
     parent: Optional[ViewBuilder] = field(default=None)
 
     def __post_init__(self):
         def normalize_children(child_or_args: Union[ViewBuilder, Tuple]):
-            if isinstance(child_or_args, tuple):
+            if isinstance(child_or_args, Iterable):
                 return ViewBuilder(*child_or_args)
             else:
                 return child_or_args
@@ -39,7 +41,7 @@ class ViewBuilder:
         assert self.rect, "View must have a rect."
 
         view = View(name=self.name,
-                    rect=self.rect,
+                    rect=Rect(*self.rect),
                     parent=parent_view)
 
         # Note: Python's 'frozen' concept isn't *quite* immutable.
@@ -50,3 +52,12 @@ class ViewBuilder:
         object.__setattr__(view, 'children', child_views)
 
         return view
+
+    @classmethod
+    def from_dict(cls, d: dict) -> ViewBuilder:
+        return cls(**d)
+
+    @classmethod
+    def from_file(cls, p: Path):
+        with p.open('r') as f:
+            return cls.from_dict(json.load(f))

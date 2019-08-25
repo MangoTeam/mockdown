@@ -4,42 +4,42 @@ from itertools import chain
 from mockdown.model.anchor import Anchor
 from mockdown.model.attribute import Attribute
 from mockdown.model.edge import Edge
-from mockdown.model.typing import IView, AnchorID
+from mockdown.model.typing import IAnchor, IEdge, IView, AnchorID
 
 
 @dataclass(frozen=True)
 class View(IView):
-    def is_parent_of(self, view):
+    def is_parent_of(self, view) -> bool:
         return view.parent == self
 
-    def is_child_of(self, view):
+    def is_child_of(self, view) -> bool:
         return self.parent == view
 
-    def is_sibling_of(self, view):
+    def is_sibling_of(self, view) -> bool:
         return self.parent == view.parent
 
     @property
-    def left(self):
+    def left(self) -> int:
         return self.rect[0]
 
     @property
-    def left_anchor(self):
+    def left_anchor(self) -> IAnchor:
         return Anchor(self, Attribute.LEFT)
 
     @property
-    def left_edge(self):
+    def left_edge(self) -> IEdge:
         return Edge(self.left_anchor, (self.top, self.bottom))
 
     @property
-    def top(self):
+    def top(self) -> int:
         return self.rect[1]
 
     @property
-    def top_anchor(self) -> Anchor:
+    def top_anchor(self) -> IAnchor:
         return Anchor(self, Attribute.TOP)
 
     @property
-    def top_edge(self) -> Edge:
+    def top_edge(self) -> IEdge:
         return Edge(self.top_anchor, (self.left, self.right))
 
     @property
@@ -47,11 +47,11 @@ class View(IView):
         return self.rect[2]
 
     @property
-    def right_anchor(self) -> Anchor:
+    def right_anchor(self) -> IAnchor:
         return Anchor(self, Attribute.RIGHT)
 
     @property
-    def right_edge(self) -> Edge:
+    def right_edge(self) -> IEdge:
         return Edge(self.right_anchor, (self.top, self.bottom))
 
     @property
@@ -59,24 +59,24 @@ class View(IView):
         return self.rect[3]
 
     @property
-    def bottom_anchor(self) -> Anchor:
+    def bottom_anchor(self) -> IAnchor:
         return Anchor(self, Attribute.BOTTOM)
 
     @property
-    def bottom_edge(self) -> Edge:
+    def bottom_edge(self) -> IEdge:
         return Edge(self.bottom_anchor, (self.left, self.right))
 
     @property
     def center_x(self):
-        return (self.left + self.right) / 2
+        return (self.left + self.right) // 2
 
     @property
-    def center_x_anchor(self):
+    def center_x_anchor(self) -> IAnchor:
         return Anchor(self, Attribute.CENTER_X)
 
     @property
-    def center_y(self):
-        return (self.top + self.bottom) / 2
+    def center_y(self) -> int:
+        return (self.top + self.bottom) // 2
 
     @property
     def center_y_anchor(self):
@@ -95,7 +95,7 @@ class View(IView):
         return self.bottom - self.top
 
     @property
-    def height_anchor(self) -> Anchor:
+    def height_anchor(self) -> IAnchor:
         return Anchor(self, Attribute.HEIGHT)
 
     @property

@@ -20,12 +20,16 @@ setup(
     long_description_content_type='text/markdown',
 
     install_requires=[
-        'burdock',
+        'click',
         'dominate',
         'intervaltree',
         'more-itertools',
         'pyswip',
-        ''
     ],
-    include_package_data=True
+    include_package_data=True,
+
+    entry_points='''
+        [console_scripts]
+        mockdown=mockdown.cli:cli
+    ''',
 )

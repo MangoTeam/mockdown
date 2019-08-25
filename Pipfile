@@ -9,8 +9,8 @@ pylint = "*"
 pandas = "*"
 
 [packages]
+click = "*"
 dominate = "*"
-burdock = "==0.1.2"
 intervaltree = "*"
 more-itertools = "*"
 pyswip = "*"

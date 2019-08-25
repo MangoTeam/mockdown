@@ -5,7 +5,10 @@ from .view import View
 
 __all__ = [
     AnchorID,
+    IAnchor,
     Anchor,
+    IEdge,
     Edge,
+    IView,
     View
 ]
