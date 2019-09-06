@@ -17,7 +17,7 @@ async def synthesize(request: Request):
 
     # Promote single bare example to a singleton list.
     if isinstance(examples_json, dict):
-        examples_json = list(examples_json)
+        examples_json = [examples_json]
 
     # Product a list of examples (IView's).
     examples = [
