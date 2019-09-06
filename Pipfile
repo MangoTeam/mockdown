@@ -15,6 +15,7 @@ intervaltree = "*"
 more-itertools = "*"
 pyswip = "*"
 uvicorn = "*"
+starlette = "*"
 
 [requires]
 python_version = "3.7"
