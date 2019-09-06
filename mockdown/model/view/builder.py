@@ -22,8 +22,10 @@ class ViewBuilder:
 
     def __post_init__(self):
         def normalize_children(child_or_args: Union[ViewBuilder, Tuple]):
-            if isinstance(child_or_args, Iterable):
+            if isinstance(child_or_args, list) or isinstance(child_or_args, tuple):
                 return ViewBuilder(*child_or_args)
+            elif isinstance(child_or_args, dict):
+                return ViewBuilder(**child_or_args)
             else:
                 return child_or_args
 
