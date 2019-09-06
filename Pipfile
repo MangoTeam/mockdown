@@ -14,6 +14,7 @@ dominate = "*"
 intervaltree = "*"
 more-itertools = "*"
 pyswip = "*"
+uvicorn = "*"
 
 [requires]
 python_version = "3.7"
