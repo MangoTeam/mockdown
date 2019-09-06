@@ -11,7 +11,7 @@ from mockdown.visibility import visible_pairs
 app = Starlette(debug=True)
 
 
-@app.route('/')
+@app.route('/', methods=["POST"])
 async def synthesize(request: Request):
     examples_json = await request.json()
 
@@ -59,3 +59,7 @@ async def synthesize(request: Request):
     ]
 
     return JSONResponse(trained_constraints_json)
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=8000)
