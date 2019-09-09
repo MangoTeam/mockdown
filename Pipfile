@@ -16,6 +16,7 @@ more-itertools = "*"
 pyswip = "*"
 uvicorn = "*"
 starlette = "*"
+aiofiles = "*"
 
 [requires]
 python_version = "3.7"

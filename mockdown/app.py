@@ -2,16 +2,23 @@ import uvicorn
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from starlette.staticfiles import StaticFiles
 
 from mockdown.logic import valid_constraints
 from mockdown.model.constraint import IConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.visibility import visible_pairs
 
-app = Starlette(debug=True)
+
+def create_app(*, static_dir: str, static_path: str, **kwargs) -> Starlette:
+    app = Starlette(debug=True)
+
+    app.add_route('/api/synthesize', synthesize, methods=['POST'])
+    app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
+
+    return app
 
 
-@app.route('/', methods=["POST"])
 async def synthesize(request: Request):
     examples_json = await request.json()
 
@@ -59,7 +66,3 @@ async def synthesize(request: Request):
     ]
 
     return JSONResponse(trained_constraints_json)
-
-
-if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
