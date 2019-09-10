@@ -1,3 +1,6 @@
+@improt "vendor/codemirror/lib/codemirror.css";
+@import "vendor/codemirror/theme/solarized.css";
+
 /*noinspection CssInvalidHtmlTagReference*/
 :root {
   --dark-bg-color: #002b36;
@@ -50,14 +53,14 @@ html, body {
       font-weight: normal;
       color: var(--text-color);
       margin: 0;
-      padding: 0.25em 0 0.25em 1.5em;
+      padding: 0.25em 0 0.25em 1.25em;
     }
 
     .spacer {
       flex-grow: 1;
     }
 
-    .action {
+    .header-item {
       color: var(--text-color);
       text-decoration: underline;
       cursor: pointer;
@@ -69,7 +72,7 @@ html, body {
   }
 }
 
-#input-area, #output-area {
+#input-area, #output-area, #visualization-area {
   flex: 1;
   overflow-x: hidden;
   overflow-y: scroll;
@@ -79,8 +82,22 @@ html, body {
   }
 }
 
-#visualization-area {
-  flex: 1;
+
+#visualization-inner_area {
+  margin-left: 34px;
+  margin-bottom: 34px;
+  overflow-y: scroll;
+
+  height: calc(100% - 34px);
+  box-shadow: inset 0 0 12px -8px #000;
+}
+
+.dark #visualization-inner_area {
+  background-color: var(--dark-bg-color);
+}
+
+.light #visualization-inner_area {
+  background-color: var(--light-bg-color);
 }
 
 .dark {

@@ -1,3 +1,5 @@
+@import url(vendor/codemirror/theme/solarized.css);
+@improt "vendor/codemirror/lib/codemirror.css";
 /*noinspection CssInvalidHtmlTagReference*/
 :root {
   --dark-bg-color: #002b36;
@@ -38,10 +40,10 @@ html, body {
       font-weight: normal;
       color: var(--text-color);
       margin: 0;
-      padding: 0.25em 0 0.25em 1.5em; }
+      padding: 0.25em 0 0.25em 1.25em; }
     #input-column .column-header .spacer, #output-column .column-header .spacer {
       flex-grow: 1; }
-    #input-column .column-header .action, #output-column .column-header .action {
+    #input-column .column-header .header-item, #output-column .column-header .header-item {
       color: var(--text-color);
       text-decoration: underline;
       cursor: pointer;
@@ -49,15 +51,25 @@ html, body {
       flex-grow: 0;
       padding: 0 0.5em; }
 
-#input-area, #output-area {
+#input-area, #output-area, #visualization-area {
   flex: 1;
   overflow-x: hidden;
   overflow-y: scroll; }
-  #input-area .CodeMirror, #output-area .CodeMirror {
+  #input-area .CodeMirror, #output-area .CodeMirror, #visualization-area .CodeMirror {
     height: 100%; }
 
-#visualization-area {
-  flex: 1; }
+#visualization-inner_area {
+  margin-left: 34px;
+  margin-bottom: 34px;
+  overflow-y: scroll;
+  height: calc(100% - 34px);
+  box-shadow: inset 0 0 12px -8px #000; }
+
+.dark #visualization-inner_area {
+  background-color: var(--dark-bg-color); }
+
+.light #visualization-inner_area {
+  background-color: var(--light-bg-color); }
 
 .dark #input-column, .dark #output-column {
   background-color: var(--dark-gutter-color); }
