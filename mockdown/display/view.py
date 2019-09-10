@@ -1,3 +1,5 @@
+from itertools import chain
+
 import dominate.tags as html
 
 from mockdown.display.constraint import constraint_to_html
@@ -7,29 +9,26 @@ from mockdown.model import IView
 
 def view_label_html(view: IView) -> html.label:
     style = (
-        "position: absolute;"
-        "left: 5px;"
-        "top: 5px;"
+        "--left: 5px;"
+        "--top: 5px;"
     )
 
-    label = html.span(view.name, style=style)
+    label = html.span(view.name, cls="mockdown-vis-label", style=style)
     return label
 
 
-def view_to_html(view: IView, scale=1) -> html.div:
+def view_to_html(view: IView, scale=1, is_root=False) -> html.div:
     style = (
-        "position: absolute;"
-        "box-sizing: border-box;"
-        "border: 1px solid black;"
-        f"left:   {scale * view.left}px;"
-        f"right:  {scale * view.right}px;"
-        f"top:    {scale * view.top}px;"
-        f"bottom: {scale * view.bottom}px;"
-        f"height: {scale * view.height}px;"
-        f"width:  {scale * view.width}px;"
+        f"--left:   {scale * view.left}px;"
+        f"--right:  {scale * view.right}px;"
+        f"--top:    {scale * view.top}px;"
+        f"--bottom: {scale * view.bottom}px;"
+        f"--height: {scale * view.height}px;"
+        f"--width:  {scale * view.width}px;"
     )
 
-    div = html.div(id=view.name, style=style)
+    class_str = f"mockdown-vis-view {'mockdown-vis-root' if is_root else ''}"
+    div = html.div(cls=class_str, id=view.name, style=style)
     div.add(view_label_html(view))
 
     return div
@@ -43,19 +42,18 @@ def display_view(view: IView, visible_pairs=None, constraints=None, extra_styles
         constraints = []
 
     style = (
-        "font-size: 10px;"
-        "position: relative;"
-        f"width:  {scale * view.width}px;"
-        f"height: {scale * view.height}px;"
+        f"--width:  {scale * view.width}px;"
+        f"--height: {scale * view.height}px;"
     )
 
     if extra_styles:
         style += extra_styles
 
-    container = html.div(id="container", style=style)
+    container = html.div(cls="mockdown-vis-root", style=style)
 
-    for child in view:
-        container.add(view_to_html(child, scale=scale))
+    container.add(view_to_html(view, scale=scale, is_root=True))
+    for subview in chain(*map(iter, view.children)):
+        container.add(view_to_html(subview, scale=scale))
 
     for pair in visible_pairs:
         container.add(visible_pair_to_html(pair, scale=scale))
@@ -65,5 +63,5 @@ def display_view(view: IView, visible_pairs=None, constraints=None, extra_styles
 
     return container
 
-def multi_view_container() -> html.div:
-    container = html.div(*layout_divs, style="display: flex; flex-direction: row; align-content: space-around;")
+# def multi_view_container() -> html.div:
+#     container = html.div(*layout_divs, style="display: flex; flex-direction: row; align-content: space-around;")

@@ -1,5 +1,7 @@
-@improt "vendor/codemirror/lib/codemirror.css";
-@import "vendor/codemirror/theme/solarized.css";
+@import "../vendor/codemirror/lib/codemirror.css";
+@import "../vendor/codemirror/theme/solarized.css";
+
+@import "_visualization.scss";
 
 /*noinspection CssInvalidHtmlTagReference*/
 :root {

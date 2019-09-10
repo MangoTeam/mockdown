@@ -1,5 +1,26 @@
-@import url(vendor/codemirror/theme/solarized.css);
-@improt "vendor/codemirror/lib/codemirror.css";
+@import url(../vendor/codemirror/lib/codemirror.css);
+@import url(../vendor/codemirror/theme/solarized.css);
+.mockdown-vis-root {
+  position: relative;
+  width: var(--width);
+  height: var(--height); }
+
+.mockdown-vis-view {
+  position: absolute;
+  border: 0.5px solid black;
+  left: var(--left);
+  right: var(--right);
+  top: var(--top);
+  bottom: var(--bottom);
+  width: var(--width);
+  height: var(--height); }
+
+.mockdown-vis-label {
+  font-size: 10px;
+  position: absolute;
+  left: var(--left);
+  top: var(--top); }
+
 /*noinspection CssInvalidHtmlTagReference*/
 :root {
   --dark-bg-color: #002b36;

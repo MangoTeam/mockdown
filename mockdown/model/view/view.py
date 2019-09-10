@@ -139,5 +139,6 @@ class View(IView):
 
     def __iter__(self):
         yield self
-        # noinspection PyTypeChecker
         yield from chain(*map(iter, self.children))
+        # noinspection PyTypeChecker
+        # yield self

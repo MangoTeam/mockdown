@@ -70,7 +70,7 @@ def alignment_constraint_to_html(constraint: IConstraint, view: IView, scale=1):
     style = alignment_constraint_style(constraint, view, scale=scale)
     div_id = f"{a1.name}-{a2.name}"
 
-    div = html.div(id=div_id, style=style)
+    div = html.div(cls="mockdown-vis-constraint", id=div_id, style=style)
 
     return div
 

@@ -13,16 +13,6 @@ from mockdown.visibility import visible_pairs
 import dominate.tags as html
 
 
-def create_app(*, static_dir: str, static_path: str, **kwargs) -> Starlette:
-    app = Starlette(debug=True)
-
-    app.add_route('/api/synthesize', synthesize, methods=['POST'])
-    app.add_route('/api/visualize', visualize, methods=['POST'])
-    app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
-
-    return app
-
-
 async def synthesize(request: Request):
     request_json = await request.json()
     examples_json = request_json['examples']
@@ -97,3 +87,16 @@ async def visualize(request: Request):
         container.add(view_div)
 
     return HTMLResponse(container.render())
+
+
+def create_app(*, static_dir: str, static_path: str, **kwargs) -> Starlette:
+    app = Starlette(debug=True)
+
+    app.add_route('/api/synthesize', synthesize, methods=['POST'])
+    app.add_route('/api/visualize', visualize, methods=['POST'])
+    app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
+
+    return app
+
+
+default_app = create_app(static_dir='static/', static_path='/')

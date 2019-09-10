@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
+from itertools import chain
 from typing import Tuple, List, Optional, Iterator, NamedTuple
 
 from mockdown.model.attribute import Attribute
