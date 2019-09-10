@@ -91,7 +91,7 @@ async def visualize(request: Request):
     for i in range(len(examples)):
         view_div = display_view(examples[i],
                                 constraints=constraints,
-                                scale=3,
+                                scale=2,
                                 extra_styles=("margin: 1rem;"
                                               "display: inline-block;"))
         container.add(view_div)
