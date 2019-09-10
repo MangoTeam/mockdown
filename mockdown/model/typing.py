@@ -19,6 +19,11 @@ class AnchorID:
     view_name: str
     attribute: Attribute
 
+    @classmethod
+    def from_str(cls, s):
+        v, a = s.split('.', 1)
+        return cls(view_name=v, attribute=Attribute(a))
+
     def __str__(self):
         return f"{self.view_name}.{self.attribute.value}"
 

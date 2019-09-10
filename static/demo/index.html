@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Mockdown</title>
+    <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css">
+    <link rel="stylesheet" href="vendor/codemirror/theme/paraiso-light.css">
+    <link rel="stylesheet" href="vendor/codemirror/theme/paraiso-dark.css">
+    <link rel="stylesheet" href="vendor/codemirror/theme/solarized.css">
+    <link rel="stylesheet" href="vendor/codemirror/addon/lint/lint.css">
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="vendor/jsonlint/web/jsonlint.js"></script>
+
+    <script src="vendor/codemirror/lib/codemirror.js"></script>
+    <script src="vendor/codemirror/mode/javascript/javascript.js"></script>
+    <script src="vendor/codemirror/addon/lint/lint.js"></script>
+    <script src="vendor/codemirror/addon/lint/json-lint.js"></script>
+</head>
+<body>
+<div id="container">
+    <div id="input-column">
+        <div class="column-header">
+            <h1>Input</h1>
+            <div class="spacer"></div>
+            <div id="synthesize-btn" class="action">Synthesize</div>
+            <div id="visualize-btn" class="action">Visualize</div>
+        </div>
+        <div id="input-area">
+            <!--suppress HtmlFormInputWithoutLabel -->
+            <textarea id="input-textarea"></textarea>
+        </div>
+    </div>
+    <div id="output-column">
+        <div class="column-header">
+            <h1>Output</h1>
+        </div>
+        <!--suppress HtmlFormInputWithoutLabel -->
+        <div id="visualization-area">
+
+        </div>
+        <div id="output-area">
+            <textarea id="output-textarea"></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setupTheme() {
+        const params = new URLSearchParams(location.search);
+        let theme = 'solarized';
+
+        if (window.matchMedia("(prefers-color-scheme: dark").matches || params.get('dark') !== null) {
+            document.body.classList.add('dark');
+            theme = 'solarized dark';
+        } else {
+            document.body.classList.add('light');
+            theme = 'solarized light';
+        }
+
+        return theme;
+    }
+
+    function setupEditors(theme) {
+        const inputEditor = CodeMirror.fromTextArea(document.getElementById('input-textarea'), {
+            lineNumbers: true,
+            mode: "application/json",
+            theme: theme,
+            gutters: ["CodeMirror-lint-markers"],
+            lint: true
+        });
+
+        const outputEditor = CodeMirror.fromTextArea(document.getElementById('output-textarea'), {
+            lineNumbers: true,
+            mode: "application/json",
+            theme: theme,
+            // readOnly: true
+        });
+
+        return [inputEditor, outputEditor];
+    }
+
+    const theme = setupTheme();
+    const [inputEditor, outputEditor] = setupEditors(theme);
+
+    function synthesize(examples) {
+        fetch("/api/synthesize", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                'examples': examples
+            })
+        })
+        .then((response) => response.json())
+        .then((json) => {
+            const text = JSON.stringify(json, null, 2);
+            outputEditor.setValue(text)
+        });
+    }
+
+    function visualize(examples, constraints) {
+        fetch("/api/visualize", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                'examples': examples,
+                'constraints': constraints
+            })
+        })
+        .then((response) => response.text())
+        .then((html_text) => {
+            document.getElementById("visualization-area").innerHTML = html_text;
+        });
+    }
+
+    document.getElementById("synthesize-btn").onclick = (_ev) => {
+        synthesize(JSON.parse(inputEditor.getValue()));
+    };
+
+    document.getElementById("visualize-btn").onclick = (_ev) => {
+        const examples = JSON.parse(inputEditor.getValue());
+
+        let constraints;
+        try {
+            constraints = JSON.parse(outputEditor.getValue());
+        } catch (e) {
+            constraints = []
+        }
+        visualize(examples, constraints);
+    };
+
+    fetch('demo.json')
+        .then((response) => response.text())
+        .then((text) => inputEditor.setValue(text));
+</script>
+</body>
+</html>

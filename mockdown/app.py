@@ -1,30 +1,31 @@
 import uvicorn
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 
+from mockdown.display.view import display_view
 from mockdown.logic import valid_constraints
 from mockdown.model.constraint import IConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.visibility import visible_pairs
+
+import dominate.tags as html
 
 
 def create_app(*, static_dir: str, static_path: str, **kwargs) -> Starlette:
     app = Starlette(debug=True)
 
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
+    app.add_route('/api/visualize', visualize, methods=['POST'])
     app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
 
     return app
 
 
 async def synthesize(request: Request):
-    examples_json = await request.json()
-
-    # Promote single bare example to a singleton list.
-    if isinstance(examples_json, dict):
-        examples_json = [examples_json]
+    request_json = await request.json()
+    examples_json = request_json['examples']
 
     # Product a list of examples (IView's).
     examples = [
@@ -66,3 +67,33 @@ async def synthesize(request: Request):
     ]
 
     return JSONResponse(trained_constraints_json)
+
+
+async def visualize(request: Request):
+    request_json = await request.json()
+    examples_json = request_json['examples']
+    constraints_json = request_json['constraints']
+
+    # Product a list of examples (IView's).
+    examples = [
+        ViewBuilder.from_dict(example_json).to_view()
+        for example_json
+        in examples_json
+    ]
+
+    constraints = [
+        IConstraint.from_dict(constraint_json)
+        for constraint_json
+        in constraints_json
+    ]
+
+    container = html.div()
+    for i in range(len(examples)):
+        view_div = display_view(examples[i],
+                                constraints=constraints,
+                                scale=3,
+                                extra_styles=("margin: 1rem;"
+                                              "display: inline-block;"))
+        container.add(view_div)
+
+    return HTMLResponse(container.render())

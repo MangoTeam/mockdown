@@ -1,0 +1,96 @@
+/*noinspection CssInvalidHtmlTagReference*/
+:root {
+  --dark-bg-color: #002b36;
+  --light-bg-color: #fdf6e3;
+  --dark-gutter-color: #073642;
+  --light-gutter-color: #eee8d5;
+  --text-color: #859900;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+
+  font-family: "Avenir", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  &.dark {
+    background-color: var(--dark-bg-color);
+  }
+
+  &.light {
+    background-color: var(--light-bg-color);
+  }
+}
+
+#container {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100vw;
+  height: 100vh;
+}
+
+#input-column, #output-column {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+
+  .column-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    h1 {
+      flex: 1;
+
+      font-weight: normal;
+      color: var(--text-color);
+      margin: 0;
+      padding: 0.25em 0 0.25em 1.5em;
+    }
+
+    .spacer {
+      flex-grow: 1;
+    }
+
+    .action {
+      color: var(--text-color);
+      text-decoration: underline;
+      cursor: pointer;
+
+      flex: 1;
+      flex-grow: 0;
+      padding: 0 0.5em;
+    }
+  }
+}
+
+#input-area, #output-area {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: scroll;
+
+  .CodeMirror {
+    height: 100%;
+  }
+}
+
+#visualization-area {
+  flex: 1;
+}
+
+.dark {
+  #input-column, #output-column {
+    background-color: var(--dark-gutter-color);
+  }
+}
+
+.light {
+  #input-column, #output-column {
+    background-color: var(--light-gutter-color);
+  }
+}

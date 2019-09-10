@@ -1,6 +1,3 @@
-# Default location for static files while debugging.
-static/
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

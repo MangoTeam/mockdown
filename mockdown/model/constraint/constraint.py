@@ -105,8 +105,21 @@ class IConstraint(metaclass=ABCMeta):
             'x': str(self.x),
             'b': self.b,
             'sample_count': self.sample_count,
-            'priority': self.priority
+            'priority': self.priority,
+            'kind': self.kind
         }
+
+    @classmethod
+    def from_dict(cls, d):
+        kind = d.pop('kind')
+
+        x_id = AnchorID.from_str(d.pop('x'))
+        y_id = AnchorID.from_str(d.pop('y'))
+
+        if kind == 'spacing':
+            return SpacingConstraint(x=x_id, y=y_id, **d)
+        elif kind == 'alignment':
+            return AlignmentConstraint(x=x_id, y=y_id, **d)
 
     def to_series(self) -> pd.Series:
         return pd.Series(self.to_dict)
