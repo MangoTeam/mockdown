@@ -3,6 +3,7 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
+from starlette.middleware.cors import CORSMiddleware
 
 from mockdown.display.view import display_view
 from mockdown.logic import valid_constraints
@@ -91,6 +92,7 @@ async def visualize(request: Request):
 
 def create_app(*, static_dir: str, static_path: str, **kwargs) -> Starlette:
     app = Starlette(debug=True)
+    app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'], allow_credentials=True)
 
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
     app.add_route('/api/visualize', visualize, methods=['POST'])
