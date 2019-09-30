@@ -63,13 +63,14 @@ def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
                            for view
                            in chain([root], children))))
 
-    get_pos = attrgetter('position')
+    x_sort_key = attrgetter('view.center_x', 'position')
+    y_sort_key = attrgetter('view.center_y', 'position')
 
     pairs = []
 
     for x_ev in x_events:
         # Cast a vertical line through horizontal intervals.        
-        data = sorted(map(attrgetter('data'), x_itree[x_ev]), key=get_pos)
+        data = sorted(map(attrgetter('data'), x_itree[x_ev]), key=y_sort_key)
         for pair in pairwise(data):
             if pair[0].view.name == pair[1].view.name:
                 continue
@@ -77,7 +78,7 @@ def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
 
     for y_ev in y_events:
         # Cast a horizontal line through vertical intervals.
-        data = sorted(map(attrgetter('data'), y_itree[y_ev]), key=get_pos)
+        data = sorted(map(attrgetter('data'), y_itree[y_ev]), key=x_sort_key)
         for pair in pairwise(data):
             if pair[0].view.name == pair[1].view.name:
                 continue

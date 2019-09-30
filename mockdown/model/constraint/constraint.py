@@ -62,7 +62,7 @@ class IConstraint(metaclass=ABCMeta):
 
         xv, yv = x.view, y.view
 
-        assert xv.is_sibling_of(yv) or xv.is_parent_of(yv), \
+        assert xv.is_sibling_of(yv) or xv.is_parent_of(yv) or xv.is_child_of(yv), \
             "Constraints must be between siblings or parent/children."
 
         xa, ya = x.attribute, y.attribute
