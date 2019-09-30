@@ -1,3 +1,4 @@
+from collections import deque
 from itertools import chain
 from operator import attrgetter
 from typing import List, Tuple
@@ -8,7 +9,7 @@ from more_itertools import pairwise
 from mockdown.model import IView, IEdge
 
 
-def interval_tree(root: IView, primary_axis: str):
+def interval_tree(root: IView, primary_axis: str, include_root=True):
     """
     Compute an interval tree for the given root view
     and it's immediate children. The primary axis is
@@ -20,7 +21,11 @@ def interval_tree(root: IView, primary_axis: str):
 
     tree = IntervalTree()
 
-    for view in chain([root], root.children):
+    view_iter = root.children
+    if include_root:
+        view_iter = chain([root], view_iter)
+
+    for view in view_iter:
         if primary_axis == 'x':
             top_edge = view.top_edge
             bottom_edge = view.bottom_edge
@@ -50,8 +55,11 @@ def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
     # We build an interval tree for the horizontal and 
     # vertical line segments making up our view rects.
 
-    x_itree = interval_tree(root, primary_axis='x')
-    y_itree = interval_tree(root, primary_axis='y')
+    # We do _not_ include the root view, as it interferes with
+    # sorting later, and we can just tack it onto the beginning/end
+    # of each query.
+    x_itree = interval_tree(root, primary_axis='x', include_root=False)
+    y_itree = interval_tree(root, primary_axis='y', include_root=False)
 
     # In a scan-line algorithm, "events" are the points of
     # interest where we cast a scan line and check along it.
@@ -69,8 +77,10 @@ def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
     pairs = []
 
     for x_ev in x_events:
-        # Cast a vertical line through horizontal intervals.        
-        data = sorted(map(attrgetter('data'), x_itree[x_ev]), key=y_sort_key)
+        # Cast a vertical line through horizontal intervals.
+        data = deque(sorted(map(attrgetter('data'), x_itree[x_ev]), key=y_sort_key))
+        data.appendleft(root.top_edge)
+        data.append(root.bottom_edge)
         for pair in pairwise(data):
             if pair[0].view.name == pair[1].view.name:
                 continue
@@ -78,7 +88,9 @@ def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
 
     for y_ev in y_events:
         # Cast a horizontal line through vertical intervals.
-        data = sorted(map(attrgetter('data'), y_itree[y_ev]), key=x_sort_key)
+        data = deque(sorted(map(attrgetter('data'), y_itree[y_ev]), key=x_sort_key))
+        data.appendleft(root.left_edge)
+        data.append(root.right_edge)
         for pair in pairwise(data):
             if pair[0].view.name == pair[1].view.name:
                 continue
