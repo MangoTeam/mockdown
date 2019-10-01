@@ -5,6 +5,9 @@ from starlette.responses import JSONResponse, HTMLResponse
 from starlette.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
+from timing_asgi import TimingMiddleware, TimingClient
+from timing_asgi.integrations import StarletteScopeToName
+
 from mockdown.display.view import display_view
 from mockdown.logic import valid_constraints
 from mockdown.model.constraint import IConstraint
@@ -92,11 +95,22 @@ async def visualize(request: Request):
 
 def create_app(*, static_dir: str, static_path: str, **kwargs) -> Starlette:
     app = Starlette(debug=True)
-    app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'], allow_credentials=True)
+    app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'],
+                       allow_credentials=True)
 
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
     app.add_route('/api/visualize', visualize, methods=['POST'])
     app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
+
+    class StdoutTimingClient(TimingClient):
+        def timing(self, metric_name, timing, tags=None):
+            print(metric_name, timing, tags)
+
+    app.add_middleware(
+        TimingMiddleware,
+        client=StdoutTimingClient(),
+        metric_namer=StarletteScopeToName(prefix="mockdown", starlette_app=app)
+    )
 
     return app
 

@@ -17,6 +17,7 @@ pyswip = "*"
 uvicorn = "*"
 starlette = "*"
 aiofiles = "*"
+timing-asgi = "*"
 
 [requires]
 python_version = "3.7"

@@ -152,7 +152,13 @@ class PositionConstraint(IConstraint):
         new_b = y.value - x.value
 
         if not self.is_abstract:
-            new_b = new_b if self.op(new_b, self.b) else self.b
+            if self.op == operator.le:
+                new_b = max(self.b, new_b)
+            elif self.op == operator.ge:
+                new_b = min(self.b, new_b)
+            elif self.op == operator.eq:
+                assert "unsupported operator: == (because of scary IEEE754 nonsense)"
+            # new_b = new_b if self.op(self.b, new_b) else self.b
 
         return replace(self, b=new_b, sample_count=self.sample_count + 1)
 
