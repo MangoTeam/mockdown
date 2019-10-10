@@ -21,7 +21,9 @@ class AnchorID:
     attribute: Attribute
 
     @classmethod
-    def from_str(cls, s):
+    def from_str(cls, s) -> Optional[AnchorID]:
+        if s == 'None':
+            return None
         v, a = s.split('.', 1)
         return cls(view_name=v, attribute=Attribute(a))
 

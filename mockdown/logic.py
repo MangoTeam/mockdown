@@ -7,12 +7,13 @@ from pyswip import Prolog
 from mockdown.model import IView, IAnchor, AnchorID
 from mockdown.model.attribute import Attribute
 from mockdown.model.constraint import SpacingConstraint, AlignmentConstraint, IConstraint
+from mockdown.model.constraint.constraint import AbsoluteSizeConstraint
 
 
 def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) \
         -> Generator[IConstraint, None, None]:
     """
-    Computes the valid ((view, attr), (view, attr)) pairs for various
+    Computes the valid constraint pairs (or singletons) for various
     types of constraints.
     """
 
@@ -41,15 +42,20 @@ def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) 
 
         # todo: Post-process output? Necessary?
 
+        for answer in prolog.query("absolute_size(V, A)"):
+            v, a = [answer[k] for k in ('V', 'A')]
+            yield AbsoluteSizeConstraint(x=None, y=AnchorID(v, Attribute(a)), op=operator.le)
+            yield AbsoluteSizeConstraint(x=None, y=AnchorID(v, Attribute(a)), op=operator.ge)
+
         for answer in prolog.query("spacing(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-            yield SpacingConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)), op=operator.le)
-            yield SpacingConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)), op=operator.ge)
+            yield SpacingConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.le)
+            yield SpacingConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.ge)
 
         for answer in prolog.query("alignment(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-            yield AlignmentConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)), op=operator.le)
-            yield AlignmentConstraint(AnchorID(v, Attribute(a)), AnchorID(w, Attribute(b)), op=operator.ge)
+            yield AlignmentConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.le)
+            yield AlignmentConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.ge)
 
     finally:
         # Cleanup dynamic predicates to avoid subsequent calls running in a

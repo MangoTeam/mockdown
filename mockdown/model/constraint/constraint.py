@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, ABC
 from dataclasses import dataclass, field, replace, asdict
 from typing import Optional, Iterable, Tuple
 
@@ -11,7 +11,7 @@ from mockdown.model import AnchorID, IAnchor, IView
 
 
 @dataclass(frozen=True)
-class IConstraint(metaclass=ABCMeta):
+class IConstraint(ABC):
     """
     A general constraint of the form y = a * x + b.
 
@@ -131,11 +131,7 @@ class IConstraint(metaclass=ABCMeta):
         return df
 
 
-class PositionConstraint(IConstraint):
-    @property
-    def kind(self):
-        return "position"
-
+class PositionConstraint(IConstraint, ABC):
     def validate_constants(self):
         assert self.a == 1.0, \
             "Position constraints musy not have not a non-identity multiplier."
@@ -173,3 +169,35 @@ class AlignmentConstraint(PositionConstraint):
     @property
     def kind(self):
         return "alignment"
+
+
+class SizeConstraint(IConstraint, ABC):
+    pass
+
+
+class AbsoluteSizeConstraint(SizeConstraint):
+    @property
+    def kind(self):
+        return "absolute_size"
+
+    def validate_constants(self):
+        pass
+
+    def validate(self, x: Optional[IAnchor], y: IAnchor):
+        super().validate(x, y)
+
+        assert x is None, \
+            "Absolute size constraints must only have one anchor."
+
+    def train(self, x: Optional[IAnchor], y: IAnchor):
+        new_b = y.value
+
+        if not self.is_abstract:
+            if self.op == operator.le:
+                new_b = max(self.b, new_b)
+            elif self.op == operator.ge:
+                new_b = min(self.b, new_b)
+            elif self.op == operator.eq:
+                assert "unsupported operator: == (because of scary IEEE754 nonsense)"
+
+        return replace(self, b=new_b, sample_count=self.sample_count + 1)

@@ -11,14 +11,24 @@ use_module(library(csv)).
                  anchor/2,
                  visible/2. 
 
-attr('left').
-attr('right').
-attr('top').
-attr('bottom').
-attr('width').
-attr('height').
-attr('center_x').
-attr('center_y').
+attr(left).
+attr(right).
+attr(top).
+attr(bottom).
+attr(width).
+attr(height).
+attr(center_x).
+attr(center_y).
+
+position(left).
+position(right).
+position(top).
+position(bottom).
+position(center_x).
+position(center_y).
+
+size(width).
+size(height).
 
 horizontal(left).
 horizontal(right).
@@ -44,8 +54,8 @@ visible_horizontal(V, W) :-
     view(V),
     view(W),
     V \= W,
-    horizontal(A),
-    horizontal(B),
+    position(A), horizontal(A),
+    position(B), horizontal(B),
     A \= B,
     visible_sym(anchor(V, A), anchor(W, B)).
 
@@ -54,8 +64,8 @@ visible_vertical(V, W) :-
     view(V),
     view(W),
     V \= W,
-    vertical(A),
-    vertical(B),
+    position(A), vertical(A),
+    position(B), vertical(B),
     A \= B,
     visible_sym(anchor(V, A), anchor(W, B)).
 
@@ -66,8 +76,8 @@ alignable(X, Y) :-
     anchor(W, B), 
     V \= W, 
     visible_horizontal(V, W), 
-    vertical(A), 
-    vertical(B), 
+    position(A), vertical(A),
+    position(B), vertical(B),
     A = B.
 
 alignable(X, Y) :-
@@ -77,8 +87,8 @@ alignable(X, Y) :-
     anchor(W, B), 
     V \= W,
     visible_vertical(V, W),
-    horizontal(A),
-    horizontal(B),
+    position(A), horizontal(A),
+    position(B), horizontal(B),
     A = B.
 
 alignable_sym(X, Y) :-
@@ -110,6 +120,10 @@ alignment(V, A, W, B) :-
     X = anchor(V, A),
     Y = anchor(W, B),
     alignable(X, Y).
+
+absolute_size(V, A) :-
+    anchor(V, A),
+    size(A).
 
 % List constraints of type F.
 lscons(F, FileName) :-
