@@ -7,7 +7,7 @@ from pyswip import Prolog
 from mockdown.model import IView, IAnchor, AnchorID
 from mockdown.model.attribute import Attribute
 from mockdown.model.constraint import SpacingConstraint, AlignmentConstraint, IConstraint
-from mockdown.model.constraint.constraint import AbsoluteSizeConstraint
+from mockdown.model.constraint.constraint import AbsoluteSizeConstraint, RelativeSizeConstraint
 
 
 def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) \
@@ -49,8 +49,8 @@ def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) 
 
         for answer in prolog.query("parent_relative_size(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A')]
-            yield ParentRelativeSizeConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.le)
-            yield ParentRelativeSizeConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.ge)
+            yield RelativeSizeConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.le)
+            yield RelativeSizeConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.ge)
 
         for answer in prolog.query("spacing(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
