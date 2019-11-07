@@ -125,6 +125,18 @@ absolute_size(V, A) :-
     anchor(V, A),
     size(A).
 
+parent_relative_size(V, A, W, B) :-
+    anchor(V, A),
+    anchor(W, B),
+    parent(V, W),
+    size(A),
+    size(B),
+    A == B.
+
+aspect_ratio_size(V) :-
+    anchor(V, width),  % redundant?
+    anchor(V, height).
+
 % List constraints of type F.
 lscons(F, FileName) :-
     findall(constraint(F, V, A, W, B), call(F, V, A, W, B), Constraints),

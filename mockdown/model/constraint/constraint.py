@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import operator
 from abc import ABCMeta, abstractmethod, ABC
 from dataclasses import dataclass, field, replace, asdict
@@ -9,6 +10,7 @@ import pandas as pd
 
 from mockdown.model import AnchorID, IAnchor, IView
 
+ISCLOSE_TOLERANCE = 0.01  # maximum difference of 1%
 
 @dataclass(frozen=True)
 class IConstraint(ABC):
@@ -28,6 +30,8 @@ class IConstraint(ABC):
 
     priority: int = field(default=1000)
     sample_count: int = field(default=0)
+
+    is_falsified: bool = field(default=False)
 
     def __post_init__(self):
         self.validate_constants()
@@ -57,6 +61,8 @@ class IConstraint(ABC):
     def validate_constants(self): ...
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
+        self.validate_constants()
+
         assert self.x == x.identifier and self.y == y.identifier, \
             "Constraints must be trained on matching anchors."
 
@@ -71,12 +77,15 @@ class IConstraint(ABC):
             "Constraints must be between compatible anchors."
 
     def train(self, x: Optional[IAnchor], y: IAnchor):
+        assert not self.is_falsified, "Cannot train a falsified constraint."
         self.validate(x, y)
 
     def train_many(self, *pairs: Iterable[Tuple[Optional[IAnchor], IAnchor]]):
         constraint = self
         for x, y in pairs:
             constraint = constraint.train(x, y)
+            if constraint.is_falsified:
+                break
         return constraint
 
     def _anchors_in_view(self, view):
@@ -181,7 +190,7 @@ class AbsoluteSizeConstraint(SizeConstraint):
         return "absolute_size"
 
     def validate_constants(self):
-        pass
+        assert self.a == 1.0, "Absolute size constraints must have a = 1."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
         super().validate(x, y)
@@ -190,6 +199,8 @@ class AbsoluteSizeConstraint(SizeConstraint):
             "Absolute size constraints must only have one anchor."
 
     def train(self, x: Optional[IAnchor], y: IAnchor):
+        super().train(x, y)
+
         new_b = y.value
 
         if not self.is_abstract:
@@ -201,3 +212,37 @@ class AbsoluteSizeConstraint(SizeConstraint):
                 assert "unsupported operator: == (because of scary IEEE754 nonsense)"
 
         return replace(self, b=new_b, sample_count=self.sample_count + 1)
+
+
+class RelativeSizeConstraint(SizeConstraint):
+    @property
+    def kind(self):
+        return "relative_size"
+
+    def validate_constants(self):
+        assert math.isclose(self.b, 0, rel_tol=0.01), "Relatie size constraints must have b = 0."
+
+    def validate(self, x: Optional[IAnchor], y: IAnchor):
+        assert x.view.is_parent_of(y.view), "Relative size constraints' x must be the parent of y."
+        assert x.attribute == y.attribute, "Relative size constraints should be between the same attribute."
+        super().validate(x, y)
+
+    def train(self, x: Optional[IAnchor], y: IAnchor):
+        super().train(x, y)
+
+        is_falsified = self.is_falsified
+        new_a = y.value / x.value
+
+        if not self.is_abstract:
+            if self.op == operator.eq:
+                if not math.isclose(self.a, new_a):
+                    is_falsified = True
+            if self.op == operator.le:
+                new_a = max(self.a, new_a)
+            if self.op == operator.ge:
+                new_a = max(self.a, new_a)
+
+        return replace(self, a=new_a, is_falsified=is_falsified, sample_count=self.sample_count + 1)
+
+
+
