@@ -63,8 +63,14 @@ class IConstraint(ABC):
     def validate(self, x: Optional[IAnchor], y: IAnchor):
         self.validate_constants()
 
-        assert self.x == x.identifier and self.y == y.identifier, \
-            "Constraints must be trained on matching anchors."
+        if self.x is None:
+            assert x is None and self.y == y.identifier, \
+                "Constraints must be trained on matching anchors."
+        else:
+            assert self.x == x.identifier and self.y == y.identifier, \
+                "Constraints must be trained on matching anchors."
+
+        # todo fix validation
 
         xv, yv = x.view, y.view
 
