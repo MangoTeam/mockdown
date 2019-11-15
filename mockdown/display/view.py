@@ -59,7 +59,9 @@ def display_view(view: IView, visible_pairs=None, constraints=None, extra_styles
         container.add(visible_pair_to_html(pair, scale=scale))
 
     for constraint in constraints:
-        container.add(constraint_to_html(constraint, view, scale=scale))
+        el = constraint_to_html(constraint, view, scale=scale)
+        if el is not None:
+            container.add(el)
 
     return container
 

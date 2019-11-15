@@ -81,4 +81,4 @@ def constraint_to_html(pair: IConstraint, view: IView, scale=1):
     elif isinstance(pair, AlignmentConstraint):
         return alignment_constraint_to_html(pair, view, scale=scale)
     else:
-        raise NotImplementedError()
+        return None
