@@ -238,6 +238,7 @@ class RelativeSizeConstraint(SizeConstraint):
         if not self.is_abstract:
             if self.op == operator.eq:
                 if not math.isclose(self.a, new_a):
+                    new_a = self.a
                     is_falsified = True
             if self.op == operator.le:
                 new_a = max(self.a, new_a)
