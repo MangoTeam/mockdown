@@ -63,24 +63,20 @@ class IConstraint(ABC):
     def validate(self, x: Optional[IAnchor], y: IAnchor):
         self.validate_constants()
 
-        if self.x is None:
-            assert x is None and self.y == y.identifier, \
-                "Constraints must be trained on matching anchors."
-        else:
-            assert self.x == x.identifier and self.y == y.identifier, \
-                "Constraints must be trained on matching anchors."
+        if x is not None:
+            assert self.x == x.identifier, "Constraints must be trained on matching anchors."
+        assert self.y == y.identifier, "Constraints must be trained on matching anchors."
 
-        # todo fix validation
+        if x is not None:
+            xv, yv = x.view, y.view
 
-        xv, yv = x.view, y.view
+            assert xv.is_sibling_of(yv) or xv.is_parent_of(yv) or xv.is_child_of(yv), \
+                "Constraints must be between siblings or parent/children."
 
-        assert xv.is_sibling_of(yv) or xv.is_parent_of(yv) or xv.is_child_of(yv), \
-            "Constraints must be between siblings or parent/children."
+            xa, ya = x.attribute, y.attribute
 
-        xa, ya = x.attribute, y.attribute
-
-        assert xa.is_compatible(ya), \
-            "Constraints must be between compatible anchors."
+            assert xa.is_compatible(ya), \
+                "Constraints must be between compatible anchors."
 
     def train(self, x: Optional[IAnchor], y: IAnchor):
         assert not self.is_falsified, "Cannot train a falsified constraint."
