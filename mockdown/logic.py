@@ -49,8 +49,7 @@ def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) 
 
         for answer in prolog.query("parent_relative_size(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-            yield RelativeSizeConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.le)
-            yield RelativeSizeConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.ge)
+            yield RelativeSizeConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.eq)
 
         for answer in prolog.query("spacing(V, A, W, B)"):
             v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
