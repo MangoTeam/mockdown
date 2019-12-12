@@ -3,8 +3,8 @@ from __future__ import annotations
 import math
 import operator
 from abc import ABCMeta, abstractmethod, ABC
-from dataclasses import dataclass, field, replace, asdict
-from typing import Optional, Iterable, Tuple
+from dataclasses import dataclass, field, replace, asdict, fields
+from typing import Optional, Iterable, Tuple, List
 
 import pandas as pd
 
@@ -57,8 +57,8 @@ class IConstraint(ABC):
     @abstractmethod
     def kind(self): ...
 
-    @abstractmethod
-    def validate_constants(self): ...
+    def validate_constants(self):
+        assert self.a >= 0, "Constraints must have positive multipliers."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
         self.validate_constants()
@@ -104,6 +104,32 @@ class IConstraint(ABC):
         """Like `train_view`, but accepts multiple views."""
         return self.train_many(*map(self._anchors_in_view, views))
 
+    @property
+    def bounds_above(self) -> List[AnchorID]:
+        """Returns the variable(s) this constraint bounds above."""
+        y = [self.y]
+        x = [self.x] if self.x is not None else []
+
+        if self.op == operator.le:
+            return y
+        elif self.op == operator.ge:
+            return x
+        elif self.op == operator.eq:
+            return x + y
+
+    @property
+    def bounds_below(self) -> List[AnchorID]:
+        """Returns the variable(s) this constraint bounds below."""
+        y = [self.y]
+        x = [self.x] if self.x is not None else []
+
+        if self.op == operator.le:
+            return x
+        elif self.op == operator.ge:
+            return y
+        elif self.op == operator.eq:
+            return x + y
+
     def to_dict(self) -> dict:
         return {
             'y': str(self.y),
@@ -117,7 +143,9 @@ class IConstraint(ABC):
             'b': self.b,
             'sample_count': self.sample_count,
             'priority': self.priority,
-            'kind': self.kind
+            'kind': self.kind,
+            'bounds_above': list(map(str, self.bounds_above)),
+            'bounds_below': list(map(str, self.bounds_below))
         }
 
     @classmethod
@@ -127,23 +155,28 @@ class IConstraint(ABC):
         x_id = AnchorID.from_str(d.pop('x'))
         y_id = AnchorID.from_str(d.pop('y'))
 
+        # Don't pass any extra fields to the constructor (they will error).
+        class_fields = {f.name for f in fields(cls)}
+        init_fields = {k: v for k, v in d.items() if k in class_fields}
+
         if kind == 'spacing':
-            return SpacingConstraint(x=x_id, y=y_id, **d)
+            return SpacingConstraint(x=x_id, y=y_id, **init_fields)
         elif kind == 'alignment':
-            return AlignmentConstraint(x=x_id, y=y_id, **d)
+            return AlignmentConstraint(x=x_id, y=y_id, **init_fields)
 
-    def to_series(self) -> pd.Series:
-        return pd.Series(self.to_dict)
-
-    @staticmethod
-    def set_to_dataframe(*constraints: IConstraint):
-        rows = map(lambda c: c.to_dict(), constraints)
-        df = pd.DataFrame(rows)
-        return df
+    # def to_series(self) -> pd.Series:
+    #     return pd.Series(self.to_dict)
+    #
+    # @staticmethod
+    # def set_to_dataframe(*constraints: IConstraint):
+    #     rows = map(lambda c: c.to_dict(), constraints)
+    #     df = pd.DataFrame(rows)
+    #     return df
 
 
 class PositionConstraint(IConstraint, ABC):
     def validate_constants(self):
+        super().validate_constants()
         assert self.a == 1.0, \
             "Position constraints musy not have not a non-identity multiplier."
 
@@ -192,6 +225,7 @@ class AbsoluteSizeConstraint(SizeConstraint):
         return "absolute_size"
 
     def validate_constants(self):
+        super().validate_constants()
         assert self.a == 1.0, "Absolute size constraints must have a = 1."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
@@ -222,6 +256,7 @@ class RelativeSizeConstraint(SizeConstraint):
         return "relative_size"
 
     def validate_constants(self):
+        super().validate_constants()
         assert math.isclose(self.b, 0, rel_tol=0.01), "Relatie size constraints must have b = 0."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
