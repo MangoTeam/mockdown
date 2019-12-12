@@ -1,3 +1,5 @@
+from typing import Iterable, Callable, Dict
+
 import uvicorn
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -15,6 +17,24 @@ from mockdown.model.view import ViewBuilder
 from mockdown.visibility import visible_pairs
 
 import dominate.tags as html
+
+PruningMethod = Callable[[Iterable[IConstraint]], Iterable[IConstraint]]
+PruningMethodFactory = Callable[[], PruningMethod]
+
+
+class FancyPruning(PruningMethod):
+    def __call__(self, constraints: Iterable[IConstraint]):
+        return constraints
+
+
+"""
+This dictionary contains *factories* that produce pruning methods!
+"""
+PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
+    'none': lambda: (lambda cs: cs),
+    # 'baseline': None  # put it here
+    'fancy': FancyPruning
+}
 
 
 async def synthesize(request: Request):
@@ -54,10 +74,14 @@ async def synthesize(request: Request):
         in all_constraints
     ]
 
+    prune = PRUNING_METHODS[request_json.get('method', 'none')]()
+
+    pruned_constraints = prune(trained_constraints)
+
     trained_constraints_json = [
         IConstraint.to_dict(constraint)
         for constraint
-        in trained_constraints
+        in pruned_constraints
         if not constraint.is_falsified
     ]
 
