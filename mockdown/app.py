@@ -1,4 +1,4 @@
-from typing import Iterable, Callable, Dict
+from typing import Iterable, Callable, Dict, List
 
 import uvicorn
 from starlette.applications import Starlette
@@ -12,18 +12,22 @@ from timing_asgi.integrations import StarletteScopeToName
 
 from mockdown.display.view import display_view
 from mockdown.logic import valid_constraints
+from mockdown.model import IView
 from mockdown.model.constraint import IConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.visibility import visible_pairs
 
 import dominate.tags as html
 
-PruningMethod = Callable[[Iterable[IConstraint]], Iterable[IConstraint]]
-PruningMethodFactory = Callable[[], PruningMethod]
+PruningMethod = Callable[[List[IConstraint]], List[IConstraint]]
+PruningMethodFactory = Callable[[List[IView]], PruningMethod]
 
 
 class FancyPruning(PruningMethod):
-    def __call__(self, constraints: Iterable[IConstraint]):
+    def __init__(self, examples: List[IView]):
+        pass
+
+    def __call__(self, constraints: List[IConstraint]):
         return constraints
 
 
@@ -31,7 +35,7 @@ class FancyPruning(PruningMethod):
 This dictionary contains *factories* that produce pruning methods!
 """
 PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
-    'none': lambda: (lambda cs: cs),
+    'none': lambda _: (lambda constraints: constraints),
     # 'baseline': None  # put it here
     'fancy': FancyPruning
 }
@@ -74,7 +78,7 @@ async def synthesize(request: Request):
         in all_constraints
     ]
 
-    prune = PRUNING_METHODS[request_json.get('method', 'none')]()
+    prune = PRUNING_METHODS[request_json.get('method', 'none')](examples)
 
     pruned_constraints = prune(trained_constraints)
 
