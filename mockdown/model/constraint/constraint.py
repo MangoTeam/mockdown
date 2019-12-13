@@ -12,6 +12,11 @@ from mockdown.model import AnchorID, IAnchor, IView
 
 ISCLOSE_TOLERANCE = 0.01  # maximum difference of 1%
 
+PRIORITY_REQUIRED = (1000, 1000, 1000)
+PRIORITY_STRONG = (1, 0, 0)
+PRIORITY_MEDIUM = (0, 1, 0)
+PRIORITY_WEAK = (0, 0, 1)
+
 @dataclass(frozen=True)
 class IConstraint(ABC):
     """
@@ -28,7 +33,7 @@ class IConstraint(ABC):
 
     op: {operator.eq, operator.le, operator.ge} = field(default=operator.eq)
 
-    priority: tuple = field(default=(1000, 1000, 1000))
+    priority: tuple = field(default=PRIORITY_REQUIRED)
     sample_count: int = field(default=0)
 
     is_falsified: bool = field(default=False)
