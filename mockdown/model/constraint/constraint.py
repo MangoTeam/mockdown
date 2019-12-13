@@ -28,7 +28,7 @@ class IConstraint(ABC):
 
     op: {operator.eq, operator.le, operator.ge} = field(default=operator.eq)
 
-    priority: int = field(default=1000)
+    priority: tuple = field(default=(1000, 1000, 1000))
     sample_count: int = field(default=0)
 
     is_falsified: bool = field(default=False)
