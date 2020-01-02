@@ -1,4 +1,4 @@
-from typing import Iterable, Callable, Dict, List
+from typing import Iterable, Callable, Dict, List, AbstractSet
 
 import uvicorn
 from starlette.applications import Starlette
@@ -17,10 +17,135 @@ from mockdown.model.constraint import IConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.visibility import visible_pairs
 
+
+import z3
+
 import dominate.tags as html
 
 PruningMethod = Callable[[List[IConstraint]], List[IConstraint]]
 PruningMethodFactory = Callable[[List[IView]], PruningMethod]
+
+
+class Conformance:
+    @property
+    def width(self) -> int:
+        return self.__w
+    @property
+    def height(self) -> int:
+        return self.__h
+
+    # TODO: do we need x/y in top-level conformances? right now they're always 0
+    @property
+    def x(self) -> int:
+        return self.__x
+    @property
+    def y(self) -> int:
+        return self.__y
+
+    def __str__(self):
+        return "{x: %i, y: %i, h: %i, w: %i}" % (self.x, self.y, self.height, self.width)
+
+    def __init__(self, x: int, y: int, h: int, w: int):
+        self.__w = w
+        self.__h = h
+        self.__x = x
+        self.__y = y
+
+class BlackBoxPruner(PruningMethod):
+
+    def __init__(self, examples: List[IView]):
+
+        heights = [v.height for v in examples]
+        widths = [v.width for v in examples]
+
+        min_h, max_h = min(heights), max(heights)
+        min_w, max_w = min(widths), max(widths)
+
+        self.min_conf = Conformance(0,0, min_h, min_w)
+        self.max_conf = Conformance(0,0, max_h, max_w)
+
+        self.top_width = examples[0].width_anchor
+        self.top_height = examples[0].height_anchor
+        self.top_x = examples[0].left_anchor
+        self.top_y = examples[0].top_anchor
+
+        self.examples = set()
+
+    def genExtraConformances(self) -> AbstractSet[Conformance]:
+        # print('')
+        # create 10 evenly spaced conformances on the range [min height/width...max height/width]
+        extras = set()
+        scale = 10
+        diff_h = (self.max_conf.height - self.min_conf.height)/scale
+        diff_w = (self.max_conf.width - self.min_conf.width)/scale
+        for step in range(0,scale):
+            new_c = Conformance(0, 0, self.min_conf.height + diff_h * step, self.min_conf.width + diff_w * step)
+            # print('adding:', new_c)
+            extras.add(new_c)
+        # print('orig:')
+        # print(self.min_conf)
+        # print(self.max_conf)
+        # print('extras:')
+        # print(str(extras))
+        return extras
+
+    def __call__(self, constraints: List[IConstraint]):
+
+        # build up all of the constraints as Z3 objects
+
+        idents = set()
+        solver = z3.Optimize()
+        namesMap = {}
+
+        confs = self.genExtraConformances()
+
+
+        
+        for constrIdx, constr in enumerate(constraints):
+            cvname = "constr_var" + str(constrIdx)
+            cvar = z3.Bool(cvname)
+
+            namesMap[cvname] = constr
+            solver.add_soft(cvar)
+
+            for confIdx, conf in enumerate(confs):
+                # print("adding:", z3.Implies(cvar, constr.to_z3_expr(confIdx)))
+            
+                solver.add(z3.Implies(cvar, constr.to_z3_expr(confIdx)))
+                
+                top_x_v = z3.Real(str(self.top_x) + "_" + str(confIdx))
+                top_y_v = z3.Real(str(self.top_y) + "_" + str(confIdx))
+                top_w_v = z3.Real(str(self.top_width) + "_" + str(confIdx))
+                top_h_v = z3.Real(str(self.top_height) + "_" + str(confIdx))
+
+                solver.add(top_x_v == conf.x, top_y_v == conf.y)
+                solver.add(top_w_v == conf.width, top_h_v == conf.height)
+
+        # solver.check()
+        chk = solver.check()
+        if (str(chk) is 'sat'):
+            # print("result:")
+            # print(solver.model())
+
+            constrValues = [v for v in solver.model().decls() if v.name() in namesMap]
+            output = [namesMap[v.name()] for v in constrValues if bool(v.as_ast())]
+            # print(output)
+            return output
+        elif (str(chk) is 'unsat'):
+            print('unsat!')
+            # solver.unsat_core()
+            print(solver.unsat_core())
+        else:
+            print('unknown: ', chk)
+        
+        # print("constraints:")
+        # print(namesMap)
+        
+            
+
+        return constraints
+
+
 
 
 class FancyPruning(PruningMethod):
@@ -36,7 +161,7 @@ This dictionary contains *factories* that produce pruning methods!
 """
 PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
     'none': lambda _: (lambda constraints: constraints),
-    # 'baseline': None  # put it here
+    'baseline': BlackBoxPruner,  # put it here
     'fancy': FancyPruning
 }
 
@@ -78,7 +203,7 @@ async def synthesize(request: Request):
         in all_constraints
     ]
 
-    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples)
+    prune = PRUNING_METHODS[request_json.get('pruning', 'baseline')](examples)
 
     pruned_constraints = prune(trained_constraints)
 

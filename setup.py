@@ -8,7 +8,7 @@ with open(path.join(project_dir, 'README.md'), encoding='utf-8') as f:
 setup(
     name='mockdown',
     version='0.0.1',
-    packages=['mockdown'],
+    packages=['mockdown', 'mockdown.display'],
     url='https://github.com/MangoTeam/mockdown',
     license='MIT',
 
@@ -25,6 +25,8 @@ setup(
         'intervaltree',
         'more-itertools',
         'pyswip',
+        'z3-solver',
+        'pandas'
     ],
     include_package_data=True,
 

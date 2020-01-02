@@ -10,6 +10,8 @@ import pandas as pd
 
 from mockdown.model import AnchorID, IAnchor, IView
 
+import z3
+
 ISCLOSE_TOLERANCE = 0.01  # maximum difference of 1%
 
 PRIORITY_REQUIRED = (1000, 1000, 1000)
@@ -53,6 +55,14 @@ class IConstraint(ABC):
 
         return (f"{str(self.y)} {op_str} {a_str}{str(self.x)}{b_str}"
                 f"(priority={self.priority}, samples={self.sample_count}, kind={self.kind})")
+
+    def to_z3_expr(self, suff: int):
+        yv = z3.Real(str(self.y) + "_" + str(suff))
+        if self.x:
+            xv = z3.Real(str(self.x) + "_" + str(suff))
+            return yv == z3.RealVal(self.a) * xv + z3.RealVal(self.b)
+        else:
+            return yv == z3.RealVal(self.b)
 
     @property
     def is_abstract(self):
@@ -183,7 +193,7 @@ class PositionConstraint(IConstraint, ABC):
     def validate_constants(self):
         super().validate_constants()
         assert self.a == 1.0, \
-            "Position constraints musy not have not a non-identity multiplier."
+            "Position constraints must not have not a non-identity multiplier."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
         super().validate(x, y)
@@ -262,7 +272,7 @@ class RelativeSizeConstraint(SizeConstraint):
 
     def validate_constants(self):
         super().validate_constants()
-        assert math.isclose(self.b, 0, rel_tol=0.01), "Relatie size constraints must have b = 0."
+        assert math.isclose(self.b, 0, rel_tol=0.01), "Relative size constraints must have b = 0."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
         assert x.view.is_parent_of(y.view), "Relative size constraints' x must be the parent of y."

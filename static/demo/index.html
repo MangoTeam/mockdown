@@ -91,7 +91,7 @@
     const [inputEditor, outputEditor] = setupEditors(theme);
 
     function synthesize(examples) {
-        return fetch("/api/synthesize", {
+        return fetch("http://0.0.0.0:8000/api/synthesize", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
