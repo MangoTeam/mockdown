@@ -17,6 +17,7 @@ uvicorn = "*"
 starlette = "*"
 aiofiles = "*"
 timing-asgi = "*"
+z3-solver = "*"
 
 [requires]
 python_version = "3.7"
