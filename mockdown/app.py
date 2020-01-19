@@ -17,6 +17,8 @@ from mockdown.model.constraint import IConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.visibility import visible_pairs
 
+from dataclasses import dataclass
+
 
 import z3
 
@@ -25,31 +27,15 @@ import dominate.tags as html
 PruningMethod = Callable[[List[IConstraint]], List[IConstraint]]
 PruningMethodFactory = Callable[[List[IView]], PruningMethod]
 
-
+@dataclass(frozen=True)
 class Conformance:
-    @property
-    def width(self) -> int:
-        return self.__w
-    @property
-    def height(self) -> int:
-        return self.__h
+    width: int
+    height: int
 
     # TODO: do we need x/y in top-level conformances? right now they're always 0
-    @property
-    def x(self) -> int:
-        return self.__x
-    @property
-    def y(self) -> int:
-        return self.__y
+    x: int
+    y: int
 
-    def __str__(self):
-        return "{x: %i, y: %i, h: %i, w: %i}" % (self.x, self.y, self.height, self.width)
-
-    def __init__(self, x: int, y: int, h: int, w: int):
-        self.__w = w
-        self.__h = h
-        self.__x = x
-        self.__y = y
 
 class BlackBoxPruner(PruningMethod):
 
@@ -60,6 +46,8 @@ class BlackBoxPruner(PruningMethod):
 
         min_h, max_h = min(heights), max(heights)
         min_w, max_w = min(widths), max(widths)
+        # min_w, max_w = 348, 900 # YOGA
+        # min_w, max_w = 400, 900 # SANITY
 
         self.min_conf = Conformance(0,0, min_h, min_w)
         self.max_conf = Conformance(0,0, max_h, max_w)
@@ -203,7 +191,7 @@ async def synthesize(request: Request):
         in all_constraints
     ]
 
-    prune = PRUNING_METHODS[request_json.get('pruning', 'baseline')](examples)
+    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples)
 
     pruned_constraints = prune(trained_constraints)
 

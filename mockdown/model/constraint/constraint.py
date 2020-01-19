@@ -250,7 +250,7 @@ class AbsoluteSizeConstraint(SizeConstraint):
             "Absolute size constraints must only have one anchor."
 
     def train(self, x: Optional[IAnchor], y: IAnchor):
-        super().train(x, y)
+        self = super().train(x, y)
 
         new_b = y.value
 
@@ -280,9 +280,13 @@ class RelativeSizeConstraint(SizeConstraint):
         super().validate(x, y)
 
     def train(self, x: Optional[IAnchor], y: IAnchor):
-        super().train(x, y)
+        self = super().train(x, y)
 
         is_falsified = self.is_falsified
+        if x.value == 0:
+            print('error: zero x value in constraint', self.to_dict())
+            assert False
+        
         new_a = y.value / x.value
 
         if not self.is_abstract:
