@@ -43,6 +43,22 @@ class IConstraint(ABC):
     def __post_init__(self):
         self.validate_constants()
 
+    def shortStr(self):
+        op_str = {
+            operator.eq: '=',
+            operator.le: '≤',
+            operator.ge: '≥'
+        }[self.op]
+
+        if self.x:
+            a_str = "" if self.a == 1.0 else f"{self.a} * "
+            b_str = "" if self.b == 0 else f" {'+' if self.b >= 0 else '-'} {abs(self.b)}"
+            return f"{str(self.y)} {op_str} {a_str}{str(self.x)}{b_str}"
+        else:
+            return f"{str(self.y)} {op_str} {str(self.b)}"
+
+
+
     def __str__(self):
         op_str = {
             operator.eq: '=',
@@ -57,9 +73,9 @@ class IConstraint(ABC):
                 f"(priority={self.priority}, samples={self.sample_count}, kind={self.kind})")
 
     def to_z3_expr(self, suff: int):
-        yv = z3.Real(str(self.y) + "_" + str(suff))
+        yv = self.y.to_z3_var(suff)
         if self.x:
-            xv = z3.Real(str(self.x) + "_" + str(suff))
+            xv = self.x.to_z3_var(suff)
             return yv == z3.RealVal(self.a) * xv + z3.RealVal(self.b)
         else:
             return yv == z3.RealVal(self.b)

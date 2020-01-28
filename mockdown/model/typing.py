@@ -7,6 +7,8 @@ from typing import Tuple, List, Optional, Iterator, NamedTuple
 
 from mockdown.model.attribute import Attribute
 
+import z3
+
 
 class Rect(NamedTuple):
     left: int
@@ -33,6 +35,9 @@ class AnchorID:
     def __iter__(self):
         return iter([self.view_name, self.attribute])
 
+    def to_z3_var(self, idx: int):
+        return z3.Real(str(self) + "_" + str(idx))
+
 
 @dataclass(frozen=True)
 class IAnchor(metaclass=ABCMeta):
@@ -54,6 +59,9 @@ class IAnchor(metaclass=ABCMeta):
     @property
     @abstractmethod
     def edge(self) -> IEdge: ...
+
+    def to_z3_var(self, idx: int):
+        return self.identifier.to_z3_var(idx)
 
 
 @dataclass(frozen=True)
