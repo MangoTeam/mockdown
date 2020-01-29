@@ -24,8 +24,8 @@ def visible_pair_style(pair: Tuple[IEdge, IEdge], scale=1):
     style_args = (e1.position, e2.position, midpoint)
     style_kwargs = {'scale': scale}
 
-    lr_attrs = {Attribute.LEFT, Attribute.RIGHT}
-    tb_attrs = {Attribute.TOP, Attribute.BOTTOM}
+    lr_attrs = {Attribute.LEFT, Attribute.RIGHT, Attribute.CENTER_X}
+    tb_attrs = {Attribute.TOP, Attribute.BOTTOM, Attribute.CENTER_Y}
 
     if e1.attribute in lr_attrs:
         assert e2.attribute in lr_attrs

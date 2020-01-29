@@ -22,4 +22,4 @@ class Edge(IEdge):
         assert self.interval[0] <= self.interval[1]
 
     def __repr__(self):
-        return f"{self.view.name}.{self.attribute} {self.interval} @ {self.position}"
+        return f"{self.view.name}.{self.attribute.value} {self.interval} @ {self.position}"

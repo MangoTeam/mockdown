@@ -85,6 +85,7 @@ def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
             if pair[0].view.name == pair[1].view.name:
                 continue
             pairs.append(pair)
+            pairs.append((pair[0].view.center_y_edge, pair[1].view.center_y_edge))
 
     for y_ev in y_events:
         # Cast a horizontal line through vertical intervals.
@@ -95,6 +96,7 @@ def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
             if pair[0].view.name == pair[1].view.name:
                 continue
             pairs.append(pair)
+            pairs.append((pair[0].view.center_x_edge, pair[1].view.center_x_edge))
 
     if deep:
         for child in children:
