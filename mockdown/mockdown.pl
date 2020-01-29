@@ -32,8 +32,10 @@ size(height).
 
 horizontal(left).
 horizontal(right).
+horizontal(center_x).
 vertical(top).
 vertical(bottom).
+vertical(center_y).
 
 anchor(V, A) :- view(V), attr(A).
 

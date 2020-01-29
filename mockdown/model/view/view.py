@@ -75,12 +75,20 @@ class View(IView):
         return Anchor(self, Attribute.CENTER_X)
 
     @property
+    def center_x_edge(self) -> IEdge:
+        return Edge(self.center_x_anchor, (self.top, self.bottom))
+
+    @property
     def center_y(self) -> int:
         return (self.top + self.bottom) // 2
 
     @property
     def center_y_anchor(self):
         return Anchor(self, Attribute.CENTER_Y)
+
+    @property
+    def center_y_edge(self) -> IEdge:
+        return Edge(self.center_y_anchor, (self.left, self.right))
 
     @property
     def width(self):
