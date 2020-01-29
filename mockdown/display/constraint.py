@@ -37,7 +37,7 @@ def alignment_constraint_style(constraint: IConstraint, view: IView, scale=1):
     style_args = [union[0], union[1]]
     style_kwargs = {'scale': scale}
 
-    if e1.attribute in {Attribute.LEFT, Attribute.RIGHT}:
+    if e1.attribute in {Attribute.LEFT, Attribute.RIGHT, Attribute.CENTER_X}:
         if e1.attribute is Attribute.LEFT:
             position = min(e1.position, e2.position)
             style_args.append(position)
@@ -46,14 +46,22 @@ def alignment_constraint_style(constraint: IConstraint, view: IView, scale=1):
             position = max(e1.position, e2.position)
             style_args.append(position)
 
+        if e1.attribute is Attribute.CENTER_X:
+            position = (e1.position + e2.position) / 2
+            style_args.append(position)
+
         style.append(vertical_line_style(*style_args, **style_kwargs))
-    elif e1.attribute in {Attribute.TOP, Attribute.BOTTOM}:
+    elif e1.attribute in {Attribute.TOP, Attribute.BOTTOM, Attribute.CENTER_Y}:
         if e1.attribute is Attribute.TOP:
             position = min(e1.position, e2.position)
             style_args.append(position)
 
         if e1.attribute is Attribute.BOTTOM:
             position = max(e1.position, e2.position)
+            style_args.append(position)
+
+        if e1.attribute is Attribute.CENTER_Y:
+            position = (e1.position + e2.position) / 2
             style_args.append(position)
 
         style.append(horizontal_line_style(*style_args, **style_kwargs))

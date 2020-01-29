@@ -182,6 +182,7 @@ class IConstraint(ABC):
 
     @classmethod
     def from_dict(cls, d):
+        d = {**d}
         kind = d.pop('kind')
 
         x_id = AnchorID.from_str(d.pop('x'))

@@ -157,11 +157,19 @@ class IView(metaclass=ABCMeta):
 
     @property
     @abstractmethod
+    def center_x_edge(self) -> IEdge: ...
+
+    @property
+    @abstractmethod
     def center_y(self) -> int: ...
 
     @property
     @abstractmethod
     def center_y_anchor(self) -> IAnchor: ...
+
+    @property
+    @abstractmethod
+    def center_y_edge(self) -> IEdge: ...
 
     @property
     @abstractmethod
