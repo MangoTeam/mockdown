@@ -7,7 +7,8 @@ from pyswip import Prolog
 from mockdown.model import IView, IAnchor, AnchorID
 from mockdown.model.attribute import Attribute
 from mockdown.model.constraint import SpacingConstraint, AlignmentConstraint, IConstraint
-from mockdown.model.constraint.constraint import AbsoluteSizeConstraint, RelativeSizeConstraint
+from mockdown.model.constraint.constraint import AbsoluteSizeConstraint, RelativeSizeConstraint, \
+    AspectRatioSizeConstraint
 
 
 def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) \
@@ -41,6 +42,12 @@ def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]]) 
             prolog.assertz(f"visible({a1_term}, {a2_term})")
 
         # todo: Post-process output? Necessary?
+
+        for answer in prolog.query("aspect_ratio_size(V)"):
+            v, = [answer[k] for k in ('V',)]
+            yield AspectRatioSizeConstraint(x=AnchorID(v, Attribute('height')),
+                                            y=AnchorID(v, Attribute('width')),
+                                            op=operator.eq)
 
         for answer in prolog.query("absolute_size(V, A)"):
             v, a = [answer[k] for k in ('V', 'A')]

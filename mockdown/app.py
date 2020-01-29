@@ -17,7 +17,6 @@ from mockdown.model.constraint import IConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.visibility import visible_pairs
 
-
 import z3
 
 import dominate.tags as html
@@ -30,6 +29,7 @@ class Conformance:
     @property
     def width(self) -> int:
         return self.__w
+
     @property
     def height(self) -> int:
         return self.__h
@@ -38,6 +38,7 @@ class Conformance:
     @property
     def x(self) -> int:
         return self.__x
+
     @property
     def y(self) -> int:
         return self.__y
@@ -51,6 +52,7 @@ class Conformance:
         self.__x = x
         self.__y = y
 
+
 class BlackBoxPruner(PruningMethod):
 
     def __init__(self, examples: List[IView]):
@@ -61,8 +63,8 @@ class BlackBoxPruner(PruningMethod):
         min_h, max_h = min(heights), max(heights)
         min_w, max_w = min(widths), max(widths)
 
-        self.min_conf = Conformance(0,0, min_h, min_w)
-        self.max_conf = Conformance(0,0, max_h, max_w)
+        self.min_conf = Conformance(0, 0, min_h, min_w)
+        self.max_conf = Conformance(0, 0, max_h, max_w)
 
         self.top_width = examples[0].width_anchor
         self.top_height = examples[0].height_anchor
@@ -76,9 +78,9 @@ class BlackBoxPruner(PruningMethod):
         # create 10 evenly spaced conformances on the range [min height/width...max height/width]
         extras = set()
         scale = 10
-        diff_h = (self.max_conf.height - self.min_conf.height)/scale
-        diff_w = (self.max_conf.width - self.min_conf.width)/scale
-        for step in range(0,scale):
+        diff_h = (self.max_conf.height - self.min_conf.height) / scale
+        diff_w = (self.max_conf.width - self.min_conf.width) / scale
+        for step in range(0, scale):
             new_c = Conformance(0, 0, self.min_conf.height + diff_h * step, self.min_conf.width + diff_w * step)
             # print('adding:', new_c)
             extras.add(new_c)
@@ -99,8 +101,6 @@ class BlackBoxPruner(PruningMethod):
 
         confs = self.genExtraConformances()
 
-
-        
         for constrIdx, constr in enumerate(constraints):
             cvname = "constr_var" + str(constrIdx)
             cvar = z3.Bool(cvname)
@@ -110,9 +110,9 @@ class BlackBoxPruner(PruningMethod):
 
             for confIdx, conf in enumerate(confs):
                 # print("adding:", z3.Implies(cvar, constr.to_z3_expr(confIdx)))
-            
+
                 solver.add(z3.Implies(cvar, constr.to_z3_expr(confIdx)))
-                
+
                 top_x_v = z3.Real(str(self.top_x) + "_" + str(confIdx))
                 top_y_v = z3.Real(str(self.top_y) + "_" + str(confIdx))
                 top_w_v = z3.Real(str(self.top_width) + "_" + str(confIdx))
@@ -137,15 +137,11 @@ class BlackBoxPruner(PruningMethod):
             print(solver.unsat_core())
         else:
             print('unknown: ', chk)
-        
+
         # print("constraints:")
         # print(namesMap)
-        
-            
 
         return constraints
-
-
 
 
 class FancyPruning(PruningMethod):

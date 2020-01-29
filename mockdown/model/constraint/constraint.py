@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import math
 import operator
-from abc import ABCMeta, abstractmethod, ABC
-from dataclasses import dataclass, field, replace, asdict, fields
+from abc import abstractmethod, ABC
+from dataclasses import dataclass, field, replace, fields
 from typing import Optional, Iterable, Tuple, List
 
-import pandas as pd
+import z3
 
 from mockdown.model import AnchorID, IAnchor, IView
-
-import z3
+from mockdown.model.attribute import Attribute
 
 ISCLOSE_TOLERANCE = 0.01  # maximum difference of 1%
 
@@ -18,6 +17,7 @@ PRIORITY_REQUIRED = (1000, 1000, 1000)
 PRIORITY_STRONG = (1, 0, 0)
 PRIORITY_MEDIUM = (0, 1, 0)
 PRIORITY_WEAK = (0, 0, 1)
+
 
 @dataclass(frozen=True)
 class IConstraint(ABC):
@@ -70,7 +70,8 @@ class IConstraint(ABC):
 
     @property
     @abstractmethod
-    def kind(self): ...
+    def kind(self):
+        ...
 
     def validate_constants(self):
         assert self.a >= 0, "Constraints must have positive multipliers."
@@ -85,8 +86,8 @@ class IConstraint(ABC):
         if x is not None:
             xv, yv = x.view, y.view
 
-            assert xv.is_sibling_of(yv) or xv.is_parent_of(yv) or xv.is_child_of(yv), \
-                "Constraints must be between siblings or parent/children."
+            assert xv.is_sibling_of(yv) or xv.is_parent_of(yv) or xv.is_child_of(yv) or xv == yv, \
+                "Constraints must be between siblings or parent/children (or be the same element)."
 
             xa, ya = x.attribute, y.attribute
 
@@ -275,9 +276,43 @@ class RelativeSizeConstraint(SizeConstraint):
         assert math.isclose(self.b, 0, rel_tol=0.01), "Relative size constraints must have b = 0."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
+        super().validate(x, y)
         assert x.view.is_parent_of(y.view), "Relative size constraints' x must be the parent of y."
         assert x.attribute == y.attribute, "Relative size constraints should be between the same attribute."
+
+    def train(self, x: Optional[IAnchor], y: IAnchor):
+        super().train(x, y)
+
+        is_falsified = self.is_falsified
+        new_a = y.value / x.value
+
+        if not self.is_abstract:
+            if self.op == operator.eq:
+                if not math.isclose(self.a, new_a):
+                    new_a = self.a
+                    is_falsified = True
+            if self.op == operator.le:
+                new_a = max(self.a, new_a)
+            if self.op == operator.ge:
+                new_a = min(self.a, new_a)
+
+        return replace(self, a=new_a, is_falsified=is_falsified, sample_count=self.sample_count + 1)
+
+
+class AspectRatioSizeConstraint(SizeConstraint):
+    @property
+    def kind(self):
+        return "aspect_ratio"
+
+    def validate_constants(self):
+        super().validate_constants()
+        assert self.b == 0, "Aspect ratio constraints should not have a constant offset."  # negotiable
+
+    def validate(self, x: Optional[IAnchor], y: IAnchor):
         super().validate(x, y)
+        assert x.view == y.view, "Aspect ratio constraints are between two anchors of the same view."
+        assert y.attribute == Attribute.WIDTH and x.attribute == Attribute.HEIGHT, \
+            "Aspect ratio constraints are always between width and height (in that order!)"
 
     def train(self, x: Optional[IAnchor], y: IAnchor):
         super().train(x, y)
@@ -296,6 +331,3 @@ class RelativeSizeConstraint(SizeConstraint):
                 new_a = max(self.a, new_a)
 
         return replace(self, a=new_a, is_falsified=is_falsified, sample_count=self.sample_count + 1)
-
-
-
