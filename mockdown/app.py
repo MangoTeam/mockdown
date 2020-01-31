@@ -81,7 +81,7 @@ async def synthesize(request: Request):
 
     lo, hi = request_json['lower'], request_json['upper']
 
-    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, (lo, hi))
+    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
 
     pruned_constraints = prune(trained_constraints)
 
