@@ -14,7 +14,7 @@ from timing_asgi.integrations import StarletteScopeToName
 from mockdown.display.view import display_view
 from mockdown.logic import valid_constraints
 from mockdown.model import IView
-from mockdown.model.constraint import IConstraint
+from mockdown.model.constraint import IConstraint, PositionConstraint, RelativeSizeConstraint, AspectRatioSizeConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.visibility import visible_pairs
 
@@ -93,6 +93,30 @@ class BlackBoxPruner(PruningMethod):
 
         return
         
+    def isWhole(self, c: IConstraint):
+        steps = [0.05 * x for x in range(20)]
+        bestDiff = min([abs(s - c.a) for s in steps])
+        return bestDiff <= 0.01
+    def buildBiases(self, constraints: List[IConstraint]):
+        default = {c: 1 for c in constraints}
+
+        # aspect > position > scaling
+        for c in constraints:
+            score = 10
+            if isinstance(c, AspectRatioSizeConstraint):
+                score = 10000
+            elif isinstance(c, RelativeSizeConstraint):
+                if self.isWhole(c):
+                    score = 1000000
+                else:
+                    score = 100
+            elif isinstance(c, PositionConstraint):
+                score = 1000
+            
+            if c.is_falsified:
+                score = 1
+            default[c] = score
+        return default
 
     def __call__(self, constraints: List[IConstraint]):
 
@@ -102,6 +126,7 @@ class BlackBoxPruner(PruningMethod):
         solver = z3.Optimize()
 
         namesMap = {}
+        biases = self.buildBiases(constraints)
 
         confs = self.genExtraConformances()
 
@@ -125,7 +150,8 @@ class BlackBoxPruner(PruningMethod):
             cvar = z3.Bool(cvname)
 
             namesMap[cvname] = constr
-            solver.add_soft(cvar)
+            solver.add_soft(cvar, biases[constr])
+            # solver.add_soft(cvar)
 
             for confIdx in range(len(confs)):
                 solver.add(z3.Implies(cvar, constr.to_z3_expr(confIdx)))
@@ -136,9 +162,9 @@ class BlackBoxPruner(PruningMethod):
 
             constrValues = [v for v in solver.model().decls() if v.name() in namesMap]
             output = [namesMap[v.name()] for v in constrValues if solver.model().get_interp(v)]
-            # pruned = [c.shortStr() for c in constraints if c not in output]
-            # print('output: ', [o.shortStr() for o in output])
-            # print('pruned: ', pruned)
+            pruned = [c.shortStr() for c in constraints if c not in output]
+            print('output: ', [o.shortStr() for o in output])
+            print('pruned: ', pruned)
             
             return output
         elif (str(chk) is 'unsat'):
@@ -174,6 +200,7 @@ PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
 async def synthesize(request: Request):
     request_json = await request.json()
     examples_json = request_json['examples']
+    # print(examples_json)
    
 
     # Product a list of examples (IView's).
@@ -207,6 +234,7 @@ async def synthesize(request: Request):
         constraint.train_view_many(*examples)
         for constraint
         in all_constraints
+        
     ]
 
     lo, hi = request_json['lower'], request_json['upper']

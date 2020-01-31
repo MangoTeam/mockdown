@@ -19,7 +19,7 @@ PRIORITY_MEDIUM = (0, 1, 0)
 PRIORITY_WEAK = (0, 0, 1)
 
 
-@dataclass(frozen=True)
+@dataclass(eq=True, frozen=True)
 class IConstraint(ABC):
     """
     A general constraint of the form y = a * x + b.
