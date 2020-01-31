@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Tuple
+from typing import Dict, List
 
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -15,12 +15,10 @@ from mockdown.model import IView
 from mockdown.model.constraint import IConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.pruning.blackbox import BlackBoxPruner
+from mockdown.pruning.typing import PruningMethod, PruningMethodFactory
 from mockdown.visibility import visible_pairs
 
 import dominate.tags as html
-
-PruningMethod = Callable[[List[IConstraint]], List[IConstraint]]
-PruningMethodFactory = Callable[[List[IView], Tuple[int, int]], PruningMethod]
 
 
 class FancyPruning(PruningMethod):

@@ -2,7 +2,7 @@ from typing import List, AbstractSet
 
 import z3
 
-from mockdown.app import PruningMethod
+from mockdown.pruning.typing import PruningMethod
 from mockdown.model import IView
 from mockdown.model.conformance import Conformance
 from mockdown.model.constraint import IConstraint
