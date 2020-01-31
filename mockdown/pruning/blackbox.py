@@ -2,6 +2,7 @@ from typing import List, AbstractSet
 
 import z3
 
+from mockdown.model.bounds import SizeBounds
 from mockdown.pruning.typing import PruningMethod
 from mockdown.model import IView
 from mockdown.model.conformance import Conformance
@@ -10,14 +11,17 @@ from mockdown.model.constraint import IConstraint
 
 class BlackBoxPruner(PruningMethod):
 
-    def __init__(self, examples: List[IView], dimensions: (int, int)):
+    def __init__(self, examples: List[IView], bounds: SizeBounds):
 
         heights = [v.height for v in examples]
         widths = [v.width for v in examples]
 
         min_h, max_h = min(heights), max(heights)
         # min_w, max_w = min(widths), max(widths)
-        min_w, max_w = dimensions
+        min_w, max_w = bounds.min_w, bounds.max_w
+
+        assert min_w, "Must provide minimum width for blackbox pruning."
+        assert max_w, "Must provixe maximum width for blackbox pruning."
 
         self.min_conf = Conformance(min_w, min_h, 0, 0)
         self.max_conf = Conformance(max_w, max_h, 0, 0)

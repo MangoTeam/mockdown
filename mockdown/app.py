@@ -12,6 +12,7 @@ from timing_asgi.integrations import StarletteScopeToName
 from mockdown.display.view import display_view
 from mockdown.logic import valid_constraints
 from mockdown.model import IView
+from mockdown.model.bounds import get_bounds
 from mockdown.model.constraint import IConstraint
 from mockdown.model.view import ViewBuilder
 from mockdown.pruning.blackbox import BlackBoxPruner
@@ -40,9 +41,10 @@ PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
 
 
 async def synthesize(request: Request):
-    request_json = await request.json()
-    examples_json = request_json['examples']
-   
+    request_json: dict = await request.json()
+    examples_json: List[dict] = request_json['examples']
+
+    bounds = get_bounds(request.get('bounds', None))
 
     # Product a list of examples (IView's).
     examples = [
@@ -80,7 +82,6 @@ async def synthesize(request: Request):
     lo, hi = request_json['lower'], request_json['upper']
 
     prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, (lo, hi))
-    
 
     pruned_constraints = prune(trained_constraints)
 
