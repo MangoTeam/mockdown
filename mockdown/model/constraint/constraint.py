@@ -298,7 +298,7 @@ class RelativeSizeConstraint(SizeConstraint):
 
     def validate_constants(self):
         super().validate_constants()
-        assert math.isclose(self.b, 0, rel_tol=0.01), "Relative size constraints must have b = 0."
+        assert math.isclose(self.b, 0), "Relative size constraints must have b = 0."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
         super().validate(x, y)
