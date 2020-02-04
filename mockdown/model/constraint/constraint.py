@@ -74,11 +74,19 @@ class IConstraint(ABC):
 
     def to_z3_expr(self, suff: int):
         yv = self.y.to_z3_var(suff)
+        rhs = self.b
+
+        if not (self.op == operator.eq):
+            # print('adding fudge factor')
+            if (self.op == operator.ge):
+                rhs -= ISCLOSE_TOLERANCE
+            else:
+                rhs += ISCLOSE_TOLERANCE
         if self.x:
             xv = self.x.to_z3_var(suff)
-            return yv == z3.RealVal(self.a) * xv + z3.RealVal(self.b)
+            return self.op(yv, xv * self.a + rhs)
         else:
-            return yv == z3.RealVal(self.b)
+            return self.op(yv, rhs)
 
     @property
     def is_abstract(self):

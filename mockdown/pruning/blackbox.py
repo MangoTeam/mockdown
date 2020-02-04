@@ -6,7 +6,7 @@ from mockdown.model.bounds import SizeBounds
 from mockdown.pruning.typing import PruningMethod
 from mockdown.model import IView
 from mockdown.model.conformance import Conformance
-from mockdown.model.constraint import IConstraint, AspectRatioSizeConstraint, RelativeSizeConstraint, PositionConstraint
+from mockdown.model.constraint import *
 
 class BlackBoxPruner(PruningMethod):
 
@@ -15,10 +15,10 @@ class BlackBoxPruner(PruningMethod):
         heights = [v.height for v in examples]
         widths = [v.width for v in examples]
 
-        min_w = bounds.min_w if bounds.min_w else min(widths)
-        max_w = bounds.max_w if bounds.max_w else max(widths)
-        min_h = bounds.min_h if bounds.min_h else min(heights)
-        max_h = bounds.max_h if bounds.max_h else max(heights)
+        min_w = bounds.min_w or min(widths)
+        max_w = bounds.max_w or max(widths)
+        min_h = bounds.min_h or min(heights)
+        max_h = bounds.max_h or max(heights)
 
         self.min_conf = Conformance(min_w, min_h, 0,0)
         self.max_conf = Conformance(max_w, max_h, 0,0)
@@ -28,12 +28,14 @@ class BlackBoxPruner(PruningMethod):
 
         assert len(examples) > 0, "Pruner requires non-empty training examples"
 
-        self.top_width = examples[0].width_anchor
-        self.top_height = examples[0].height_anchor
-        self.top_x = examples[0].left_anchor
-        self.top_y = examples[0].top_anchor
-
         self.example = examples[0]
+
+        self.top_width = self.example.width_anchor
+        self.top_height = self.example.height_anchor
+        self.top_x = self.example.left_anchor
+        self.top_y = self.example.top_anchor
+
+        
 
     def genExtraConformances(self) -> AbstractSet[Conformance]:
         # create 10 evenly spaced conformances on the range [min height/width...max height/width]
@@ -51,7 +53,11 @@ class BlackBoxPruner(PruningMethod):
 
     # add axioms for width = right - left, width >= 0, height = bottom - top, height >= 0
     # specialized to a particular conformance
+
+    # return a map from asserted layout axioms to explanatory strings
     def addLayoutAxioms(self, solver: z3.Optimize, confIdx: int):
+
+        output = {}
 
         for box in self.example:
             w, h = box.width_anchor.to_z3_var(confIdx), box.height_anchor.to_z3_var(confIdx)
@@ -61,10 +67,38 @@ class BlackBoxPruner(PruningMethod):
             heightAx = h == (b - t)
 
             # print('adding axioms:', widthAx, heightAx, w>=0, h >= 0)
-            solver.add(widthAx, heightAx)
-            solver.add(w >= 0, h >= 0)
+            solver.assert_and_track(widthAx, "width_ax_%d" % confIdx)
+            output["width_ax_%d" % confIdx] = "%s = (%s - %s)" % (box.width_anchor.name, box.left_anchor.name, box.right_anchor.name)
+            solver.assert_and_track(heightAx, "height_ax_%d" % confIdx) 
+            output["height_ax_%d" % confIdx] = "%s = (%s - %s)" % (box.height_anchor.name, box.bottom_anchor.name, box.top_anchor.name)
+            # , heightAx
+            solver.assert_and_track(w >= 0, "pos_w_%d" % confIdx) 
+            solver.assert_and_track(h >= 0, "pos_w_%d" % confIdx) 
+            output["pos_w_%d" % confIdx] = "%s >= 0" % box.width_anchor.name
+            output["pos_h_%d" % confIdx] = "%s >= 0" % box.height_anchor.name
 
-        return
+        return output
+
+    def checkSanity(self, constraints: List[IConstraint]):
+        
+        confs = self.genExtraConformances()
+
+        print('checking constraints for sanity:', [x.shortStr() for x in constraints])
+
+        for confidx, conf in enumerate(confs):
+            solver = z3.Optimize()
+            self.addConfDims(solver, conf, confidx)
+            self.addLayoutAxioms(solver, confidx)
+            # solver.add
+            for c in constraints:
+                solver.add(c.to_z3_expr(confidx))
+
+            m = solver.model()
+            chk = solver.check()
+
+            print('result for', conf)
+            print(str(chk))
+
         
     def isWhole(self, c: IConstraint):
         steps = [0.05 * x for x in range(20)]
@@ -78,6 +112,7 @@ class BlackBoxPruner(PruningMethod):
         for c in constraints:
             score = 10
             if isinstance(c, AspectRatioSizeConstraint):
+                print(c, c.is_falsified)
                 score = 10000
             elif isinstance(c, RelativeSizeConstraint):
                 if self.isWhole(c):
@@ -87,10 +122,29 @@ class BlackBoxPruner(PruningMethod):
             elif isinstance(c, PositionConstraint):
                 score = 1000
             
+            # if (isinstance(c, ))
             if c.is_falsified:
-                score = 1
+                score = -1 # discard!
             default[c] = score
         return default
+
+    def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int):
+        output = {}
+
+        top_x_v = self.top_x.to_z3_var(confIdx)
+        top_y_v = self.top_y.to_z3_var(confIdx)
+        top_w_v = self.top_width.to_z3_var(confIdx)
+        top_h_v = self.top_height.to_z3_var(confIdx)
+        
+        solver.assert_and_track(top_w_v == conf.width, "top_w_%d" % conf.width)
+        solver.assert_and_track(top_h_v == conf.height, "top_h_%d" % conf.height)
+        solver.assert_and_track(top_x_v == conf.x, "top_x_%d" % conf.x)
+        solver.assert_and_track(top_y_v == conf.y, "top_y_%d" % conf.y)
+
+        output["top_w_%d" % conf.width] = str(top_w_v) + " = " + str(conf.width)
+        output["top_h_%d" % conf.height] = str(top_h_v) + " = " + str(conf.height)
+
+        return output
 
     def __call__(self, constraints: List[IConstraint]):
 
@@ -101,23 +155,15 @@ class BlackBoxPruner(PruningMethod):
 
         namesMap = {}
         biases = self.buildBiases(constraints)
+        axiomMap = {}
 
         confs = self.genExtraConformances()
 
         for confIdx, conf in enumerate(confs):
-            top_x_v = z3.Real(str(self.top_x.identifier) + "_" + str(confIdx))
-            top_y_v = z3.Real(str(self.top_y.identifier) + "_" + str(confIdx))
-            top_w_v = z3.Real(str(self.top_width.identifier) + "_" + str(confIdx))
-            top_h_v = z3.Real(str(self.top_height.identifier) + "_" + str(confIdx))
 
-            # print('adding top-level constraint', top_w_v, top_w_v == conf.width)
-
-            solver.add(top_x_v == conf.x, top_y_v == conf.y)
-            solver.add(top_w_v == conf.width, top_h_v == conf.height)
-
-            self.addLayoutAxioms(solver, confIdx)
-
-        
+            axiomMap = {**axiomMap, **self.addConfDims(solver, conf, confIdx)}
+            axiomMap = {**axiomMap, **self.addLayoutAxioms(solver, confIdx)}
+            
         
         for constrIdx, constr in enumerate(constraints):
             cvname = "constr_var" + str(constrIdx)
@@ -128,7 +174,24 @@ class BlackBoxPruner(PruningMethod):
 
             for confIdx in range(len(confs)):
                 solver.add(z3.Implies(cvar, constr.to_z3_expr(confIdx)))
+
+                # solver.assert_and_track(, cvar)
                 
+
+        sanitys = []
+        for constrIdx, constr in enumerate(constraints):
+            cvname = "constr_var" + str(constrIdx)
+            cvar = z3.Bool(cvname)
+
+            # captures = ['box0.center_x', 'box0.width']
+            captures = ['box0.height']
+            types = (AspectRatioSizeConstraint)
+
+            if str(constr.y) in captures and not isinstance(constr, types):
+                sanitys.append(constr)
+        # self.checkSanity(sanitys)
+
+
 
         chk = solver.check()
         if (str(chk) is 'sat'):
@@ -141,8 +204,12 @@ class BlackBoxPruner(PruningMethod):
             
             return output
         elif (str(chk) is 'unsat'):
+            # allConstraints = {**namesMap, **axiomMap}
+            incompat = [axiomMap[str(v)] for v in solver.unsat_core() if str(v) in axiomMap] + [namesMap[str(c)].shortStr() for c in solver.unsat_core() if str(c) in namesMap]
             print('unsat!')
-            print(solver.unsat_core())
+            print('core: ', solver.unsat_core())
+            print('pretty: ', incompat)
+            # print('values: ', [solver.model().get_interp(c.y) for c in incompat])
         else:
             print('unknown: ', chk)
 
