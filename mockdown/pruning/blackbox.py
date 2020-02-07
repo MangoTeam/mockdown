@@ -112,8 +112,8 @@ class BlackBoxPruner(PruningMethod):
         for c in constraints:
             score = 10
             if isinstance(c, AspectRatioSizeConstraint):
-                print(c, c.is_falsified)
-                score = 10000
+                # print(c, c.is_falsified)
+                score = 1 if c.is_falsified else 100000000
             elif isinstance(c, RelativeSizeConstraint):
                 if self.isWhole(c):
                     score = 1000000
@@ -124,7 +124,7 @@ class BlackBoxPruner(PruningMethod):
             
             # if (isinstance(c, ))
             if c.is_falsified:
-                score = -1 # discard!
+                score = 1 # discard!
             default[c] = score
         return default
 

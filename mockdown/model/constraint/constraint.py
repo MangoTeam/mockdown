@@ -298,7 +298,7 @@ class RelativeSizeConstraint(SizeConstraint):
 
     def validate_constants(self):
         super().validate_constants()
-        assert math.isclose(self.b, 0), "Relative size constraints must have b = 0."
+        assert math.isclose(self.b, 0, rel_tol=ISCLOSE_TOLERANCE), "Relative size constraints must have b = 0."
 
     def validate(self, x: Optional[IAnchor], y: IAnchor):
         super().validate(x, y)
@@ -317,7 +317,7 @@ class RelativeSizeConstraint(SizeConstraint):
 
         if not self.is_abstract:
             if self.op == operator.eq:
-                if not math.isclose(self.a, new_a):
+                if not math.isclose(self.a, new_a, rel_tol=ISCLOSE_TOLERANCE):
                     new_a = self.a
                     is_falsified = True
             if self.op == operator.le:
@@ -351,7 +351,7 @@ class AspectRatioSizeConstraint(SizeConstraint):
 
         if not self.is_abstract:
             if self.op == operator.eq:
-                if not math.isclose(self.a, new_a):
+                if not math.isclose(self.a, new_a, rel_tol=ISCLOSE_TOLERANCE):
                     new_a = self.a
                     is_falsified = True
             if self.op == operator.le:
