@@ -43,6 +43,10 @@ class IConstraint(ABC):
     def __post_init__(self):
         self.validate_constants()
 
+    # equal modulo operator and offset
+    def fuzzyEq(self, other: IConstraint):
+        return self.y == other.y and self.x == other.x
+
     def shortStr(self):
         op_str = {
             operator.eq: '=',

@@ -105,27 +105,61 @@ class BlackBoxPruner(PruningMethod):
         bestDiff = min([abs(s - c.a) for s in steps])
         return bestDiff <= 0.01
 
+    def makePairs(self, constraints: List[IConstraint]):
+        return [(c, cp) for c in constraints for cp in constraints if c.fuzzyEq(cp) and c.op != cp.op]
+
+
+
     def buildBiases(self, constraints: List[IConstraint]):
         default = {c: 1 for c in constraints}
 
-        # aspect > position > scaling
+        pairs = self.makePairs(constraints)
+        # print([(x.shortStr(), y.shortStr()) for (x,y) in pairs][0])
+
+
+        # reward specific constraints
         for c in constraints:
             score = 10
+            # aspect ratios and size constraints are specific the more samples behind them
             if isinstance(c, AspectRatioSizeConstraint):
                 # print(c, c.is_falsified)
                 score = 1 if c.is_falsified else 100 * c.sample_count
             elif isinstance(c, RelativeSizeConstraint):
+                # and doubly specific when the constants are nice
                 if self.isWhole(c):
                     score = 1000 * c.sample_count
                 else:
                     score = 100 * c.sample_count
+            # positions are specific if they're paired and the pairs are close together
             elif isinstance(c, PositionConstraint):
                 score = 1000
+                # for simplicity we update pairs after this loop
             
             # if (isinstance(c, ))
             if c.is_falsified:
                 score = 1 # discard!
             default[c] = score
+
+        for (l, r) in pairs:
+            if isinstance(l, PositionConstraint):
+                assert isinstance(r, PositionConstraint)
+
+                diff = l.b + r.b
+                # map > 500 => 10
+                # 0 => 10000
+                # everything else linearly
+                upper = 500
+                lower = 0
+                if diff > upper:
+                    score = 10
+                else:
+                    # a * upper + b = 10
+                    # a * 0 +  b = 10000
+                    # b = 10000, a  = -9990/upper
+                    score = (-9990)/upper * diff + 10000
+                    default[l] = score
+                    default[r] = score
+            
         return default
 
     def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int):
