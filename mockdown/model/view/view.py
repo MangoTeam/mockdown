@@ -16,7 +16,11 @@ class View(IView):
         return self.parent == view
 
     def is_sibling_of(self, view) -> bool:
-        return self.parent == view.parent
+        comp = self.parent == view.parent
+        if self.parent and view.parent and not comp: 
+            assert self.parent.name != view.parent.name, "unequal boxes with identical names %s, %s" % (self.parent.name, view.parent.name)
+
+        return comp
 
     @property
     def left(self) -> int:

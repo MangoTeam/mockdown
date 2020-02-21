@@ -114,8 +114,12 @@ class IConstraint(ABC):
         if x is not None:
             xv, yv = x.view, y.view
 
+            # if xv.parent and yv.parent: print(xv.parent.name == yv.parent.name)
+
+            # print(xv.is_sibling_of(yv))
+
             assert xv.is_sibling_of(yv) or xv.is_parent_of(yv) or xv.is_child_of(yv) or xv == yv, \
-                "Constraints must be between siblings or parent/children (or be the same element)."
+                "Constraint %s must be between siblings or parent/children (or be the same element): %s <> %s, parents : %s, %s" % (self.shortStr(), xv.name, yv.name, xv.parent.name, yv.parent.name)
 
             xa, ya = x.attribute, y.attribute
 
