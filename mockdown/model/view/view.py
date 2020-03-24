@@ -12,6 +12,9 @@ class View(IView):
     def is_parent_of(self, view) -> bool:
         return view.parent == self
 
+    def is_parent_of_name(self, vs: str) -> bool:
+        return len([x for x in self.children if x.name == vs]) == 1
+
     def is_child_of(self, view) -> bool:
         return self.parent == view
 

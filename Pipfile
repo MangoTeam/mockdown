@@ -18,6 +18,7 @@ starlette = "*"
 aiofiles = "*"
 timing-asgi = "*"
 z3-solver = "*"
+kiwisolver = "*"
 
 [requires]
 python_version = "3.7"

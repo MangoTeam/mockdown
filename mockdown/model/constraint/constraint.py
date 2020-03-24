@@ -7,6 +7,7 @@ from dataclasses import dataclass, field, replace, fields
 from typing import Optional, Iterable, Tuple, List
 
 import z3
+import kiwisolver
 
 from mockdown.model import AnchorID, IAnchor, IView
 from mockdown.model.attribute import Attribute
@@ -39,6 +40,9 @@ class IConstraint(ABC):
     sample_count: int = field(default=0)
 
     is_falsified: bool = field(default=False)
+
+    def vars(self):
+        return {self.y.view_name} | {self.x.view_name} if self.x is not None else {}
 
     def __post_init__(self):
         self.validate_constants()
@@ -76,9 +80,15 @@ class IConstraint(ABC):
         return (f"{str(self.y)} {op_str} {a_str}{str(self.x)}{b_str}"
                 f"(priority={self.priority}, samples={self.sample_count}, kind={self.kind})")
 
-    def to_z3_expr(self, suff: int):
-        yv = self.y.to_z3_var(suff)
+
+
+    def to_z3_expr(self, suff: int, linearize: bool):
+        yv = self.y.to_z3_var(suff, linearize)
         rhs = self.b
+
+        precision = 1000
+
+        clamp = lambda x: int(round(x, 3) * precision)
 
         if not (self.op == operator.eq):
             # print('adding fudge factor')
@@ -87,10 +97,26 @@ class IConstraint(ABC):
             else:
                 rhs += ISCLOSE_TOLERANCE
         if self.x:
-            xv = self.x.to_z3_var(suff)
-            return self.op(yv, xv * self.a + rhs)
+            xv = self.x.to_z3_var(suff, linearize)
+            if linearize:
+                return self.op(z3.IntVal(precision) * yv, xv * clamp(self.a) + clamp(rhs))
+            else:
+                return self.op(yv, xv * self.a + rhs)
         else:
-            return self.op(yv, rhs)
+            if linearize:
+                return self.op(z3.IntVal(precision) * yv, clamp(rhs))
+            else:
+                return self.op(yv, rhs)
+
+    def to_kiwi_constr(self, strength: str = 'required') -> kiwisolver.Constraint:
+        yv = kiwisolver.Variable(str(self.y))
+        if self.x:
+            xv = kiwisolver.Variable(str(self.x))
+            return (self.op(yv, xv * self.a) | strength)
+        else:
+            # print("me:", self)
+            return (self.op(yv, self.a) | strength)
+
 
     @property
     def is_abstract(self):

@@ -35,8 +35,11 @@ class AnchorID:
     def __iter__(self):
         return iter([self.view_name, self.attribute])
 
-    def to_z3_var(self, idx: int):
-        return z3.Real(str(self) + "_" + str(idx))
+    def to_z3_var(self, idx: int, linearize: bool):
+        if linearize:
+            return z3.Int(str(self) + "_" + str(idx))
+        else:
+            return z3.Real(str(self) + "_" + str(idx))
 
 
 @dataclass(frozen=True)
@@ -60,8 +63,8 @@ class IAnchor(metaclass=ABCMeta):
     @abstractmethod
     def edge(self) -> IEdge: ...
 
-    def to_z3_var(self, idx: int):
-        return self.identifier.to_z3_var(idx)
+    def to_z3_var(self, idx: int, linearize: bool):
+        return self.identifier.to_z3_var(idx, linearize)
 
 
 @dataclass(frozen=True)
@@ -92,6 +95,9 @@ class IView(metaclass=ABCMeta):
 
     @abstractmethod
     def is_parent_of(self, view: IView) -> bool: ...
+
+    @abstractmethod
+    def is_parent_of_name(self, vs: str) -> bool: ...
 
     @abstractmethod
     def is_child_of(self, view: IView) -> bool: ...

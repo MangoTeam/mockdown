@@ -15,7 +15,7 @@ from mockdown.model import IView
 from mockdown.model.constraint import IConstraint
 from mockdown.model.bounds import get_bounds
 from mockdown.model.view import ViewBuilder
-from mockdown.pruning.blackbox import BlackBoxPruner
+from mockdown.pruning.blackbox import BlackBoxPruner, HierarchicalPruner
 from mockdown.pruning.typing import PruningMethod, PruningMethodFactory
 from mockdown.visibility import visible_pairs
 
@@ -35,6 +35,7 @@ This dictionary contains *factories* that produce pruning methods!
 PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
     'none': lambda x, y: (lambda constraints: constraints),
     'baseline': BlackBoxPruner, 
+    'hierarchical': HierarchicalPruner,
     'fancy': FancyPruning
 }
 
