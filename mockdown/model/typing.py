@@ -13,8 +13,8 @@ class IAnchorID(Protocol):
     attribute: Attribute
 
 
-class IAnchor(Protocol[NT_Co]):
-    view: IView[NT_Co]
+class IAnchor(Protocol[NT]):
+    view: IView[NT]
     attribute: Attribute
 
     @property
@@ -27,7 +27,7 @@ class IAnchor(Protocol[NT_Co]):
 
     @property
     @abstractmethod
-    def value(self) -> NT_Co: ...
+    def value(self) -> NT: ...
 
     @property
     @abstractmethod

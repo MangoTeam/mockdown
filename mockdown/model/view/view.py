@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from itertools import chain
 from typing import List, Optional, Sequence
 
-from .. import IView
+from .. import IView, IAnchorID
 from ..anchor import Anchor, AnchorID
 from ..edge import Edge
 from ..primitives import IRect, Attribute, ViewName
@@ -156,8 +156,9 @@ class View(IView[NT]):
         except StopIteration:
             return default
 
-    def get_anchor(self, anchor_id: AnchorID):
-        [view_name, attr] = anchor_id
+    def get_anchor(self, anchor_id: IAnchorID):
+        view_name = anchor_id.view_name
+        attr = anchor_id.attribute
 
         view = self.get(view_name, include_self=True, deep=True)
         return getattr(view, f"{attr.value}_anchor")

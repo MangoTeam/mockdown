@@ -10,6 +10,7 @@ from .constants import ISCLOSE_TOLERANCE, PRIORITY_REQUIRED
 from .typing import IConstraint, ComparisonOp, Priority
 from ..model import IAnchorID, IAnchor, IView, Attribute
 
+# todo: write IConstraint, then make it not suck
 
 @dataclass(eq=True, frozen=True)
 class AbstractConstraint(IConstraint):

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Protocol, List, Optional, Sequence
+from typing import Protocol, Optional, Sequence
 
-from .. import IEdge, IAnchor
+from .. import IEdge, IAnchor, IAnchorID
 from ..primitives import ViewName, IRect
 from ...typing import NT
 
@@ -60,3 +60,5 @@ class IView(Protocol[NT], IRect[NT]):
     @property
     @abstractmethod
     def bottom_anchor(self) -> IAnchor[NT]: ...
+
+    def get_anchor(self, anchor_id: IAnchorID) -> IAnchor[NT]: ...
