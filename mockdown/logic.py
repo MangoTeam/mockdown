@@ -4,23 +4,19 @@ from typing import List, Tuple, Generator
 
 from pyswip import Prolog
 
-from mockdown.model import IView, IAnchor, AnchorID
-from mockdown.model.attribute import Attribute
-from mockdown.model.constraint import SpacingConstraint, AlignmentConstraint, IConstraint
-from mockdown.model.constraint.constraint import AbsoluteSizeConstraint, RelativeSizeConstraint, \
-    AspectRatioSizeConstraint
+from .model import Attribute, IView, IAnchor, AnchorID
+from .constraint import *
 
 
-def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]], debug = False) \
-        -> Generator[IConstraint, None, None]:
+def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]], debug=False) \
+        -> Generator[AbstractConstraint, None, None]:
     """
     Computes the valid constraint pairs (or singletons) for various
-    types of constraints.
+    types of constraint.
     """
 
     debug = True
     outfile = "debug.pl"
-
 
     # Note: Prolog is a singleton!
     prolog = Prolog()

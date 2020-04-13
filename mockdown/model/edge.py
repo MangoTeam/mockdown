@@ -1,11 +1,17 @@
 from dataclasses import dataclass
+from typing import Tuple
 
-from mockdown.model.attribute import Attribute
-from mockdown.model.typing import IEdge, IView
+from . import IView
+from .primitives import Attribute
+from .typing import IAnchor, IEdge
+from ..typing import NT
 
 
 @dataclass(frozen=True)
-class Edge(IEdge):
+class Edge(IEdge[NT]):
+    anchor: IAnchor[NT]
+    interval: Tuple[NT, NT]
+
     @property
     def view(self) -> IView:
         return self.anchor.view
@@ -15,7 +21,7 @@ class Edge(IEdge):
         return self.anchor.attribute
 
     @property
-    def position(self) -> int:
+    def position(self) -> NT:
         return self.anchor.value
 
     def __post_init__(self):

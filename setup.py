@@ -8,7 +8,7 @@ with open(path.join(project_dir, 'README.md'), encoding='utf-8') as f:
 setup(
     name='mockdown',
     version='0.0.1',
-    packages=['mockdown', 'mockdown.display'],
+    packages=['mockdown'],
     url='https://github.com/MangoTeam/mockdown',
     license='MIT',
 
@@ -21,10 +21,13 @@ setup(
 
     install_requires=[
         'click',
-        'dominate',
         'intervaltree',
         'more-itertools',
         'pyswip',
+        'uvicorn',
+        'starlette',
+        'aiofiles',
+        'timing-asgi',
         'z3-solver',
         'pandas'
     ],
@@ -32,6 +35,6 @@ setup(
 
     entry_points='''
         [console_scripts]
-        mockdown=mockdown.cli:serve
+        mockdown=mockdown.cli:cli
     ''',
 )

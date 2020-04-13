@@ -5,11 +5,11 @@ verify_ssl = true
 
 [dev-packages]
 jupyterlab = "*"
+mypy="*"
 pylint = "*"
 
 [packages]
 click = "*"
-dominate = "*"
 intervaltree = "*"
 more-itertools = "*"
 pyswip = "*"
@@ -21,4 +21,4 @@ z3-solver = "*"
 kiwisolver = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"

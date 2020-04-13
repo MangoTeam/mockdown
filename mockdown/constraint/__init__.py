@@ -1,7 +1,10 @@
-from mockdown.model.constraint.constraint import *
+from .constraint import *
+from .constants import ISCLOSE_TOLERANCE
 
 __all__ = [
-    'IConstraint',
+    'ISCLOSE_TOLERANCE',
+    'AbsoluteSizeConstraint',
+    'AbstractConstraint',
     'SpacingConstraint',
     'AlignmentConstraint',
     'PositionConstraint',

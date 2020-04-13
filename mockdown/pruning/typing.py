@@ -1,8 +1,15 @@
-from typing import Callable, List, Tuple
+from typing import Callable, List, TypedDict, Optional
 
 from mockdown.model import IView
-from mockdown.model.bounds import SizeBounds
-from mockdown.model.constraint import IConstraint
+from mockdown.constraint import AbstractConstraint
 
-PruningMethod = Callable[[List[IConstraint]], List[IConstraint]]
-PruningMethodFactory = Callable[[List[IView], SizeBounds], PruningMethod]
+
+class ISizeBounds(TypedDict):
+    min_w: Optional[str]
+    min_h: Optional[str]
+    max_w: Optional[str]
+    max_h: Optional[str]
+
+
+PruningMethod = Callable[[List[AbstractConstraint]], List[AbstractConstraint]]
+PruningMethodFactory = Callable[[List[IView], ISizeBounds], PruningMethod]

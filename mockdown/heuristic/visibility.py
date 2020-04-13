@@ -6,7 +6,7 @@ from typing import List, Tuple
 from intervaltree import IntervalTree
 from more_itertools import pairwise
 
-from mockdown.model import IView, IEdge
+from ..model import IView, IEdge
 
 
 def interval_tree(root: IView, primary_axis: str, include_root=True):
@@ -23,7 +23,7 @@ def interval_tree(root: IView, primary_axis: str, include_root=True):
 
     view_iter = root.children
     if include_root:
-        view_iter = chain([root], view_iter)
+        view_iter = list(chain([root], view_iter))
 
     for view in view_iter:
         if primary_axis == 'x':
