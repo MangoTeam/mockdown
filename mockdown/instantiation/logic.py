@@ -2,14 +2,16 @@ import operator
 from importlib import resources
 from typing import List, Tuple, Generator
 
-from pyswip import Prolog
+from pyswip import Prolog  # type: ignore
 
-from .model import Attribute, IView, IAnchor, AnchorID
-from .constraint import *
+from ..constraint import ConstraintKind
+from ..constraint.factory import ConstraintFactory
+from ..model import Attribute, IView, IAnchor, AnchorID
+from ..constraint import *
 
 
 def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]], debug=False) \
-        -> Generator[AbstractConstraint, None, None]:
+        -> Generator[IConstraint, None, None]:
     """
     Computes the valid constraint pairs (or singletons) for various
     types of constraint.
@@ -49,28 +51,40 @@ def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]], 
 
             for answer in prolog.query("aspect_ratio_size(V)"):
                 v, = [answer[k] for k in ('V',)]
-                yield AspectRatioSizeConstraint(x=AnchorID(v, Attribute('height')),
-                                                y=AnchorID(v, Attribute('width')),
-                                                op=operator.eq)
+                yield ConstraintFactory.create(kind=ConstraintKind.SIZE_ASPECT_RATIO,
+                                               x_id=AnchorID(v, Attribute('height')),
+                                               y_id=AnchorID(v, Attribute('width')),
+                                               op=operator.eq)
 
             for answer in prolog.query("absolute_size(V, A)"):
                 v, a = [answer[k] for k in ('V', 'A')]
-                yield AbsoluteSizeConstraint(x=None, y=AnchorID(v, Attribute(a)), op=operator.le)
-                yield AbsoluteSizeConstraint(x=None, y=AnchorID(v, Attribute(a)), op=operator.ge)
+                for op in [operator.le, operator.ge]:
+                    yield ConstraintFactory.create(kind=ConstraintKind.SIZE_CONSTANT,
+                                                   x_id=None, y_id=AnchorID(v, Attribute(a)),
+                                                   op=op)
 
             for answer in prolog.query("parent_relative_size(V, A, W, B)"):
                 v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-                yield RelativeSizeConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.eq)
+                yield ConstraintFactory.create(kind=ConstraintKind.SIZE_RATIO,
+                                               x_id=AnchorID(v, Attribute(a)),
+                                               y_id=AnchorID(w, Attribute(b)),
+                                               op=operator.eq)
 
             for answer in prolog.query("spacing(V, A, W, B)"):
                 v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-                yield SpacingConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.le)
-                yield SpacingConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.ge)
+                for op in [operator.le, operator.ge]:
+                    yield ConstraintFactory.create(kind=ConstraintKind.POS_LTRB_OFFSET,
+                                                   x_id=AnchorID(v, Attribute(a)),
+                                                   y_id=AnchorID(w, Attribute(b)),
+                                                   op=op)
 
             for answer in prolog.query("alignment(V, A, W, B)"):
                 v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-                yield AlignmentConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.le)
-                yield AlignmentConstraint(x=AnchorID(v, Attribute(a)), y=AnchorID(w, Attribute(b)), op=operator.ge)
+                for op in [operator.le, operator.ge]:
+                    yield ConstraintFactory.create(kind=ConstraintKind.POS_LTRB_OFFSET,
+                                                   x_id=AnchorID(v, Attribute(a)),
+                                                   y_id=AnchorID(w, Attribute(b)),
+                                                   op=op)
 
     finally:
         # Cleanup dynamic predicates to avoid subsequent calls running in a

@@ -1,6 +1,6 @@
 import operator
 
-from z3 import z3
+from z3 import z3  # type: ignore
 
 from ..constraint import ISCLOSE_TOLERANCE, IConstraint
 from ..model import IAnchorID
@@ -14,7 +14,7 @@ def anchor_id_to_z3_var(anchor_id: IAnchorID, suffix: int, linearize: bool = Fal
 
 
 def constraint_to_z3_expr(constraint: IConstraint, suffix: int, linearize: bool = False):
-    yv = anchor_id_to_z3_var(constraint.y, suffix, linearize)
+    yv = anchor_id_to_z3_var(constraint.y_id, suffix, linearize)
     rhs = constraint.b
 
     precision = 1000
@@ -28,8 +28,8 @@ def constraint_to_z3_expr(constraint: IConstraint, suffix: int, linearize: bool 
             rhs -= ISCLOSE_TOLERANCE
         else:
             rhs += ISCLOSE_TOLERANCE
-    if constraint.x:
-        xv = anchor_id_to_z3_var(constraint.x, suffix, linearize)
+    if constraint.x_id:
+        xv = anchor_id_to_z3_var(constraint.x_id, suffix, linearize)
         if linearize:
             return constraint.op(z3.IntVal(precision) * yv, xv * clamp(constraint.a) + clamp(rhs))
         else:

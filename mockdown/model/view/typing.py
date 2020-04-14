@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from itertools import chain
 from typing import Protocol, Optional, Sequence
 
 from .. import IEdge, IAnchor, IAnchorID
@@ -28,6 +29,43 @@ class IView(Protocol[NT], IRect[NT]):
 
     def is_sibling_of(self, view) -> bool:
         ...
+
+    # Implement IRect by delegation.
+    @property
+    def left(self) -> NT:
+        return self.rect.left
+
+    @property
+    def top(self) -> NT:
+        return self.rect.top
+
+    @property
+    def right(self) -> NT:
+        return self.rect.right
+
+    @property
+    def bottom(self) -> NT:
+        return self.rect.bottom
+
+    @property
+    def width(self) -> NT:
+        return self.rect.width
+
+    @property
+    def height(self) -> NT:
+        return self.rect.height
+
+    @property
+    def center_x(self) -> NT:
+        return self.rect.center_x
+
+    @property
+    def center_y(self) -> NT:
+        return self.rect.center_x
+
+    @property
+    def size(self):
+        return self.rect.size
 
     @property
     @abstractmethod
@@ -61,4 +99,24 @@ class IView(Protocol[NT], IRect[NT]):
     @abstractmethod
     def bottom_anchor(self) -> IAnchor[NT]: ...
 
+    @property
+    @abstractmethod
+    def width_anchor(self) -> IAnchor[NT]: ...
+
+    @property
+    @abstractmethod
+    def height_anchor(self) -> IAnchor[NT]: ...
+
+    @property
+    @abstractmethod
+    def center_x_anchor(self) -> IAnchor[NT]: ...
+
+    @property
+    @abstractmethod
+    def center_y_anchor(self) -> IAnchor[NT]: ...
+
     def get_anchor(self, anchor_id: IAnchorID) -> IAnchor[NT]: ...
+
+    def __iter__(self):
+        yield self
+        yield from chain(*map(iter, self.children))

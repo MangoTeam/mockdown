@@ -3,10 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-import z3
-
-from .typing import IAnchor, IAnchorID, IEdge
-from . import IView
+from .typing import IAnchor, IAnchorID, IEdge, IView
 from .primitives import Attribute, ViewName
 
 
@@ -27,12 +24,6 @@ class AnchorID(IAnchorID):
 
     def __iter__(self):
         return iter([self.view_name, self.attribute])
-
-    def to_z3_var(self, idx: int, linearize: bool):
-        if linearize:
-            return z3.Int(str(self) + "_" + str(idx))
-        else:
-            return z3.Real(str(self) + "_" + str(idx))
 
 
 @dataclass(frozen=True)

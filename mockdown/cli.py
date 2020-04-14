@@ -1,5 +1,5 @@
 import click
-import uvicorn
+import uvicorn  # type: ignore
 
 from mockdown.app import create_app
 

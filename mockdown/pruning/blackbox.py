@@ -1,27 +1,28 @@
 from typing import List, AbstractSet, Tuple
 
-import kiwisolver
-import z3
+import kiwisolver  # type: ignore
+import z3  # type: ignore
 
 from .conformance import Conformance
-from .typing import PruningMethod, ISizeBounds
-from ..constraint import AbstractConstraint, AspectRatioSizeConstraint, RelativeSizeConstraint, \
-    PositionConstraint, SizeConstraint
+from .typing import IPruningMethod, ISizeBounds
+from .util import anchor_equiv
+from ..constraint.old import OldAbstractConstraint, OldPositionConstraint, OldSizeConstraint, OldRelativeSizeConstraint, \
+    OldAspectRatioSizeConstraint
 from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var
 from ..model import IView
 
 
-class BlackBoxPruner(PruningMethod):
+class BlackBoxPruner(IPruningMethod):
 
-    def __init__(self, examples: List[IView], bounds: ISizeBounds):
+    def __init__(self, examples: List[IView[float]], bounds: ISizeBounds):
 
         heights = [v.height for v in examples]
         widths = [v.width for v in examples]
 
-        min_w = bounds.min_w or min(widths)
-        max_w = bounds.max_w or max(widths)
-        min_h = bounds.min_h or min(heights)
-        max_h = bounds.max_h or max(heights)
+        min_w = bounds.get('min_w', None) or int(min(widths))
+        max_w = bounds.get('max_w', None) or int(max(widths))
+        min_h = bounds.get('min_h', None) or int(min(heights))
+        max_h = bounds.get('max_h', None) or int(max(heights))
 
         self.min_conf = Conformance(min_w, min_h, 0, 0)
         self.max_conf = Conformance(max_w, max_h, 0, 0)
@@ -90,7 +91,7 @@ class BlackBoxPruner(PruningMethod):
 
         return output
 
-    def checkSanity(self, constraints: List[AbstractConstraint]):
+    def checkSanity(self, constraints: List[OldAbstractConstraint]):
 
         confs = self.genExtraConformances()
 
@@ -110,15 +111,15 @@ class BlackBoxPruner(PruningMethod):
             print('result for', conf)
             print(str(chk))
 
-    def isWhole(self, c: AbstractConstraint):
+    def isWhole(self, c: OldAbstractConstraint):
         steps = [0.05 * x for x in range(20)]
         bestDiff = min([abs(s - c.a) for s in steps])
         return bestDiff <= 0.01
 
-    def makePairs(self, constraints: List[AbstractConstraint]):
-        return [(c, cp) for c in constraints for cp in constraints if c.anchor_equiv(cp) and c.op != cp.op]
+    def makePairs(self, constraints: List[OldAbstractConstraint]):
+        return [(c, cp) for c in constraints for cp in constraints if anchor_equiv(c, cp) and c.op != cp.op]
 
-    def buildBiases(self, constraints: List[AbstractConstraint]):
+    def buildBiases(self, constraints: List[OldAbstractConstraint]):
         default = {c: 1 for c in constraints}
 
         pairs = self.makePairs(constraints)
@@ -128,17 +129,17 @@ class BlackBoxPruner(PruningMethod):
         for c in constraints:
             score = 10
             # aspect ratios and size constraint are specific the more samples behind them
-            if isinstance(c, AspectRatioSizeConstraint):
+            if isinstance(c, OldAspectRatioSizeConstraint):
                 # print(c, c.is_falsified)
                 score = 1 if c.is_falsified else 100 * c.sample_count
-            elif isinstance(c, RelativeSizeConstraint):
+            elif isinstance(c, OldRelativeSizeConstraint):
                 # and doubly specific when the constants are nice
                 if self.isWhole(c):
                     score = 1000 * c.sample_count
                 else:
                     score = 100 * c.sample_count
             # positions are specific if they're paired and the pairs are close together
-            elif isinstance(c, PositionConstraint):
+            elif isinstance(c, OldPositionConstraint):
                 score = 1000
                 # for simplicity we update pairs after this loop
 
@@ -148,8 +149,8 @@ class BlackBoxPruner(PruningMethod):
             default[c] = score
 
         for (l, r) in pairs:
-            if isinstance(l, PositionConstraint):
-                assert isinstance(r, PositionConstraint)
+            if isinstance(l, OldPositionConstraint):
+                assert isinstance(r, OldPositionConstraint)
 
                 diff = l.b + r.b
                 # map > 500 => 10
@@ -187,7 +188,7 @@ class BlackBoxPruner(PruningMethod):
 
         return output
 
-    def __call__(self, constraints: List[AbstractConstraint]):
+    def __call__(self, constraints: List[OldAbstractConstraint]):
 
         # build up all of the constraint as Z3 objects
 
@@ -224,9 +225,9 @@ class BlackBoxPruner(PruningMethod):
 
             # captures = ['box0.center_x', 'box0.width']
             captures = ['box0.height']
-            types = (AspectRatioSizeConstraint)
+            types = (OldAspectRatioSizeConstraint)
 
-            if str(constr.y) in captures and not isinstance(constr, types):
+            if str(constr.y_id) in captures and not isinstance(constr, types):
                 sanitys.append(constr)
         # self.checkSanity(sanitys)
 
@@ -277,15 +278,15 @@ class BlackBoxPruner(PruningMethod):
 
 class HierarchicalPruner(BlackBoxPruner):
 
-    def __init__(self, examples: List[IView], bounds: ISizeBounds):
+    def __init__(self, examples: List[IView[float]], bounds: ISizeBounds):
 
         heights = [v.height for v in examples]
         widths = [v.width for v in examples]
 
-        min_w = bounds.min_w or min(widths)
-        max_w = bounds.max_w or max(widths)
-        min_h = bounds.min_h or min(heights)
-        max_h = bounds.max_h or max(heights)
+        min_w = bounds.get('min_w', None) or int(min(widths))
+        max_w = bounds.get('max_w', None) or int(max(widths))
+        min_h = bounds.get('min_h', None) or int(min(heights))
+        max_h = bounds.get('max_h', None) or int(max(heights))
 
         self.min_conf = Conformance(min_w, min_h, 0, 0)
         self.max_conf = Conformance(max_w, max_h, 0, 0)
@@ -322,8 +323,13 @@ class HierarchicalPruner(BlackBoxPruner):
 
         return extras
 
-    def relevantConstraint(self, focus: IView, c: AbstractConstraint) -> bool:
-        cvs = c.vars()
+    def relevantConstraint(self, focus: IView, c: OldAbstractConstraint) -> bool:
+
+        # Note: "I moved this here inline as it doesn't belong in Constraint."
+        def vars(cn):
+            return {cn.y_id.view_name} | {cn.x_id.view_name} if self.x_id is not None else {}
+
+        cvs = vars(c)
 
         if len(cvs) == 1:
             name = cvs.pop()
@@ -332,12 +338,12 @@ class HierarchicalPruner(BlackBoxPruner):
                     return True
             return False
         else:
-            if isinstance(c, PositionConstraint):
-                return focus.is_parent_of_name(c.y.view_name) or (
-                    focus.is_parent_of_name(c.x.view_name) if c.x else False)
-            if isinstance(c, SizeConstraint):
-                return focus.is_parent_of_name(c.y.view_name) or (
-                    focus.is_parent_of_name(c.x.view_name) if c.x else False)
+            if isinstance(c, OldPositionConstraint):
+                return focus.is_parent_of_name(c.y_id.view_name) or (
+                    focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
+            if isinstance(c, OldSizeConstraint):
+                return focus.is_parent_of_name(c.y_id.view_name) or (
+                    focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
 
     # add axioms for width = right - left, width >= 0, height = bottom - top, height >= 0
     # specialized to a particular conformance
@@ -372,15 +378,15 @@ class HierarchicalPruner(BlackBoxPruner):
 
         return output
 
-    def isWhole(self, c: AbstractConstraint) -> bool:
+    def isWhole(self, c: OldAbstractConstraint) -> bool:
         steps = [0.05 * x for x in range(20)]
         bestDiff = min([abs(s - c.a) for s in steps])
         return bestDiff <= 0.01
 
-    def makePairs(self, constraints: List[AbstractConstraint]):
-        return [(c, cp) for c in constraints for cp in constraints if c.anchor_equiv(cp) and c.op != cp.op]
+    def makePairs(self, constraints: List[OldAbstractConstraint]):
+        return [(c, cp) for c in constraints for cp in constraints if anchor_equiv(c, cp) and c.op != cp.op]
 
-    def buildBiases(self, constraints: List[AbstractConstraint]):
+    def buildBiases(self, constraints: List[OldAbstractConstraint]):
         default = {c: 1 for c in constraints}
 
         pairs = self.makePairs(constraints)
@@ -390,17 +396,17 @@ class HierarchicalPruner(BlackBoxPruner):
         for c in constraints:
             score = 10
             # aspect ratios and size constraint are specific the more samples behind them
-            if isinstance(c, AspectRatioSizeConstraint):
+            if isinstance(c, OldAspectRatioSizeConstraint):
                 # print(c, c.is_falsified)
                 score = 1 if c.is_falsified else 100 * c.sample_count
-            elif isinstance(c, RelativeSizeConstraint):
+            elif isinstance(c, OldRelativeSizeConstraint):
                 # and doubly specific when the constants are nice
                 if self.isWhole(c):
                     score = 1000 * c.sample_count
                 else:
                     score = 100 * c.sample_count
             # positions are specific if they're paired and the pairs are close together
-            elif isinstance(c, PositionConstraint):
+            elif isinstance(c, OldPositionConstraint):
                 score = 1000
                 # for simplicity we update pairs after this loop
 
@@ -410,8 +416,8 @@ class HierarchicalPruner(BlackBoxPruner):
             default[c] = score
 
         for (l, r) in pairs:
-            if isinstance(l, PositionConstraint):
-                assert isinstance(r, PositionConstraint)
+            if isinstance(l, OldPositionConstraint):
+                assert isinstance(r, OldPositionConstraint)
 
                 diff = l.b + r.b
                 # map > 500 => 10
@@ -449,7 +455,7 @@ class HierarchicalPruner(BlackBoxPruner):
 
         return output
 
-    def inferChildConf(self, constrs: List[AbstractConstraint], focus: IView, min_c: Conformance, max_c: Conformance) -> \
+    def inferChildConf(self, constrs: List[OldAbstractConstraint], focus: IView, min_c: Conformance, max_c: Conformance) -> \
             Tuple[Conformance, Conformance]:
 
         linear_solver = kiwisolver.Solver()
@@ -488,7 +494,7 @@ class HierarchicalPruner(BlackBoxPruner):
 
         return (focus_min, focus_max)
 
-    def __call__(self, constraints: List[AbstractConstraint]):
+    def __call__(self, constraints: List[OldAbstractConstraint]):
 
         idents = set()
 
@@ -536,9 +542,9 @@ class HierarchicalPruner(BlackBoxPruner):
 
                 # captures = ['box0.center_x', 'box0.width']
                 captures = ['box0.height']
-                types = (AspectRatioSizeConstraint)
+                types = (OldAspectRatioSizeConstraint)
 
-                if str(constr.y) in captures and not isinstance(constr, types):
+                if str(constr.y_id) in captures and not isinstance(constr, types):
                     sanitys.append(constr)
 
             print("solving %s" % focus.name)

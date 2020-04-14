@@ -15,5 +15,5 @@ __all__ = [
     'ViewBuilder',
     'Attribute',
     'ZRect',
-    'ZSize',
+    'ZSize'
 ]

@@ -1,15 +1,17 @@
-from typing import Callable, List, TypedDict, Optional
+from typing import Callable, List, TypedDict, Optional, Protocol
 
 from mockdown.model import IView
-from mockdown.constraint import AbstractConstraint
+from mockdown.constraint import IConstraint
 
 
 class ISizeBounds(TypedDict):
-    min_w: Optional[str]
-    min_h: Optional[str]
-    max_w: Optional[str]
-    max_h: Optional[str]
+    min_w: Optional[int]
+    min_h: Optional[int]
+    max_w: Optional[int]
+    max_h: Optional[int]
 
 
-PruningMethod = Callable[[List[AbstractConstraint]], List[AbstractConstraint]]
-PruningMethodFactory = Callable[[List[IView], ISizeBounds], PruningMethod]
+class IPruningMethod(Protocol):
+    def __call__(self, cns: List[IConstraint]) -> List[IConstraint]: ...
+
+PruningMethodFactory = Callable[[List[IView], ISizeBounds], IPruningMethod]

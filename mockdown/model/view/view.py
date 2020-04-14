@@ -35,43 +35,6 @@ class View(IView[NT]):
 
         return comp
 
-    # Implement IRect by delegation.
-    @property
-    def left(self):
-        return self.rect.left
-
-    @property
-    def top(self):
-        return self.rect.top
-
-    @property
-    def right(self):
-        return self.rect.right
-
-    @property
-    def bottom(self):
-        return self.rect.bottom
-
-    @property
-    def width(self):
-        return self.rect.width
-
-    @property
-    def height(self):
-        return self.rect.height
-
-    @property
-    def center_x(self):
-        return self.rect.center_x
-
-    @property
-    def center_y(self):
-        return self.rect.center_x
-
-    @property
-    def size(self):
-        return self.rect.size
-
     # Anchor and Edge convenience properties
     @property
     def left_anchor(self) -> Anchor:
@@ -170,8 +133,5 @@ class View(IView[NT]):
         except StopIteration:
             raise KeyError()
 
-    def __iter__(self):
-        yield self
-        yield from chain(*map(iter, self.children))
-        # noinspection PyTypeChecker
-        # yield self
+
+

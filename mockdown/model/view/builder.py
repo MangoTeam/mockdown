@@ -15,6 +15,8 @@ from .. import IView
 from ..primitives import ZRect, QRect, RRect, IRect, ViewName
 from ...typing import NT
 
+# todo: only really from_dict is being used heavily here, though this \
+#  could be really handy for testing... needs to be fixed up.
 
 @dataclass
 class ViewBuilder(Generic[NT]):

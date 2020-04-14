@@ -1,12 +1,12 @@
-import kiwisolver
+import kiwisolver  # type: ignore
 
-from ..constraint import AbstractConstraint
+from ..constraint import IConstraint
 
 
-def constraint_to_kiwi(constraint: AbstractConstraint, strength: str = 'required') -> kiwisolver.Constraint:
-    yv = kiwisolver.Variable(str(constraint.y))
-    if constraint.x:
-        xv = kiwisolver.Variable(str(constraint.x))
+def constraint_to_kiwi(constraint: IConstraint, strength: str = 'required') -> kiwisolver.Constraint:
+    yv = kiwisolver.Variable(str(constraint.y_id))
+    if constraint.x_id:
+        xv = kiwisolver.Variable(str(constraint.x_id))
         return constraint.op(yv, xv * constraint.a) | strength
     else:
         # print("me:", self)

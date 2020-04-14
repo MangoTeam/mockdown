@@ -1,18 +1,15 @@
-from fractions import Fraction
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
-from timing_asgi import TimingMiddleware, TimingClient
-from timing_asgi.integrations import StarletteScopeToName
+from timing_asgi import TimingMiddleware, TimingClient  # type: ignore
+from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 
-from .constraint import AbstractConstraint
-from .heuristic.visibility import visible_pairs
-from .logic import valid_constraints
-from .model import ViewBuilder, IView
+from .engine import OldMockdownEngine
+from .model import ViewBuilder
 from .pruning import BlackBoxPruner, HierarchicalPruner, PruningMethodFactory, ISizeBounds
 
 """
@@ -31,6 +28,8 @@ async def synthesize(request: Request):
 
     bounds: ISizeBounds = request_json.get('bounds', {})
 
+    engine = OldMockdownEngine()
+
     # Product a list of examples (IView's).
     examples = [
         ViewBuilder.from_dict(example_json).to_view()
@@ -38,25 +37,9 @@ async def synthesize(request: Request):
         in examples_json
     ]
 
-    edge_pair_sets = [
-        visible_pairs(example, deep=True)
-        for example
-        in examples
-    ]
+    all_constraints = engine.instantiation_engine.instantiate(examples)
 
-    anchor_pair_sets = [
-        [(e1.anchor, e2.anchor) for (e1, e2) in edge_pair_set]
-        for edge_pair_set
-        in edge_pair_sets
-    ]
-
-    constraint_sets = [
-        list(valid_constraints(examples[i], anchor_pair_sets[i]))
-        for i
-        in range(len(examples))
-    ]
-
-    all_constraints = list(set().union(*constraint_sets))
+    # todo here
 
     trained_constraints = [
         constraint.train_view_many(examples)
@@ -70,10 +53,10 @@ async def synthesize(request: Request):
     pruned_constraints = prune(trained_constraints)
 
     trained_constraints_json = [
-        AbstractConstraint.to_dict(constraint)
+        constraint.to_dict()
         for constraint
         in pruned_constraints
-        if not constraint.is_falsified
+        # if not constraint.is_falsified
     ]
 
     return JSONResponse(trained_constraints_json)

@@ -3,10 +3,10 @@ from itertools import chain
 from operator import attrgetter
 from typing import List, Tuple
 
-from intervaltree import IntervalTree
+from intervaltree import IntervalTree  # type: ignore
 from more_itertools import pairwise
 
-from ..model import IView, IEdge
+from mockdown.model import IView, IEdge
 
 
 def interval_tree(root: IView, primary_axis: str, include_root=True):
