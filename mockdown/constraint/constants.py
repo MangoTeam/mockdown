@@ -31,3 +31,17 @@ class ConstraintKind(Enum):
     # y = ax + b, where y.attr = width and x.attr = height, and y = x
     SIZE_ASPECT_RATIO = 'size_aspect_ratio'
 
+    @classmethod
+    def get_position_kinds(cls):
+        return {cls.POS_LRTB_OFFSET,
+                cls.POS_LTRB_GENERAL,
+                cls.POS_CENTERING}
+
+    # noinspection PyPep8Naming
+    @classmethod
+    def get_size_kinds(cls):
+        return {cls.SIZE_OFFSET,
+                cls.SIZE_RATIO,
+                cls.SIZE_CONSTANT,
+                cls.SIZE_ASPECT_RATIO}
+

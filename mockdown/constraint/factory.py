@@ -26,6 +26,7 @@ class ConstraintFactory:
                op: Optional[ComparisonOp] = None) -> IConstraint:
 
         # Note: mypy isn't smart enough to understand `kind in { ... }`.
+        # Also, can't use **kwargs for type safety reasons (dataclass will accept None!!!).
         if kind is kind is Kind.POS_LTRB_OFFSET \
                 or kind is Kind.POS_LTRB_GENERAL \
                 or kind is Kind.POS_CENTERING \

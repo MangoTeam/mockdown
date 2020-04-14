@@ -41,6 +41,10 @@ class IConstraint(Protocol):
     @abstractmethod
     def kind(self) -> ConstraintKind: ...
 
+    @property
+    @abstractmethod
+    def sample_count(self) -> int: ...
+
     def to_dict(self) -> dict:
         return {
             'y': str(self.y_id),
@@ -57,3 +61,4 @@ class IConstraint(Protocol):
                 'kind': self.kind
             }
         }
+
