@@ -7,7 +7,7 @@ from .conformance import Conformance
 from .typing import IPruningMethod, ISizeBounds
 from .util import anchor_equiv, short_str
 from ..constraint import IConstraint, ConstraintKind
-from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var
+from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var, constraint_to_kiwi
 from ..model import IView
 
 
@@ -458,7 +458,7 @@ class HierarchicalPruner(BlackBoxPruner):
 
         linear_solver = kiwisolver.Solver()
         for constr in constrs:
-            linear_solver.addConstraint(constr.to_kiwi_constr())
+            linear_solver.addConstraint(constraint_to_kiwi(constr))
 
         # get the min by suggesting 0, and the max by suggesting max_c
 
