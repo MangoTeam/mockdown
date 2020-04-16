@@ -1,18 +1,19 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 
-# We don't have stubs for these.
-
-from starlette.applications import Starlette  # type: ignore
-from starlette.middleware.cors import CORSMiddleware  # type: ignore
-from starlette.requests import Request  # type: ignore
-from starlette.responses import JSONResponse  # type: ignore
-from starlette.staticfiles import StaticFiles  # type: ignore
-from timing_asgi import TimingMiddleware, TimingClient  # type: ignore
+from starlette.applications import Starlette
+from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.staticfiles import StaticFiles
+from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 
 from .engine import OldMockdownEngine
-from .model import ViewBuilder
-from .pruning import BlackBoxPruner, HierarchicalPruner, PruningMethodFactory, ISizeBounds
+from .model import IView
+from .model.view.loader import RViewLoader
+from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory
+
+# We don't have stubs for these.
 
 """
 This dictionary contains *factories* that produce pruning methods!
@@ -24,17 +25,19 @@ PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
 }
 
 
-async def synthesize(request: Request):
-    request_json: dict = await request.json()
-    examples_json: List[dict] = request_json['examples']
-
+async def synthesize(request: Request) -> JSONResponse:
+    request_json = await request.json()
+    examples_json = request_json['examples']
     bounds: ISizeBounds = request_json.get('bounds', {})
 
     engine = OldMockdownEngine()
 
+    # RViewLoader just loads everything as floats.
+    loader = RViewLoader()
+
     # Product a list of examples (IView's).
-    examples = [
-        ViewBuilder.from_dict(example_json).to_view()
+    examples: List[IView[float]] = [
+        loader.load_dict(example_json)
         for example_json
         in examples_json
     ]
@@ -64,7 +67,7 @@ async def synthesize(request: Request):
     return JSONResponse(trained_constraints_json)
 
 
-def create_app(*, static_dir: str, static_path: str, **kwargs) -> Starlette:
+def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) -> Starlette:
     app = Starlette(debug=True)
     app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'],
                        allow_credentials=True)
@@ -73,7 +76,7 @@ def create_app(*, static_dir: str, static_path: str, **kwargs) -> Starlette:
     app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
 
     class StdoutTimingClient(TimingClient):
-        def timing(self, metric_name, timing, tags=None):
+        def timing(self, metric_name, timing, tags=None) -> None:
             print(metric_name, timing, tags)
 
     app.add_middleware(
