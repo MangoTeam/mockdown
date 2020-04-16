@@ -1,6 +1,7 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 from os import path
+
 project_dir = path.abspath(path.dirname(__file__))
 with open(path.join(project_dir, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -8,7 +9,8 @@ with open(path.join(project_dir, 'README.md'), encoding='utf-8') as f:
 setup(
     name='mockdown',
     version='0.0.1',
-    packages=['mockdown'],
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
     url='https://github.com/MangoTeam/mockdown',
     license='MIT',
 
@@ -31,6 +33,11 @@ setup(
         'z3-solver',
         'pandas'
     ],
+
+    setup_requires=[
+        'pytest-runner',
+    ],
+
     include_package_data=True,
 
     entry_points='''
