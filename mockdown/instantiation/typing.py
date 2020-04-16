@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Protocol, Collection, Sequence
+from typing import Protocol, Collection, Sequence, Set
 
 from ..constraint import IConstraint
 from ..model import IView
@@ -13,7 +13,7 @@ class IConstraintInstantiator(Protocol[NT]):
     """
 
     @abstractmethod
-    def instantiate(self, examples: Sequence[IView[NT]]) -> Collection[IConstraint]:
+    def instantiate(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
         """
         Given a set of examples, instantiate a set of constraints to train.
         """

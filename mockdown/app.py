@@ -8,7 +8,7 @@ from starlette.staticfiles import StaticFiles
 from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 
-from .engine import OldMockdownEngine
+from .engine import DefaultMockdownEngine
 from .model import IView
 from .model.view.loader import RViewLoader
 from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory
@@ -30,7 +30,7 @@ async def synthesize(request: Request) -> JSONResponse:
     examples_json = request_json['examples']
     bounds: ISizeBounds = request_json.get('bounds', {})
 
-    engine = OldMockdownEngine()
+    engine = DefaultMockdownEngine()
 
     # RViewLoader just loads everything as floats.
     loader = RViewLoader()

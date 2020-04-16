@@ -7,10 +7,10 @@ from .instantiation import IConstraintInstantiator, VisibilityConstraintInstanti
 from .typing import NT, NT_co
 
 
-class IMockdownEngine(Protocol[NT_co]):
+class IMockdownEngine(Protocol[NT]):
     @property
     @abstractmethod
-    def instantiation_engine(self) -> IConstraintInstantiator: ...
+    def instantiation_engine(self) -> IConstraintInstantiator[NT]: ...
 
     @property
     @abstractmethod
@@ -20,18 +20,18 @@ class IMockdownEngine(Protocol[NT_co]):
     @abstractmethod
     def selection_behavior(self) -> None: ...
 
-    def run(self, examples: Sequence[IView[NT]]) -> Set[IConstraint]:
+    def run(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
         templates = self.instantiation_engine.instantiate(examples)
         # todo: train and prune
         return templates
 
 
-class OldMockdownEngine(IMockdownEngine):
-    def __init__(self):
+class DefaultMockdownEngine(IMockdownEngine[float]):
+    def __init__(self) -> None:
         self._instantiation_engine = VisibilityConstraintInstantiator()
 
     @property
-    def instantiation_engine(self) -> IConstraintInstantiator:
+    def instantiation_engine(self) -> IConstraintInstantiator[float]:
         return self._instantiation_engine
 
     @property

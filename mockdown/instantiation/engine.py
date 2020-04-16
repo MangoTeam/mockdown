@@ -1,4 +1,4 @@
-from typing import Sequence, List, Any, Set, Collection
+from typing import Any, Sequence, Set
 
 from .logic import valid_constraints
 from .typing import IConstraintInstantiator
@@ -8,7 +8,7 @@ from ..model import IView
 from ..typing import NT
 
 
-class VisibilityConstraintInstantiator(IConstraintInstantiator[NT]):
+class VisibilityConstraintInstantiator(IConstraintInstantiator[Any]):
     def instantiate(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
         edge_pair_sets = [
             visible_pairs(example, deep=True)
