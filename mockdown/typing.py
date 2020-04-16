@@ -1,9 +1,12 @@
 from fractions import Fraction
 # from numbers import Real, Rational, Integral
-from typing import TypeVar, NoReturn
+from typing import NoReturn, TypeVar, Union
 
-# This is used everywhere, so we define them once here.
-# Note, the protocols from Numbers proved weird.
+AnyNum = Union[int, float, Fraction]
+
+_T = TypeVar('_T')
+Tuple4 = Tuple[_T, _T, _T, _T]
+
 NT = TypeVar('NT', int, float, Fraction)
 NT_co = TypeVar('NT_co', int, float, Fraction, covariant=True)
 NT_contra = TypeVar('NT_contra', int, float, Fraction, contravariant=True)

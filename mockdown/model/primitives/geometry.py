@@ -7,6 +7,10 @@ from typing import Protocol, TypeVar, cast, runtime_checkable
 
 from ...typing import NT_co
 
+# Type-erased rect.
+# ∀T ∈ {int, float, Fraction}, IRect[T]
+_T = TypeVar('_T', int, float, Fraction)
+AnyRect = IRect[_T]
 
 @runtime_checkable
 class IRect(Protocol[NT_co]):

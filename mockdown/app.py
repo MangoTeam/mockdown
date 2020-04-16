@@ -1,10 +1,12 @@
 from typing import Dict, List
 
-from starlette.applications import Starlette
-from starlette.middleware.cors import CORSMiddleware
-from starlette.requests import Request
-from starlette.responses import JSONResponse
-from starlette.staticfiles import StaticFiles
+# We don't have stubs for these.
+
+from starlette.applications import Starlette  # type: ignore
+from starlette.middleware.cors import CORSMiddleware  # type: ignore
+from starlette.requests import Request  # type: ignore
+from starlette.responses import JSONResponse  # type: ignore
+from starlette.staticfiles import StaticFiles  # type: ignore
 from timing_asgi import TimingMiddleware, TimingClient  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 

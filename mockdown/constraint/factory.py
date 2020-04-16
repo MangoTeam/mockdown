@@ -1,10 +1,10 @@
-from typing import TypedDict, Optional
+from typing import Optional
 
-from . import LinearConstraint, ConstantConstraint
-from .constants import ConstraintKind
-from .typing import IConstraint, ComparisonOp
-from ..model import IAnchorID
-from ..typing import unreachable
+from mockdown.constraint.constants import ConstraintKind
+from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
+from mockdown.constraint.typing import ComparisonOp, IConstraint
+from mockdown.model import IAnchorID
+from mockdown.typing import unreachable
 
 Kind = ConstraintKind
 

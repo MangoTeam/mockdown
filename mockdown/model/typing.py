@@ -31,11 +31,11 @@ class IAnchor(Protocol[NT]):
 
     @property
     @abstractmethod
-    def edge(self) -> IEdge: ...
+    def edge(self) -> IEdge[NT]: ...
 
 
 class IEdge(Protocol[NT]):
-    anchor: IAnchor
+    anchor: IAnchor[NT]
     interval: Tuple[NT, NT]
 
     @property

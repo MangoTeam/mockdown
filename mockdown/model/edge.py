@@ -13,7 +13,7 @@ class Edge(IEdge[NT]):
     interval: Tuple[NT, NT]
 
     @property
-    def view(self) -> IView:
+    def view(self) -> IView[NT]:
         return self.anchor.view
 
     @property
@@ -24,8 +24,8 @@ class Edge(IEdge[NT]):
     def position(self) -> NT:
         return self.anchor.value
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         assert self.interval[0] <= self.interval[1]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.view.name}.{self.attribute.value} {self.interval} @ {self.position}"
