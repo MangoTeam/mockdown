@@ -63,7 +63,7 @@ class BlackBoxPruner(IPruningMethod):
     # specialized to a particular conformance
 
     # return a map from asserted layout axioms to explanatory strings
-    def addLayoutAxioms(self, solver: z3.Optimize, confIdx: int) -> Dict[str, str]:
+    def addLayoutAxioms(self, solver: z3.Optimize, confIdx: int, **kwargs: IView) -> Dict[str, str]:
 
         output = {}
 
@@ -171,7 +171,7 @@ class BlackBoxPruner(IPruningMethod):
 
         return default
 
-    def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int) -> Dict[str, str]:
+    def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int, **kwargs: IView) -> Dict[str, str]:
         output = {}
 
         top_x_v = anchor_id_to_z3_var(self.top_x.id, confIdx)
@@ -354,8 +354,8 @@ class HierarchicalPruner(BlackBoxPruner):
     # specialized to a particular conformance
 
     # return a map from asserted layout axioms to explanatory strings
-    def addLayoutAxioms(self, solver: z3.Optimize, focus: IView, confIdx: int):
-
+    def addLayoutAxioms(self, solver: z3.Optimize, confIdx: int, **kwargs: IView):
+        focus = kwargs.pop('focus')
         output = {}
 
         for box in [focus, *focus.children]:
@@ -442,7 +442,8 @@ class HierarchicalPruner(BlackBoxPruner):
 
         return default
 
-    def addConfDims(self, solver: z3.Optimize, focus: IView, conf: Conformance, confIdx: int):
+    def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int, **kwargs: IView):
+        focus = kwargs.pop('focus')
         output = {}
 
         top_x_v = anchor_id_to_z3_var(focus.left_anchor.id, confIdx)
@@ -507,7 +508,7 @@ class HierarchicalPruner(BlackBoxPruner):
 
         linearize = False
 
-        axiomMap = {}
+        axiomMap: Dict[str, str] = {}
 
         worklist = []
         start = (self.hierarchy, self.min_conf, self.max_conf)
@@ -519,11 +520,11 @@ class HierarchicalPruner(BlackBoxPruner):
             focus, min_c, max_c = worklist.pop()
 
             solver = z3.Optimize()
-            confs = self.genExtraConformances(self.min_conf, self.max_conf)
+            confs = self.genExtraConformances(lower=self.min_conf, upper=self.max_conf)
 
             for confIdx, conf in enumerate(confs):
-                axiomMap = {**axiomMap, **self.addConfDims(solver, focus, conf, confIdx=linearize)}
-                axiomMap = {**axiomMap, **self.addLayoutAxioms(solver, focus, confIdx=linearize)}
+                axiomMap = {**axiomMap, **self.addConfDims(solver, conf, confIdx, focus=focus)}
+                axiomMap = {**axiomMap, **self.addLayoutAxioms(solver, confIdx, focus=focus)}
 
             relevant = [c for c in constraints if self.relevantConstraint(focus, c)]
             usedConstrs = set()

@@ -4,7 +4,7 @@ import operator
 from abc import abstractmethod
 from enum import Enum
 from fractions import Fraction
-from typing import Dict, Protocol, Tuple, Any, Callable, Optional, TypedDict
+from typing import Any, Callable, Dict, Optional, Protocol, Set, Tuple
 
 from ..model import IAnchorID
 
