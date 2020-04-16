@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from collections import Set
 from enum import Enum
 
 from .typing import Priority
@@ -32,14 +35,14 @@ class ConstraintKind(Enum):
     SIZE_ASPECT_RATIO = 'size_aspect_ratio'
 
     @classmethod
-    def get_position_kinds(cls):
-        return {cls.POS_LRTB_OFFSET,
+    def get_position_kinds(cls) -> Set[ConstraintKind]:
+        return {cls.POS_LTRB_OFFSET,
                 cls.POS_LTRB_GENERAL,
                 cls.POS_CENTERING}
 
     # noinspection PyPep8Naming
     @classmethod
-    def get_size_kinds(cls):
+    def get_size_kinds(cls) -> Set[ConstraintKind]:
         return {cls.SIZE_OFFSET,
                 cls.SIZE_RATIO,
                 cls.SIZE_CONSTANT,

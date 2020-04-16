@@ -1,4 +1,4 @@
-from typing import List, AbstractSet, Tuple
+from typing import Dict, List, AbstractSet, Set, Tuple
 
 import kiwisolver  # type: ignore
 import z3  # type: ignore
@@ -9,6 +9,7 @@ from .util import anchor_equiv, short_str
 from ..constraint import IConstraint, ConstraintKind
 from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var, constraint_to_kiwi
 from ..model import IView
+from ..typing import unreachable
 
 
 class BlackBoxPruner(IPruningMethod):
@@ -38,7 +39,7 @@ class BlackBoxPruner(IPruningMethod):
         self.top_x = self.example.left_anchor
         self.top_y = self.example.top_anchor
 
-    def genExtraConformances(self) -> AbstractSet[Conformance]:
+    def genExtraConformances(self, **kwargs: Conformance) -> Set[Conformance]:
         # create 10 evenly spaced conformances on the range [min height/width...max height/width]
         extras = set()
         scale = 10
@@ -52,7 +53,8 @@ class BlackBoxPruner(IPruningMethod):
 
         # print('min/max:', self.max_conf, self.max_conf.width)
         for step in range(0, scale):
-            new_c = Conformance(self.min_conf.width + diff_w * step, self.min_conf.height + diff_h * step, 0, 0)
+            new_c = Conformance(self.min_conf.width + diff_w * step,
+                                self.min_conf.height + diff_h * step, 0, 0)
             extras.add(new_c)
 
         return extras
@@ -61,17 +63,17 @@ class BlackBoxPruner(IPruningMethod):
     # specialized to a particular conformance
 
     # return a map from asserted layout axioms to explanatory strings
-    def addLayoutAxioms(self, solver: z3.Optimize, confIdx: int, linearize: bool = False):
+    def addLayoutAxioms(self, solver: z3.Optimize, confIdx: int) -> Dict[str, str]:
 
         output = {}
 
         for box in self.example:
-            w, h = anchor_id_to_z3_var(box.width_anchor.id, confIdx, linearize), \
-                   anchor_id_to_z3_var(box.height_anchor.id, confIdx, linearize)
-            l, r = anchor_id_to_z3_var(box.left_anchor.id, confIdx, linearize), \
-                   anchor_id_to_z3_var(box.right_anchor.id, confIdx, linearize)
-            t, b = anchor_id_to_z3_var(box.top_anchor.id, confIdx, linearize), \
-                   anchor_id_to_z3_var(box.bottom_anchor.id, confIdx, linearize)
+            w, h = anchor_id_to_z3_var(box.width_anchor.id, confIdx), \
+                   anchor_id_to_z3_var(box.height_anchor.id, confIdx)
+            l, r = anchor_id_to_z3_var(box.left_anchor.id, confIdx), \
+                   anchor_id_to_z3_var(box.right_anchor.id, confIdx)
+            t, b = anchor_id_to_z3_var(box.top_anchor.id, confIdx), \
+                   anchor_id_to_z3_var(box.bottom_anchor.id, confIdx)
             widthAx = w == (r - l)
             heightAx = h == (b - t)
 
@@ -90,7 +92,7 @@ class BlackBoxPruner(IPruningMethod):
 
         return output
 
-    def checkSanity(self, constraints: List[IConstraint]):
+    def checkSanity(self, constraints: List[IConstraint]) -> None:
 
         confs = self.genExtraConformances()
 
@@ -110,18 +112,18 @@ class BlackBoxPruner(IPruningMethod):
             print('result for', conf)
             print(str(chk))
 
-    def isWhole(self, c: IConstraint):
+    def is_whole(self, c: IConstraint) -> bool:
         steps = [0.05 * x for x in range(20)]
-        bestDiff = min([abs(s - c.a) for s in steps])
-        return bestDiff <= 0.01
+        best_diff = float(min([abs(s - c.a) for s in steps]))
+        return best_diff <= 0.01
 
-    def makePairs(self, constraints: List[IConstraint]):
+    def make_pairs(self, constraints: List[IConstraint]) -> List[Tuple[IConstraint, IConstraint]]:
         return [(c, cp) for c in constraints for cp in constraints if anchor_equiv(c, cp) and c.op != cp.op]
 
-    def buildBiases(self, constraints: List[IConstraint]):
-        default = {c: 1 for c in constraints}
+    def build_biases(self, constraints: List[IConstraint]) -> Dict[IConstraint, float]:
+        default = {c: 1.0 for c in constraints}
 
-        pairs = self.makePairs(constraints)
+        pairs = self.make_pairs(constraints)
         # print([(x.shortStr(), y.shortStr()) for (x,y) in pairs][0])
 
         # reward specific constraint
@@ -133,7 +135,7 @@ class BlackBoxPruner(IPruningMethod):
                 score = 1 if c.is_falsified else 100 * c.sample_count
             elif c.kind is ConstraintKind.SIZE_RATIO:
                 # and doubly specific when the constants are nice
-                if self.isWhole(c):
+                if self.is_whole(c):
                     score = 1000 * c.sample_count
                 else:
                     score = 100 * c.sample_count
@@ -169,13 +171,13 @@ class BlackBoxPruner(IPruningMethod):
 
         return default
 
-    def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int, linearize: bool = False):
+    def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int) -> Dict[str, str]:
         output = {}
 
-        top_x_v = anchor_id_to_z3_var(self.top_x.id, confIdx, linearize)
-        top_y_v = anchor_id_to_z3_var(self.top_y.id, confIdx, linearize)
-        top_w_v = anchor_id_to_z3_var(self.top_width.id, confIdx, linearize)
-        top_h_v = anchor_id_to_z3_var(self.top_height.id, confIdx, linearize)
+        top_x_v = anchor_id_to_z3_var(self.top_x.id, confIdx)
+        top_y_v = anchor_id_to_z3_var(self.top_y.id, confIdx)
+        top_w_v = anchor_id_to_z3_var(self.top_width.id, confIdx)
+        top_h_v = anchor_id_to_z3_var(self.top_height.id, confIdx)
 
         solver.assert_and_track(top_w_v == conf.width, "top_w_%d" % conf.width)
         solver.assert_and_track(top_h_v == conf.height, "top_h_%d" % conf.height)
@@ -187,22 +189,22 @@ class BlackBoxPruner(IPruningMethod):
 
         return output
 
-    def __call__(self, constraints: List[IConstraint]):
+    def __call__(self, constraints: List[IConstraint]) -> List[IConstraint]:
 
         # build up all of the constraint as Z3 objects
 
-        idents = set()
-        solver = z3.Optimize()
+        # idents = set()
+        solver = z3.Optsimize()
         linearize = False
 
         namesMap = {}
-        biases = self.buildBiases(constraints)
-        axiomMap = {}
+        biases = self.build_biases(constraints)
+        axiomMap: Dict[str, str] = {}
 
         confs = self.genExtraConformances()
 
         for confIdx, conf in enumerate(confs):
-            axiomMap = {**axiomMap, **self.addConfDims(solver, conf, confIdx, linearize=linearize)}
+            axiomMap = {**axiomMap, **self.addConfDims(solver, conf, confIdx=linearize)}
             axiomMap = {**axiomMap, **self.addLayoutAxioms(solver, confIdx)}
 
         for constrIdx, constr in enumerate(constraints):
@@ -213,7 +215,7 @@ class BlackBoxPruner(IPruningMethod):
             solver.add_soft(cvar, biases[constr])
 
             for confIdx in range(len(confs)):
-                solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, confIdx, linearize)))
+                solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, confIdx)))
 
                 # solver.assert_and_track(, cvar)
 
@@ -301,7 +303,10 @@ class HierarchicalPruner(BlackBoxPruner):
         self.top_x = self.hierarchy.left_anchor
         self.top_y = self.hierarchy.top_anchor
 
-    def genExtraConformances(self, lower: Conformance, upper: Conformance) -> AbstractSet[Conformance]:
+    def genExtraConformances(self, **kwargs: Conformance) -> Set[Conformance]:
+        lower = kwargs.pop('lower')
+        upper = kwargs.pop('upper')
+
         # create 10 evenly spaced conformances on the range [min height/width...max height/width]
         extras = set()
         scale = 10
@@ -324,10 +329,10 @@ class HierarchicalPruner(BlackBoxPruner):
     def relevantConstraint(self, focus: IView, c: IConstraint) -> bool:
 
         # Note: "I moved this here inline as it doesn't belong in Constraint."
-        def vars(cn):
+        def variables(cn):
             return {cn.y_id.view_name} or ({cn.x_id.view_name} if cn.x_id is not None else {})
 
-        cvs = vars(c)
+        cvs = variables(c)
 
         if len(cvs) == 1:
             name = cvs.pop()
@@ -339,25 +344,27 @@ class HierarchicalPruner(BlackBoxPruner):
             if c.kind in ConstraintKind.get_position_kinds():
                 return focus.is_parent_of_name(c.y_id.view_name) or (
                     focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
-            if c.kind in ConstraintKind.get_size_kinds():
+            elif c.kind in ConstraintKind.get_size_kinds():
                 return focus.is_parent_of_name(c.y_id.view_name) or (
                     focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
+            else:
+                raise Exception("should be unreachable!")
 
     # add axioms for width = right - left, width >= 0, height = bottom - top, height >= 0
     # specialized to a particular conformance
 
     # return a map from asserted layout axioms to explanatory strings
-    def addLayoutAxioms(self, solver: z3.Optimize, focus: IView, confIdx: int, linearize: bool = False):
+    def addLayoutAxioms(self, solver: z3.Optimize, focus: IView, confIdx: int):
 
         output = {}
 
         for box in [focus, *focus.children]:
-            w, h = anchor_id_to_z3_var(box.width_anchor.id, confIdx, linearize), \
-                   anchor_id_to_z3_var(box.height_anchor.id, confIdx, linearize)
-            l, r = anchor_id_to_z3_var(box.left_anchor.id, confIdx, linearize), \
-                   anchor_id_to_z3_var(box.right_anchor.id, confIdx, linearize)
-            t, b = anchor_id_to_z3_var(box.top_anchor.id, confIdx, linearize), \
-                   anchor_id_to_z3_var(box.bottom_anchor.id, confIdx, linearize)
+            w, h = anchor_id_to_z3_var(box.width_anchor.id, confIdx), \
+                   anchor_id_to_z3_var(box.height_anchor.id, confIdx)
+            l, r = anchor_id_to_z3_var(box.left_anchor.id, confIdx), \
+                   anchor_id_to_z3_var(box.right_anchor.id, confIdx)
+            t, b = anchor_id_to_z3_var(box.top_anchor.id, confIdx), \
+                   anchor_id_to_z3_var(box.bottom_anchor.id, confIdx)
             widthAx = w == (r - l)
             heightAx = h == (b - t)
 
@@ -376,18 +383,18 @@ class HierarchicalPruner(BlackBoxPruner):
 
         return output
 
-    def isWhole(self, c: IConstraint) -> bool:
+    def is_whole(self, c: IConstraint) -> bool:
         steps = [0.05 * x for x in range(20)]
         bestDiff = min([abs(s - c.a) for s in steps])
         return bestDiff <= 0.01
 
-    def makePairs(self, constraints: List[IConstraint]):
+    def make_pairs(self, constraints: List[IConstraint]):
         return [(c, cp) for c in constraints for cp in constraints if anchor_equiv(c, cp) and c.op != cp.op]
 
-    def buildBiases(self, constraints: List[IConstraint]):
+    def build_biases(self, constraints: List[IConstraint]):
         default = {c: 1 for c in constraints}
 
-        pairs = self.makePairs(constraints)
+        pairs = self.make_pairs(constraints)
         # print([(x.shortStr(), y.shortStr()) for (x,y) in pairs][0])
 
         # reward specific constraint
@@ -399,7 +406,7 @@ class HierarchicalPruner(BlackBoxPruner):
                 score = 1 if c.is_falsified else 100 * c.sample_count
             elif c.kind is ConstraintKind.SIZE_RATIO:
                 # and doubly specific when the constants are nice
-                if self.isWhole(c):
+                if self.is_whole(c):
                     score = 1000 * c.sample_count
                 else:
                     score = 100 * c.sample_count
@@ -435,13 +442,13 @@ class HierarchicalPruner(BlackBoxPruner):
 
         return default
 
-    def addConfDims(self, solver: z3.Optimize, focus: IView, conf: Conformance, confIdx: int, linearize: bool = False):
+    def addConfDims(self, solver: z3.Optimize, focus: IView, conf: Conformance, confIdx: int):
         output = {}
 
-        top_x_v = anchor_id_to_z3_var(focus.left_anchor.id, confIdx, linearize)
-        top_y_v = anchor_id_to_z3_var(focus.top_anchor.id, confIdx, linearize)
-        top_w_v = anchor_id_to_z3_var(focus.width_anchor.id, confIdx, linearize)
-        top_h_v = anchor_id_to_z3_var(focus.height_anchor.id, confIdx, linearize)
+        top_x_v = anchor_id_to_z3_var(focus.left_anchor.id, confIdx)
+        top_y_v = anchor_id_to_z3_var(focus.top_anchor.id, confIdx)
+        top_w_v = anchor_id_to_z3_var(focus.width_anchor.id, confIdx)
+        top_h_v = anchor_id_to_z3_var(focus.height_anchor.id, confIdx)
 
         solver.assert_and_track(top_w_v == conf.width, "top_w_%d" % conf.width)
         solver.assert_and_track(top_h_v == conf.height, "top_h_%d" % conf.height)
@@ -494,9 +501,9 @@ class HierarchicalPruner(BlackBoxPruner):
 
     def __call__(self, constraints: List[IConstraint]):
 
-        idents = set()
+        # idents = set()
 
-        biases = self.buildBiases(constraints)
+        biases = self.build_biases(constraints)
 
         linearize = False
 
@@ -515,8 +522,8 @@ class HierarchicalPruner(BlackBoxPruner):
             confs = self.genExtraConformances(self.min_conf, self.max_conf)
 
             for confIdx, conf in enumerate(confs):
-                axiomMap = {**axiomMap, **self.addConfDims(solver, focus, conf, confIdx, linearize=linearize)}
-                axiomMap = {**axiomMap, **self.addLayoutAxioms(solver, focus, confIdx, linearize=linearize)}
+                axiomMap = {**axiomMap, **self.addConfDims(solver, focus, conf, confIdx=linearize)}
+                axiomMap = {**axiomMap, **self.addLayoutAxioms(solver, focus, confIdx=linearize)}
 
             relevant = [c for c in constraints if self.relevantConstraint(focus, c)]
             usedConstrs = set()
@@ -531,7 +538,7 @@ class HierarchicalPruner(BlackBoxPruner):
                 solver.add_soft(cvar, biases[constr])
 
                 for confIdx in range(len(confs)):
-                    solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, confIdx, linearize)))
+                    solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, confIdx)))
 
             sanitys = []
             for constrIdx, constr in enumerate(relevant):

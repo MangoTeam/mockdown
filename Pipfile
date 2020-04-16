@@ -11,7 +11,6 @@ pylint = "*"
 [packages]
 click = "*"
 intervaltree = "*"
-more-itertools = "*"
 pyswip = "*"
 uvicorn = "*"
 starlette = "*"
@@ -19,6 +18,7 @@ aiofiles = "*"
 timing-asgi = "*"
 z3-solver = "*"
 kiwisolver = "*"
+Deprecated = "*"
 
 [requires]
 python_version = "3.8"

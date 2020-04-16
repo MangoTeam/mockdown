@@ -60,3 +60,8 @@ class IConstraint(Protocol):
             'kind': self.kind.value
         }
 
+
+    @property
+    def is_falsified(self) -> bool:
+        return False
+

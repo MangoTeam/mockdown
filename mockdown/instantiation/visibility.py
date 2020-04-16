@@ -1,15 +1,21 @@
 from collections import deque
-from itertools import chain
+from itertools import chain, tee
 from operator import attrgetter
 from typing import List, Tuple
 
 from intervaltree import IntervalTree  # type: ignore
-from more_itertools import pairwise
 
-from mockdown.model import IView, IEdge
+from mockdown.model import IEdge, IView
+from mockdown.typing import NT
 
 
-def interval_tree(root: IView, primary_axis: str, include_root=True):
+def pairwise(iterable):
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
+
+def interval_tree(root: IView[NT], primary_axis: str, include_root: bool = True) -> IntervalTree:
     """
     Compute an interval tree for the given root view
     and it's immediate children. The primary axis is
@@ -43,7 +49,7 @@ def interval_tree(root: IView, primary_axis: str, include_root=True):
     return tree
 
 
-def visible_pairs(view: IView, deep=True) -> List[Tuple[IEdge, IEdge]]:
+def visible_pairs(view: IView[NT], deep: bool = True) -> List[Tuple[IEdge[NT], IEdge[NT]]]:
     """
     Compute visible (view, attr) pairs for the given view. 
     :param view: the root view from which to compute pairs.

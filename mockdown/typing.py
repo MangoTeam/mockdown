@@ -1,6 +1,5 @@
 from fractions import Fraction
-# from numbers import Real, Rational, Integral
-from typing import NoReturn, TypeVar, Union
+from typing import NoReturn, Tuple, TypeVar, Union
 
 AnyNum = Union[int, float, Fraction]
 
@@ -32,7 +31,7 @@ def unreachable(x: NoReturn) -> NoReturn:
     >         unreachable(foo)
     >
 
-    Note: this only works with is! Not equality checks!
+    Note: this only works with is! Not equality checks! (Unless it's a Literal type)
 
     Which outputs:
 

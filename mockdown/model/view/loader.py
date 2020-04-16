@@ -44,6 +44,7 @@ class QViewLoader(_BaseViewLoader[Fraction]):
         def recurse(d: Dict[str, Any]) -> QViewBuilder:
             rect = tuple(map(self._rationalize, d['rect']))
             assert len(rect) == 4
+            rect = cast(Tuple4[Fraction], rect)  # shut up, mypy
 
             if 'children' not in d or len(d['children']) == 0:
                 return QViewBuilder(name=d['name'], rect=rect)
@@ -73,6 +74,7 @@ class ZViewLoader(_BaseViewLoader[int]):
         def recurse(d: Dict[str, Any]) -> ZViewBuilder:
             rect = tuple(map(self.integerize_fn, d['rect']))
             assert len(rect) == 4
+            rect = cast(Tuple4[int], rect)  # shut up, mypy
 
             if 'children' not in d or len(d['children']) == 0:
                 return ZViewBuilder(name=d['name'], rect=rect)
