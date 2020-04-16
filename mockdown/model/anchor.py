@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import NamedTuple, Optional, Tuple, cast
+from typing import Optional, cast
 
-from .primitives import Attribute, ViewName
-from .typing import IAnchor, IAnchorID, IEdge
-from .view import IView
-from ..typing import NT
+from mockdown.model.primitives import Attribute, ViewName
+from mockdown.model.typing import IAnchor, IAnchorID, IEdge, IView
+from mockdown.typing import NT
 
 
 @dataclass(frozen=True, eq=True)

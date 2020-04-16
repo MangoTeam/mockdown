@@ -3,16 +3,11 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Protocol, TypeVar, cast, runtime_checkable
+from typing import Protocol, TypeVar, cast
 
 from ...typing import NT_co
 
-# Type-erased rect.
-# ∀T ∈ {int, float, Fraction}, IRect[T]
-_T = TypeVar('_T', int, float, Fraction)
-AnyRect = IRect[_T]
 
-@runtime_checkable
 class IRect(Protocol[NT_co]):
     @property
     @abstractmethod

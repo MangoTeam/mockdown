@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-from . import IView
-from .primitives import Attribute
-from .typing import IAnchor, IEdge
-from ..typing import NT
+from mockdown.model.primitives import Attribute
+from mockdown.model.typing import IAnchor, IEdge, IView
+from mockdown.typing import NT
 
 
 @dataclass(frozen=True)

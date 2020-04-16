@@ -4,12 +4,11 @@ from dataclasses import dataclass, field
 from itertools import chain
 from typing import Iterator, Optional, Sequence, cast
 
-from ..anchor import Anchor
-from ..edge import Edge
-from ..primitives import Attribute, IRect, ViewName
-from .typing import IView
-from ..typing import IAnchor, IAnchorID, IEdge
-from ...typing import NT
+from mockdown.model.anchor import Anchor
+from mockdown.model.edge import Edge
+from mockdown.model.primitives import Attribute, IRect, ViewName
+from mockdown.model.typing import IAnchor, IAnchorID, IEdge, IView
+from mockdown.typing import NT
 
 
 @dataclass(frozen=True, eq=True)

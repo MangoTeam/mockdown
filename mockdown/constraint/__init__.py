@@ -1,5 +1,4 @@
-from .constants import ConstraintKind, ISCLOSE_TOLERANCE
-from .typing import IConstraint
+from .typing import IConstraint, ConstraintKind, ISCLOSE_TOLERANCE
 
 __all__ = [
     'ConstraintKind',

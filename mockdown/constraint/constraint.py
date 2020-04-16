@@ -5,9 +5,8 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Optional
 
-from .constants import ConstraintKind, PRIORITY_REQUIRED
-from .typing import IConstraint, ComparisonOp, Priority
-from ..model import IAnchorID
+from mockdown.constraint.typing import IConstraint, ComparisonOp, Priority, ConstraintKind, PRIORITY_REQUIRED
+from mockdown.model import IAnchorID
 
 
 @dataclass(eq=True, frozen=True)

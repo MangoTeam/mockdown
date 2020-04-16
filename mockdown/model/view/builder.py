@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Optional, Protocol, Sequence, Tuple, cast
 
-from mockdown.model import IView
 from mockdown.model.primitives import IRect, QRect, RRect, ViewName, ZRect
+from mockdown.model.typing import IView
 from mockdown.model.view.view import View
 from mockdown.typing import NT, Tuple4
 

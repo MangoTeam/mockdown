@@ -1,8 +1,7 @@
 from typing import Optional
 
-from mockdown.constraint.constants import ConstraintKind
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
-from mockdown.constraint.typing import ComparisonOp, IConstraint
+from mockdown.constraint.typing import ComparisonOp, IConstraint, ConstraintKind
 from mockdown.model import IAnchorID
 from mockdown.typing import unreachable
 
