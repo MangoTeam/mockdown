@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from abc import abstractmethod
 from fractions import Fraction
-from typing import Protocol, Tuple, Any, Callable, Optional
+from typing import Dict, Protocol, Tuple, Any, Callable, Optional, TypedDict
 
 from .constants import ConstraintKind
 from ..model import IAnchorID
@@ -45,7 +45,7 @@ class IConstraint(Protocol):
     @abstractmethod
     def sample_count(self) -> int: ...
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, str]:
         return {
             'y': str(self.y_id),
             'op': {
@@ -53,12 +53,10 @@ class IConstraint(Protocol):
                 operator.le: '≤',
                 operator.ge: '≥'
             }[self.op],
-            'a': self.a,
+            'a': str(self.a),
             'x': str(self.x_id),
-            'b': self.b,
-            'meta': {
-                'priority': self.priority,
-                'kind': self.kind
-            }
+            'b': str(self.b),
+            'priority': str(self.priority),
+            'kind': self.kind.value
         }
 

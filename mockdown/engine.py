@@ -4,10 +4,10 @@ from typing import Protocol, Sequence, Set
 from .model import IView
 from .constraint import IConstraint
 from .instantiation import IConstraintInstantiator, VisibilityConstraintInstantiator
-from .typing import NT, NT_Co
+from .typing import NT, NT_co
 
 
-class IMockdownEngine(Protocol[NT_Co]):
+class IMockdownEngine(Protocol[NT_co]):
     @property
     @abstractmethod
     def instantiation_engine(self) -> IConstraintInstantiator: ...

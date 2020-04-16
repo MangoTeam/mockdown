@@ -26,19 +26,19 @@ class ViewBuilder(Generic[NT]):
     parent: Optional[ViewBuilder] = field(default=None)
 
     # TODO: Add this magic back for testing?
-    # def __post_init__(self):
-    #     def normalize_children(child_or_args: Union[ViewBuilder, Tuple]):
-    #         if isinstance(child_or_args, list) or isinstance(child_or_args, tuple):
-    #             return ViewBuilder(*child_or_args)
-    #         elif isinstance(child_or_args, dict):
-    #             return ViewBuilder(**child_or_args)
-    #         else:
-    #             return child_or_args
-    #
-    #     self.children = list(map(normalize_children, self.children))
-    #
-    #     for child in self.children:
-    #         child.parent = self
+    def __post_init__(self):
+        def normalize_children(child_or_args: Union[ViewBuilder, Tuple]):
+            if isinstance(child_or_args, list) or isinstance(child_or_args, tuple):
+                return ViewBuilder(*child_or_args)
+            elif isinstance(child_or_args, dict):
+                return ViewBuilder(**child_or_args)
+            else:
+                return child_or_args
+
+        self.children = list(map(normalize_children, self.children))
+
+        for child in self.children:
+            child.parent = self
 
     def add_child(self, child: ViewBuilder):
         child.parent = self

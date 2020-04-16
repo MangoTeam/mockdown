@@ -5,7 +5,7 @@ from typing import Protocol, Tuple
 
 from .primitives import Attribute, ViewName
 from .view import IView
-from ..typing import NT, NT_Co
+from ..typing import NT, NT_co
 
 
 class IAnchorID(Protocol):

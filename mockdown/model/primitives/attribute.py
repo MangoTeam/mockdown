@@ -13,7 +13,7 @@ class Attribute(Enum):
     WIDTH = 'width'
     HEIGHT = 'height'
 
-    def is_compatible(self, other: Attribute):
+    def is_compatible(self, other: Attribute) -> bool:
         h_attrs = {Attribute.LEFT, Attribute.RIGHT, Attribute.CENTER_X}
         v_attrs = {Attribute.TOP, Attribute.BOTTOM, Attribute.CENTER_Y}
         s_attrs = {Attribute.WIDTH, Attribute.HEIGHT}
