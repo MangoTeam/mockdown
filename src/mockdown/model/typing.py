@@ -50,7 +50,7 @@ class IEdge(Protocol[NT]):
     def position(self) -> NT: ...
 
 
-class IView(IRect[NT], Protocol[NT]):
+class IView(Protocol[NT]):
     name: ViewName
     rect: IRect[NT]
     children: Sequence[IView[NT]]

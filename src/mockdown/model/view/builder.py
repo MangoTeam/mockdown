@@ -19,21 +19,10 @@ from mockdown.typing import NT, Tuple4
 #  could be really handy for testing... needs to be fixed up.
 
 class IViewBuilder(Protocol[NT]):
-    @property
-    @abstractmethod
-    def name(self) -> ViewName: ...
-
-    @property
-    @abstractmethod
-    def rect(self) -> Tuple[NT, NT, NT, NT]: ...
-
-    @property
-    @abstractmethod
-    def children(self) -> Sequence[IViewBuilder[NT]]: ...
-
-    @property
-    @abstractmethod
-    def parent(self) -> Optional[IViewBuilder[NT]]: ...
+    name: ViewName
+    rect: Tuple[NT, NT, NT, NT]
+    children: Sequence[IViewBuilder[NT]]
+    parent: Optional[IViewBuilder[NT]]
 
     def build(self, parent_view: Optional[IView[NT]] = None) -> IView[NT]: ...
 
@@ -57,7 +46,7 @@ class _BaseViewBuilder(IViewBuilder[NT], ABC):
         return view
 
 
-@dataclass
+@dataclass(frozen=True)
 class RViewBuilder(_BaseViewBuilder[float]):
     name: ViewName
     rect: Tuple4[float]
@@ -68,7 +57,7 @@ class RViewBuilder(_BaseViewBuilder[float]):
         return RRect(*self.rect)
 
 
-@dataclass
+@dataclass(frozen=True)
 class QViewBuilder(_BaseViewBuilder[Fraction]):
     name: ViewName
     rect: Tuple4[Fraction]
@@ -79,7 +68,7 @@ class QViewBuilder(_BaseViewBuilder[Fraction]):
         return QRect(*self.rect)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ZViewBuilder(_BaseViewBuilder[int]):
     name: ViewName
     rect: Tuple4[int]

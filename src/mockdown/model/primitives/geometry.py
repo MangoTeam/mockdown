@@ -3,50 +3,39 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Protocol, TypeVar, cast
+from typing import Protocol, cast
 
-from ...typing import NT_co
+from ...typing import NT, NT_co
 
 
-class IRect(Protocol[NT_co]):
-    @property
-    @abstractmethod
-    def left(self) -> NT_co: ...
-
-    @property
-    @abstractmethod
-    def top(self) -> NT_co: ...
+class IRect(Protocol[NT]):
+    left: NT
+    top: NT
+    right: NT
+    bottom: NT
 
     @property
     @abstractmethod
-    def right(self) -> NT_co: ...
+    def width(self) -> NT: ...
 
     @property
     @abstractmethod
-    def bottom(self) -> NT_co: ...
+    def height(self) -> NT: ...
 
     @property
     @abstractmethod
-    def width(self) -> NT_co: ...
+    def center_x(self) -> NT: ...
 
     @property
     @abstractmethod
-    def height(self) -> NT_co: ...
+    def center_y(self) -> NT: ...
 
     @property
     @abstractmethod
-    def center_x(self) -> NT_co: ...
-
-    @property
-    @abstractmethod
-    def center_y(self) -> NT_co: ...
-
-    @property
-    @abstractmethod
-    def size(self) -> ISize[NT_co]: ...
+    def size(self) -> ISize[NT]: ...
 
 
-@dataclass(frozen=True)
+@dataclass(eq=True)
 class RRect(IRect[float]):
     left: float
     top: float
@@ -74,7 +63,7 @@ class RRect(IRect[float]):
         return (self.top + self.bottom) / 2
 
 
-@dataclass(frozen=True)
+@dataclass(eq=True)
 class QRect(IRect[Fraction]):
     left: Fraction
     top: Fraction
@@ -107,7 +96,7 @@ class QRect(IRect[Fraction]):
         return cast(Fraction, (self.top + self.bottom) / 2)
 
 
-@dataclass(frozen=True)
+@dataclass(eq=True)
 class ZRect(IRect[int]):
     left: int
     top: int
@@ -135,29 +124,24 @@ class ZRect(IRect[int]):
         return (self.top + self.bottom) // 2
 
 
-class ISize(Protocol[NT_co]):
-    @property
-    @abstractmethod
-    def width(self) -> NT_co: ...
-
-    @property
-    @abstractmethod
-    def height(self) -> NT_co: ...
+class ISize(Protocol[NT]):
+    width: NT
+    height: NT
 
 
-@dataclass(frozen=True)
+@dataclass(eq=True)
 class ZSize(ISize[int]):
     width: int
     height: int
 
 
-@dataclass(frozen=True)
+@dataclass(eq=True)
 class QSize(ISize[Fraction]):
     width: Fraction
     height: Fraction
 
 
-@dataclass(frozen=True)
+@dataclass(eq=True)
 class RSize(ISize[float]):
     width: float
     height: float
