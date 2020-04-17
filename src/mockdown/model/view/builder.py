@@ -18,6 +18,7 @@ from mockdown.typing import NT, Tuple4
 # todo: only really from_dict is being used heavily here, though this \
 #  could be really handy for testing... needs to be fixed up.
 
+
 class IViewBuilder(Protocol[NT]):
     name: ViewName
     rect: Tuple[NT, NT, NT, NT]
@@ -25,6 +26,10 @@ class IViewBuilder(Protocol[NT]):
     parent: Optional[IViewBuilder[NT]]
 
     def build(self, parent_view: Optional[IView[NT]] = None) -> IView[NT]: ...
+
+
+class SupportsViewBuilder(Protocol[NT]):
+    def to_view_builder(self) -> IViewBuilder[NT]: ...
 
 
 class _BaseViewBuilder(IViewBuilder[NT], ABC):

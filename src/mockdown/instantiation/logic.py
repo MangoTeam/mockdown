@@ -25,7 +25,7 @@ def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]], 
     try:
         with open(outfile, 'w') as dbfile:
             # Load static terms/predicates.
-            with resources.path(__package__, 'mockdown.pl') as path:
+            with resources.path(__package__, 'logic.pl') as path:
                 prolog.consult(str(path))
 
             # Add dynamic terms/predicates.
