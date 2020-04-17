@@ -2,8 +2,9 @@ from fractions import Fraction
 
 import pytest  # type: ignore
 
-from mockdown.model import QViewLoader, ZViewLoader
+from mockdown.model import QViewLoader, ZViewLoader, ZViewBuilder
 
+ZV = ZViewBuilder
 
 class TestZViewLoader:
     def test_strictly_ints(self) -> None:
@@ -17,10 +18,16 @@ class TestZViewLoader:
             }]
         })
 
+        assert view == ZV('root', (0, 0, 100, 100), [
+            ZV('child', (10, 10, 90, 90))
+        ]).build()
+
         view = loader.load_dict({
             'name': 'root',
             'rect': [0.0, 0.0, 100.0, 100.0]
         })
+
+        assert view == ZV('root', (0, 0, 100, 100)).build()
 
         with pytest.raises(Exception):
             view = loader.load_dict({

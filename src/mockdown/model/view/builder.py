@@ -7,7 +7,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Optional, Protocol, Sequence, Tuple, cast
+from typing import Callable, Optional, Protocol, Sequence, Tuple, Type, Union, cast
 
 from mockdown.model.primitives import IRect, QRect, RRect, ViewName, ZRect
 from mockdown.model.typing import IView

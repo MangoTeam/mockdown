@@ -16,7 +16,9 @@ class View(IView[NT]):
     name: ViewName
     rect: IRect[NT]
     children: Sequence[IView[NT]] = field(default_factory=list)
-    parent: Optional[IView[NT]] = field(default=None)
+    parent: Optional[IView[NT]] = field(default=None, compare=False)
+
+    # Note: parent must be excluded from comparisons, or we will get infinite recursion.
 
     # Anchor and Edge convenience properties
     @property
