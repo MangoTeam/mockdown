@@ -10,7 +10,11 @@ class TestZViewLoader:
         loader = ZViewLoader(integerize_fn=ZViewLoader.strictly_ints)
         view = loader.load_dict({
             'name': 'root',
-            'rect': [0, 0, 100, 100]
+            'rect': [0, 0, 100, 100],
+            'children': [{
+                'name': 'child',
+                'rect': [10, 10, 90, 90]
+            }]
         })
 
         view = loader.load_dict({
