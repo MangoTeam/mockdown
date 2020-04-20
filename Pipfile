@@ -20,6 +20,7 @@ timing-asgi = "*"
 z3-solver = "*"
 kiwisolver = "*"
 Deprecated = "*"
+typing-extensions = "*"
 
 [requires]
 python_version = "3.8"

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "375984428cf9b953ca0a45a11a024579992005691d15c2d835ddbe9b8140fd8c"
+            "sha256": "5eca91cd9a95806d92ca2db22e566523a615cf63a2edca9309be69bd24d67b8b"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -132,6 +132,15 @@
             "index": "pypi",
             "version": "==0.2.0"
         },
+        "typing-extensions": {
+            "hashes": [
+                "sha256:6e95524d8a547a91e08f404ae485bbb71962de46967e1b71a0cb89af24e761c5",
+                "sha256:79ee589a3caca649a9bfd2a8de4709837400dfa00b6cc81962a1e6a1815969ae",
+                "sha256:f8d2bd89d25bc39dabe7d23df520442fa1d8969b82544370e03d88b5a591c392"
+            ],
+            "index": "pypi",
+            "version": "==3.7.4.2"
+        },
         "uvicorn": {
             "hashes": [
                 "sha256:0f58170165c4495f563d8224b2f415a0829af0412baa034d6f777904613087fd",
@@ -205,7 +214,7 @@
                 "sha256:5b26757dc6f79a3b7dc9fab95359328d5747fcb2409d331ea66d0272b90ab2a0",
                 "sha256:8b995ffe925347a2138d7ac0fe77155e4311a0ea6d6da4f5128fe4b3cbe5ed71"
             ],
-            "markers": "platform_system == 'Darwin'",
+            "markers": "sys_platform == 'darwin'",
             "version": "==0.1.0"
         },
         "astroid": {
@@ -484,10 +493,10 @@
         },
         "nbformat": {
             "hashes": [
-                "sha256:65a79936a128fd85aef392b7fea520166364037118b6fe3ed52de742d06c4558",
-                "sha256:f0c47cf93c505cb943e2f131ef32b8ae869292b5f9f279db2bafb35867923f69"
+                "sha256:049af048ed76b95c3c44043620c17e56bc001329e07f83fec4f177f0e3d7b757",
+                "sha256:276343c78a9660ab2a63c28cc33da5f7c58c092b3f3a40b6017ae2ce6689320d"
             ],
-            "version": "==5.0.5"
+            "version": "==5.0.6"
         },
         "notebook": {
             "hashes": [
@@ -730,6 +739,7 @@
                 "sha256:79ee589a3caca649a9bfd2a8de4709837400dfa00b6cc81962a1e6a1815969ae",
                 "sha256:f8d2bd89d25bc39dabe7d23df520442fa1d8969b82544370e03d88b5a591c392"
             ],
+            "index": "pypi",
             "version": "==3.7.4.2"
         },
         "urllib3": {

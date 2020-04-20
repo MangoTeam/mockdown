@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from fractions import Fraction
-from typing import Any, Callable, Optional, Protocol, Set, Tuple, TypeVar
+from typing import Any, Optional, Protocol, Set, Tuple, TypeVar
 
 from ..model import IAnchorID
 
@@ -13,8 +13,6 @@ class IComparisonOp(Protocol[T]):
     # This weird naming makes mypy happy (aligns with operator.eq, etc)
     def __call__(self, __a: T, __b: T) -> T: ...
 
-
-ISCLOSE_TOLERANCE = 0.01  # maximum difference of 1%
 
 Priority = Tuple[int, int, int]
 PRIORITY_REQUIRED: Priority = (1000, 1000, 1000)
@@ -60,7 +58,7 @@ class ConstraintKind(Enum):
                 cls.SIZE_ASPECT_RATIO}
 
 
-class IConstraint(Protocol):
+class IConstraint:
     kind: ConstraintKind
 
     y_id: IAnchorID
@@ -77,3 +75,7 @@ class IConstraint(Protocol):
     @property
     def is_falsified(self) -> bool:
         return False
+
+    def __eq__(self, other): ...
+
+    def __hash__(self): ...

@@ -3,12 +3,13 @@ from __future__ import annotations
 import operator
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, final
 
 from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority
 from mockdown.model import IAnchorID
 
 
+@final
 @dataclass(eq=True, frozen=True)
 class ConstantConstraint(IConstraint):
     """
@@ -19,7 +20,7 @@ class ConstantConstraint(IConstraint):
     y_id: IAnchorID
     x_id: Optional[IAnchorID] = field(default=None, init=False)
 
-    a: Fraction = Fraction('0')
+    a: Fraction = field(default=Fraction('0'), init=False)
     b: Fraction = Fraction('0')
 
     op: IComparisonOp[Any] = operator.eq
@@ -42,6 +43,7 @@ class ConstantConstraint(IConstraint):
         }
 
 
+@final
 @dataclass(eq=True, frozen=True)
 class LinearConstraint(IConstraint):
     """
@@ -56,7 +58,7 @@ class LinearConstraint(IConstraint):
     a: Fraction = Fraction('1')
     b: Fraction = Fraction('0')
 
-    op: IComparisonOp[Any]  = operator.eq
+    op: IComparisonOp[Any] = operator.eq
     priority: Priority = PRIORITY_REQUIRED
 
     sample_count: int = 0

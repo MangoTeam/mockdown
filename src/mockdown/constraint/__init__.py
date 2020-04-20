@@ -1,7 +1,6 @@
-from .typing import IConstraint, ConstraintKind, ISCLOSE_TOLERANCE
+from .typing import ConstraintKind, IConstraint
 
 __all__ = [
     'ConstraintKind',
-    'IConstraint',
-    'ISCLOSE_TOLERANCE'
+    'IConstraint'
 ]

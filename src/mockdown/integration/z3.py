@@ -1,8 +1,6 @@
-import operator
-
 from z3 import z3  # type: ignore
 
-from ..constraint import IConstraint, ISCLOSE_TOLERANCE
+from ..constraint import IConstraint
 from ..model import IAnchorID
 
 
