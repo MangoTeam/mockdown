@@ -3,9 +3,9 @@ from __future__ import annotations
 import operator
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from mockdown.constraint.typing import IConstraint, ComparisonOp, Priority, ConstraintKind, PRIORITY_REQUIRED
+from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority
 from mockdown.model import IAnchorID
 
 
@@ -19,14 +19,27 @@ class ConstantConstraint(IConstraint):
     y_id: IAnchorID
     x_id: Optional[IAnchorID] = field(default=None, init=False)
 
-    a: Fraction = Fraction('1')
+    a: Fraction = Fraction('0')
     b: Fraction = Fraction('0')
 
-    op: ComparisonOp = operator.eq
+    op: IComparisonOp[Any] = operator.eq
     priority: Priority = PRIORITY_REQUIRED
 
     sample_count: int = 0
-    is_falsified: bool = False
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            'y': str(self.y_id),
+            'op': {
+                operator.eq: '=',
+                operator.le: '≤',
+                operator.ge: '≥'
+            }[self.op],
+            'a': str(self.a),
+            'b': str(self.b),
+            'priority': str(self.priority),
+            'kind': self.kind.value
+        }
 
 
 @dataclass(eq=True, frozen=True)
@@ -43,10 +56,22 @@ class LinearConstraint(IConstraint):
     a: Fraction = Fraction('1')
     b: Fraction = Fraction('0')
 
-    op: ComparisonOp = operator.eq
+    op: IComparisonOp[Any]  = operator.eq
     priority: Priority = PRIORITY_REQUIRED
 
     sample_count: int = 0
-    is_falsified: bool = False
 
-
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            'y': str(self.y_id),
+            'op': {
+                operator.eq: '=',
+                operator.le: '≤',
+                operator.ge: '≥'
+            }[self.op],
+            'a': str(self.a),
+            'x': str(self.x_id),
+            'b': str(self.b),
+            'priority': str(self.priority),
+            'kind': self.kind.value
+        }

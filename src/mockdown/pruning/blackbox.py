@@ -30,7 +30,7 @@ class BlackBoxPruner(IPruningMethod):
         # print('min conf', self.min_conf)
         # print('max conf', self.max_conf)
 
-        assert len(examples) > 0, "Pruner requires non-empty training examples"
+        assert len(examples) > 0, "Pruner requires non-empty learning examples"
 
         self.example = examples[0]
 
@@ -294,7 +294,7 @@ class HierarchicalPruner(BlackBoxPruner):
         # print('min conf', self.min_conf)
         # print('max conf', self.max_conf)
 
-        assert len(examples) > 0, "Pruner requires non-empty training examples"
+        assert len(examples) > 0, "Pruner requires non-empty learning examples"
 
         self.hierarchy = examples[0]
 

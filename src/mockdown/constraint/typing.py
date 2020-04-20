@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-import operator
-from abc import abstractmethod
 from enum import Enum
 from fractions import Fraction
-from typing import Any, Callable, Dict, Optional, Protocol, Set, Tuple
+from typing import Any, Callable, Optional, Protocol, Set, Tuple, TypeVar
 
 from ..model import IAnchorID
 
-Priority = Tuple[int, int, int]
-ComparisonOp = Callable[[Any, Any], Any]
+T = TypeVar('T')
+
+
+class IComparisonOp(Protocol[T]):
+    # This weird naming makes mypy happy (aligns with operator.eq, etc)
+    def __call__(self, __a: T, __b: T) -> T: ...
+
 
 ISCLOSE_TOLERANCE = 0.01  # maximum difference of 1%
+
+Priority = Tuple[int, int, int]
 PRIORITY_REQUIRED: Priority = (1000, 1000, 1000)
 PRIORITY_STRONG: Priority = (1, 0, 0)
 PRIORITY_MEDIUM: Priority = (0, 1, 0)
@@ -56,52 +61,18 @@ class ConstraintKind(Enum):
 
 
 class IConstraint(Protocol):
-    @property
-    @abstractmethod
-    def x_id(self) -> Optional[IAnchorID]: ...
+    kind: ConstraintKind
 
-    @property
-    @abstractmethod
-    def y_id(self) -> IAnchorID: ...
+    y_id: IAnchorID
+    x_id: Optional[IAnchorID]
 
-    @property
-    @abstractmethod
-    def a(self) -> Fraction: ...
+    a: Fraction
+    b: Fraction
 
-    @property
-    @abstractmethod
-    def b(self) -> Fraction: ...
+    op: IComparisonOp[Any]
+    priority: Priority
 
-    @property
-    @abstractmethod
-    def op(self) -> ComparisonOp: ...
-
-    @property
-    @abstractmethod
-    def priority(self) -> Priority: ...
-
-    @property
-    @abstractmethod
-    def kind(self) -> ConstraintKind: ...
-
-    @property
-    @abstractmethod
-    def sample_count(self) -> int: ...
-
-    def to_dict(self) -> Dict[str, str]:
-        return {
-            'y': str(self.y_id),
-            'op': {
-                operator.eq: '=',
-                operator.le: '≤',
-                operator.ge: '≥'
-            }[self.op],
-            'a': str(self.a),
-            'x': str(self.x_id),
-            'b': str(self.b),
-            'priority': str(self.priority),
-            'kind': self.kind.value
-        }
+    sample_count: int
 
     @property
     def is_falsified(self) -> bool:

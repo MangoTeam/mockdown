@@ -1,12 +1,42 @@
 from collections import deque
 from itertools import chain, tee
 from operator import attrgetter
-from typing import List, Tuple
+from typing import Any, List, Sequence, Set, Tuple
 
 from intervaltree import IntervalTree  # type: ignore
 
+from mockdown.constraint import IConstraint
+from mockdown.instantiation import IConstraintInstantiator, valid_constraints
+
 from mockdown.model import IEdge, IView
 from mockdown.typing import NT
+
+
+class VisibilityConstraintInstantiator(IConstraintInstantiator[Any]):
+    def instantiate(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
+        edge_pair_sets = [
+            visible_pairs(example, deep=True)
+            for example
+            in examples
+        ]
+
+        anchor_pair_sets = [
+            [(e1.anchor, e2.anchor) for (e1, e2) in edge_pair_set]
+            for edge_pair_set
+            in edge_pair_sets
+        ]
+
+        constraint_sets = {
+            valid_constraints(examples[i], anchor_pair_sets[i])
+            for i
+            in range(len(examples))
+        }
+
+        all_constraints: Set[IConstraint] = set()
+        for constraint_set in constraint_sets:
+            all_constraints = all_constraints.union(constraint_set)
+
+        return list(all_constraints)
 
 
 def pairwise(iterable):

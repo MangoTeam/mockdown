@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Any, Optional
 
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
-from mockdown.constraint.typing import ComparisonOp, IConstraint, ConstraintKind
+from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint
 from mockdown.model import IAnchorID
 from mockdown.typing import unreachable
 
@@ -15,14 +15,14 @@ class ConstraintFactory:
         - could have some more complex system that doesn't rely on ConstraintKind.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @staticmethod
     def create(kind: Kind,
                y_id: IAnchorID,
                x_id: Optional[IAnchorID] = None,
-               op: Optional[ComparisonOp] = None) -> IConstraint:
+               op: Optional[IComparisonOp[Any]] = None) -> IConstraint:
 
         # Note: mypy isn't smart enough to understand `kind in { ... }`.
         # Also, can't use **kwargs for type safety reasons (dataclass will accept None!!!).
