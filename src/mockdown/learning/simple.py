@@ -45,7 +45,7 @@ class SimpleConstraintLearning:
         sample_counts: DefaultDict[IConstraint, int] = defaultdict(lambda: 0)
         falsified: DefaultDict[IConstraint, bool] = defaultdict(lambda: False)
 
-        def widen_bound(op: IComparisonOp[float], old: float, new: float) -> float:
+        def widen_bound(op: IComparisonOp[Any], old: float, new: float) -> float:
             if op == operator.le:
                 return max(old, new)
             elif op == operator.ge:
@@ -118,18 +118,15 @@ class SimpleConstraintLearning:
                 b = Fraction(values['b']).limit_denominator(self._max_denominator)
                 constraint = replace(template,
                                      a=a, b=b,
-                                     sample_count=sample_counts[template])
-                assert constraint is not None
+                                     sample_count=sample_counts[template],)
                 constraints.append(constraint)
             elif isinstance(template, ConstantConstraint):
                 b = Fraction(values['b']).limit_denominator(self._max_denominator)
                 constraint = replace(template,
                                      b=b,
                                      sample_count=sample_counts[template])
-                assert constraint is not None
                 constraints.append(constraint)
             else:
                 raise Exception("Unsupported IConstraint implementation.")
 
-        pprint(constraints)
         return constraints
