@@ -4,7 +4,7 @@ from collections import defaultdict
 from dataclasses import replace
 from fractions import Fraction
 from pprint import pprint
-from typing import DefaultDict, Dict, List, Optional, Sequence
+from typing import Any, DefaultDict, Dict, List, Optional, Sequence
 
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
@@ -114,16 +114,17 @@ class SimpleConstraintLearning:
 
             constraint: Optional[IConstraint] = None
             if isinstance(template, LinearConstraint):
-                a = Fraction(values['a']).limit_denominator(self._max_denominator)
-                b = Fraction(values['b']).limit_denominator(self._max_denominator)
+                a_frac = Fraction(values['a']).limit_denominator(self._max_denominator)
+                b_frac = Fraction(values['b']).limit_denominator(self._max_denominator)
                 constraint = replace(template,
-                                     a=a, b=b,
+                                     a=a_frac,
+                                     b=b_frac,
                                      sample_count=sample_counts[template],)
                 constraints.append(constraint)
             elif isinstance(template, ConstantConstraint):
-                b = Fraction(values['b']).limit_denominator(self._max_denominator)
+                b_frac = Fraction(values['b']).limit_denominator(self._max_denominator)
                 constraint = replace(template,
-                                     b=b,
+                                     b=b_frac,
                                      sample_count=sample_counts[template])
                 constraints.append(constraint)
             else:
