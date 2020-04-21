@@ -6,7 +6,8 @@ from typing import Any, List, Sequence, Set, Tuple
 from intervaltree import IntervalTree  # type: ignore
 
 from mockdown.constraint import IConstraint
-from mockdown.instantiation import IConstraintInstantiator, valid_constraints
+from mockdown.instantiation.typing import IConstraintInstantiator
+from mockdown.instantiation.logic import valid_constraints
 
 from mockdown.model import IEdge, IView
 from mockdown.typing import NT
