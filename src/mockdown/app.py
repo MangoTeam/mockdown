@@ -48,25 +48,17 @@ async def synthesize(request: Request) -> JSONResponse:
     learning = SimpleConstraintLearning(samples=examples, templates=templates)
     constraints = learning.learn()
 
-    # trained_constraints = [
-    #     constraint.train_view_many(examples)
-    #     for constraint
-    #     in all_constraints
-    #
-    # ]
-    # prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
-    #
-    # pruned_constraints = prune(trained_constraints)
-    #
-    constraints_json = [
+    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
+
+    pruned_constraints = prune(constraints)
+
+    res = [
         constraint.to_dict()
         for constraint
-        in constraints
-        # if not constraint.is_falsified
+        in pruned_constraints
     ]
 
-    # return JSONResponse(trained_constraints_json)
-    return JSONResponse(constraints_json)
+    return JSONResponse(res)
 
 
 def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) -> Starlette:

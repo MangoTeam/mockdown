@@ -194,7 +194,7 @@ class BlackBoxPruner(IPruningMethod):
         # build up all of the constraint as Z3 objects
 
         # idents = set()
-        solver = z3.Optsimize()
+        solver = z3.Optimize()
         linearize = False
 
         namesMap = {}
