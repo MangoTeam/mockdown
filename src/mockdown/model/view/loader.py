@@ -56,16 +56,16 @@ class QViewLoader(_BaseViewLoader[Fraction]):
         return builder.build()
 
 
-class ZViewLoader(_BaseViewLoader[int]):
-    @staticmethod
-    def strictly_ints(n: SupportsFloat) -> int:
-        if isinstance(n, int):
-            return n
-        elif isinstance(n, SupportsInt) and float(n) == float(int(n)):
-            return int(n)
-        else:
-            raise Exception("Only ints allowed!")
+def strictly_ints(n: SupportsFloat) -> int:
+    if isinstance(n, int):
+        return n
+    elif isinstance(n, SupportsInt) and float(n) == float(int(n)):
+        return int(n)
+    else:
+        raise Exception("Only ints allowed!")
 
+
+class ZViewLoader(_BaseViewLoader[int]):
     def __init__(self, integerize_fn: Callable[[SupportsFloat], int] = strictly_ints):
         # You could also use some rounding/ceil/floor...
         self.integerize_fn = integerize_fn

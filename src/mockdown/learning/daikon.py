@@ -1,6 +1,7 @@
+from collections import defaultdict
 from dataclasses import replace
 from fractions import Fraction
-from typing import Dict, Generic, List, Optional, Sequence
+from typing import DefaultDict, Dict, Generic, List, Optional, Sequence
 
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
@@ -34,11 +35,14 @@ class DaikonStyleConstraintLearning:
     def learn(self) -> Sequence[IConstraint]:
         # Constants are learned as floats and then rationalized.
         constants: Dict[IConstraint, Dict[str, float]] = {}
+        sample_counts: DefaultDict[IConstraint, int] = defaultdict(default_factory=lambda: 0)
 
-        for sample in self._samples:
+        for i, sample in enumerate(self._samples):
             for template in self._templates:
+                values = {}
                 if template.kind is Kind.POS_LTRB_OFFSET:
-                    # TODO: implement
+                    values['a'] = 1.0
+                    # todo
                     pass
                 elif template.kind is Kind.SIZE_OFFSET:
                     pass
@@ -59,10 +63,14 @@ class DaikonStyleConstraintLearning:
             if isinstance(template, LinearConstraint):
                 a = Fraction(values['a']).limit_denominator(self._max_denominator)
                 b = Fraction(values['b']).limit_denominator(self._max_denominator)
-                constraint = replace(template, a=a, b=b)
+                constraint = replace(template,
+                                     a=a, b=b,
+                                     sample_count=sample_counts[template])
             elif isinstance(template, ConstantConstraint):
                 b = Fraction(values['b']).limit_denominator(self._max_denominator)
-                constraint = replace(template, b=b)
+                constraint = replace(template,
+                                     b=b,
+                                     sample_count=sample_counts[template])
             else:
                 raise Exception("Unsupported IConstraint implementation.")
 

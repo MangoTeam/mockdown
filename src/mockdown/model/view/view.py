@@ -126,6 +126,26 @@ class View(IView[NT]):
 
         return comp
 
+    def is_isomorphic(self, view: IView[NT], include_names: bool = True) -> bool:
+        """
+        Graph/tree isomorphism. Useful for validating multiple samples as equivalent.
+        """
+        if len(self.children) != len(view.children):
+            return False
+
+        if include_names and self.name != view.name:
+            return False
+
+        if len(self.children) == 0:
+            return True
+        else:
+            return all(c1.is_isomorphic(c2, include_names=include_names)
+                       for c1, c2
+                       in zip(self.children, view.children))
+
     def __iter__(self) -> Iterator[IView[NT]]:
         yield self
         yield from chain(*map(lambda c: iter(c), self.children))
+
+    def __repr__(self) -> str:
+        return f"View(name='{self.name}')"

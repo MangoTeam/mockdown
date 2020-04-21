@@ -3,13 +3,14 @@ from fractions import Fraction
 import pytest  # type: ignore
 
 from mockdown.model import QViewLoader, ZViewLoader, ZViewBuilder
+from mockdown.model.view.loader import strictly_ints
 
 ZV = ZViewBuilder
 
 
 class TestZViewLoader:
     def test_strictly_ints(self) -> None:
-        loader = ZViewLoader(integerize_fn=ZViewLoader.strictly_ints)
+        loader = ZViewLoader(integerize_fn=strictly_ints)
         view = loader.load_dict({
             'name': 'root',
             'rect': [0, 0, 100, 100],
