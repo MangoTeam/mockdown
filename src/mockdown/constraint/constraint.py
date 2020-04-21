@@ -9,6 +9,14 @@ from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstrain
 from mockdown.model import IAnchorID
 
 
+def op_to_str(op: IComparisonOp[Any]):
+    return {
+        operator.eq: '=',
+        operator.le: '≤',
+        operator.ge: '≥'
+    }[op]
+
+
 @final
 @dataclass(eq=True, frozen=True)
 class ConstantConstraint(IConstraint):
@@ -27,6 +35,10 @@ class ConstantConstraint(IConstraint):
     priority: Priority = PRIORITY_REQUIRED
 
     sample_count: int = 0
+
+    def __repr__(self) -> str:
+        b = str(self.b) if self.sample_count > 0 else "_"
+        return f"{self.y_id} {op_to_str(self.op)} b"
 
     def to_dict(self) -> Dict[str, str]:
         return {
@@ -62,6 +74,11 @@ class LinearConstraint(IConstraint):
     priority: Priority = PRIORITY_REQUIRED
 
     sample_count: int = 0
+
+    def __repr__(self) -> str:
+        a = str(self.a) if self.sample_count > 0 else "_"
+        b = str(self.b) if self.sample_count > 0 else "_"
+        return f"{self.y_id} {op_to_str(self.op)} {a} * {self.x_id} + {b}"
 
     def to_dict(self) -> Dict[str, str]:
         return {

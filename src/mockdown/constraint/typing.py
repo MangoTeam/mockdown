@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from fractions import Fraction
-from typing import Any, Optional, Protocol, Set, Tuple, TypeVar
+from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar
 
 from ..model import IAnchorID
 
@@ -76,6 +76,10 @@ class IConstraint:
     def is_falsified(self) -> bool:
         return False
 
-    def __eq__(self, other): ...
+    def to_dict(self) -> Dict[str, str]: ...
 
-    def __hash__(self): ...
+    def __repr__(self) -> str: ...
+
+    def __eq__(self, other) -> bool: ...
+
+    def __hash__(self) -> int: ...

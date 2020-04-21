@@ -9,6 +9,7 @@ from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 
 from .engine import DefaultMockdownEngine
+from .learning.simple import SimpleConstraintLearning
 from .model import IView
 from .model.view.loader import RViewLoader
 from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory
@@ -42,29 +43,30 @@ async def synthesize(request: Request) -> JSONResponse:
         in examples_json
     ]
 
-    all_constraints = engine.instantiation_engine.instantiate(examples)
+    templates = engine.instantiation_engine.instantiate(examples)
 
-    # todo here
+    learning = SimpleConstraintLearning(samples=examples, templates=templates)
+    constraints = learning.learn()
 
-    trained_constraints = [
-        constraint.train_view_many(examples)
-        for constraint
-        in all_constraints
-
-    ]
-
-    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
-
-    pruned_constraints = prune(trained_constraints)
-
-    trained_constraints_json = [
+    # trained_constraints = [
+    #     constraint.train_view_many(examples)
+    #     for constraint
+    #     in all_constraints
+    #
+    # ]
+    # prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
+    #
+    # pruned_constraints = prune(trained_constraints)
+    #
+    constraints_json = [
         constraint.to_dict()
         for constraint
-        in pruned_constraints
+        in constraints
         # if not constraint.is_falsified
     ]
 
-    return JSONResponse(trained_constraints_json)
+    # return JSONResponse(trained_constraints_json)
+    return JSONResponse(constraints_json)
 
 
 def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) -> Starlette:
