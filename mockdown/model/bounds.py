@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from mockdown.model.conformance import Conformance
 from typing import Optional
 
 
@@ -9,6 +10,8 @@ class SizeBounds:
     max_w: Optional[int] = None
     max_h: Optional[int] = None
 
+def confs_to_bounds(lo_c: Conformance, hi_c: Conformance) -> SizeBounds:
+    return SizeBounds(lo_c.width, lo_c.height, hi_c.width, hi_c.height)
 
 def get_bounds(json: dict) -> SizeBounds:
     # print('bounds:', json)

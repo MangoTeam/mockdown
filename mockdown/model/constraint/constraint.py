@@ -80,6 +80,17 @@ class IConstraint(ABC):
         return (f"{str(self.y)} {op_str} {a_str}{str(self.x)}{b_str}"
                 f"(priority={self.priority}, samples={self.sample_count}, kind={self.kind})")
 
+    def fuzzify(self):
+        rhs = self.b
+
+        if not (self.op == operator.eq):
+            if (self.op == operator.ge):
+                rhs -= ISCLOSE_TOLERANCE
+            else:
+                rhs += ISCLOSE_TOLERANCE
+
+        return replace(self, b=rhs)
+            
 
 
     def to_z3_expr(self, suff: int, linearize: bool):

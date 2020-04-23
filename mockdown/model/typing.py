@@ -9,7 +9,6 @@ from mockdown.model.attribute import Attribute
 
 import z3
 
-
 class Rect(NamedTuple):
     left: int
     right: int
