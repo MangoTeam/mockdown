@@ -112,6 +112,9 @@ class SimpleConstraintLearning:
         for template in self._templates:
             values = constants[template]
 
+            if falsified[template]:
+                continue
+
             constraint: Optional[IConstraint] = None
             if isinstance(template, LinearConstraint):
                 a_frac = Fraction(values['a']).limit_denominator(self._max_denominator)
