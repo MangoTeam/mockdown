@@ -48,7 +48,6 @@ class ConstantConstraint(IConstraint):
                 operator.le: '≤',
                 operator.ge: '≥'
             }[self.op],
-            'a': str(self.a),
             'b': str(self.b),
             'priority': str(self.priority),
             'kind': self.kind.value
