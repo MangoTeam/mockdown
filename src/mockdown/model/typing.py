@@ -87,7 +87,7 @@ class IView(Protocol[NT]):
 
     @property
     def center_y(self) -> NT:
-        return self.rect.center_x
+        return self.rect.center_y
 
     @property
     def size(self) -> ISize[NT]:
