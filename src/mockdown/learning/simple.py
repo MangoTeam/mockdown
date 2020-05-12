@@ -3,12 +3,13 @@ import operator
 from collections import defaultdict
 from dataclasses import replace
 from fractions import Fraction
-from pprint import pprint
 from typing import Any, DefaultDict, Dict, List, Optional, Sequence
 
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
 from mockdown.constraint.typing import IComparisonOp
+from mockdown.learning.errors import ConstraintFalsified
+from mockdown.learning.typing import IConstraintLearning
 from mockdown.model import IView
 
 Kind = ConstraintKind
@@ -17,12 +18,7 @@ DEFAULT_TOLERANCE = 0.01  # maximum difference of 1%
 MAX_DENOMINATOR = 1000
 
 
-class _ConstraintFalsified(Exception):
-    def __init__(self, constraint: IConstraint):
-        self.constraint = constraint
-
-
-class SimpleConstraintLearning:
+class SimpleConstraintLearning(IConstraintLearning):
     """
     This class emulates the old learning method.
 
@@ -92,7 +88,7 @@ class SimpleConstraintLearning:
 
                             if template.op == operator.eq:
                                 if not math.isclose(old_a, a, rel_tol=self._tolerance):
-                                    raise _ConstraintFalsified(template)
+                                    raise ConstraintFalsified(template)
                                 # otherwise leave the original value.
                             else:
                                 a = widen_bound(template.op, old=old_a, new=a)
@@ -100,7 +96,7 @@ class SimpleConstraintLearning:
                         constants[template] = {'a': a, 'b': b}
                     else:
                         raise Exception(f"Unsupported constraint kind: {template.kind}.")
-                except _ConstraintFalsified as e:
+                except ConstraintFalsified as e:
                     # todo, better logging and more informative error
                     print(f"Equality constraint template falsified: {e.constraint}")
                     falsified[template] = True
