@@ -1,6 +1,8 @@
 from .typing import ConstraintKind, IConstraint
+from .validation import check_against_view
 
 __all__ = [
     'ConstraintKind',
-    'IConstraint'
+    'IConstraint',
+    'check_against_view'
 ]

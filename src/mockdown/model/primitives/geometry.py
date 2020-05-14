@@ -7,7 +7,6 @@ from typing import Protocol, cast
 
 from ...typing import NT, NT_co
 
-
 class IRect(Protocol[NT]):
     left: NT
     top: NT

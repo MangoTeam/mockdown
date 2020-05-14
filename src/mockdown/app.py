@@ -11,25 +11,24 @@ from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 from .engine import DefaultMockdownEngine
 from .learning.simple import SimpleConstraintLearning
 from .model import IView
-from .model.view.loader import RViewLoader
-from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory
+from .model.view.loader import RViewLoader, QViewLoader
+from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory, CegisPruner, bounds_from_json
 
-# We don't have stubs for these.
 
 """
 This dictionary contains *factories* that produce pruning methods!
 """
 PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
-    'none': lambda x, y: (lambda constraints: constraints),
-    'baseline': BlackBoxPruner,
-    'hierarchical': HierarchicalPruner,
+    'none': lambda x, y: (lambda constraints: (constraints, {}, {})),
+    'baseline': BlackBoxPruner, 
+    'cegis': CegisPruner,
+    'hierarchical': HierarchicalPruner
 }
-
 
 async def synthesize(request: Request) -> JSONResponse:
     request_json = await request.json()
     examples_json = request_json['examples']
-    bounds: ISizeBounds = request_json.get('bounds', {})
+    bounds = bounds_from_json(request_json.get('bounds', {}))
 
     engine = DefaultMockdownEngine()
 
@@ -50,13 +49,17 @@ async def synthesize(request: Request) -> JSONResponse:
 
     prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
 
-    pruned_constraints = prune(constraints)
+    amount_before = len(constraints)
+
+    pruned_constraints = prune(constraints)[0]
 
     res = [
         constraint.to_dict()
         for constraint
         in pruned_constraints
     ]
+
+    print("picking reduced %d to %d" % (amount_before, len(res)))
 
     return JSONResponse(res)
 

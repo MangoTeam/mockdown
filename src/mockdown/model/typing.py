@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Iterator, Optional, Protocol, Sequence, Tuple
+from typing import Iterator, Optional, Protocol, Sequence, Tuple, Any, List, Dict
 
 from mockdown.model.primitives import Attribute, IRect, ISize, ViewName
 from mockdown.typing import NT, NT_co
@@ -87,7 +87,7 @@ class IView(Protocol[NT]):
 
     @property
     def center_y(self) -> NT:
-        return self.rect.center_x
+        return self.rect.center_y
 
     @property
     def size(self) -> ISize[NT]:
@@ -139,6 +139,14 @@ class IView(Protocol[NT]):
 
     @property
     @abstractmethod
+    def anchors(self) -> List[IAnchor[NT]]: ...
+
+    @property
+    @abstractmethod
+    def names(self) -> Iterator[str]: ...
+
+    @property
+    @abstractmethod
     def center_y_anchor(self) -> IAnchor[NT]: ...
 
     def find_view(self, name: ViewName, include_self: bool = False, deep: bool = False) -> Optional[IView[NT]]:
@@ -159,9 +167,11 @@ class IView(Protocol[NT]):
     def is_sibling_of(self, view: IView[NT]) -> bool:
         ...
 
-    def is_isomorphic(self, view: IView[NT], include_names: Bool = True) -> bool:
+    def is_isomorphic(self, view: IView[NT], include_names: bool = True) -> bool:
         ...
 
     def __eq__(self, other: object) -> bool: ...
 
     def __iter__(self) -> Iterator[IView[NT]]: ...
+
+    def to_dict(self) -> Dict[str, Any]: ...
