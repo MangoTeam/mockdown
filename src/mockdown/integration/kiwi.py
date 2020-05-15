@@ -22,6 +22,18 @@ def anchorid_to_kv(aid: IAnchorID) -> kiwisolver.Variable:
 def kiwi_lookup(x: IAnchor[NT], env: Dict[str, kiwisolver.Variable]) -> kiwisolver.Variable:
     return env[str(x.id)]
 
+def add_linear_containment(solver: kiwisolver.Solver, env: Dict[str, kiwisolver.Variable], parent: IView[NT]) -> None:
+    pl, pr = kiwi_lookup(parent.left_anchor, env), kiwi_lookup(parent.right_anchor, env)
+    pt, pb = kiwi_lookup(parent.top_anchor, env), kiwi_lookup(parent.bottom_anchor, env)
+    for child in parent.children:
+        cl, cr = kiwi_lookup(child.left_anchor, env), kiwi_lookup(child.right_anchor, env)
+        ct, cb = kiwi_lookup(child.top_anchor, env), kiwi_lookup(child.bottom_anchor, env)
+
+        solver.addConstraint((cl >= pl) | 'required')
+        solver.addConstraint((cr <= pr) | 'required')
+        solver.addConstraint((ct >= pt) | 'required')
+        solver.addConstraint((cb <= pb) | 'required')
+
 def add_linear_axioms(solver: kiwisolver.Solver, targets: List[IView[NT]], env: Dict[str, kiwisolver.Variable]) -> None:
     for box in targets:
         strength = 'required'
@@ -63,7 +75,7 @@ def evaluate_constraints(view: IView[NT], top_rect: QRect, constraints: List[ICo
 
     add_linear_axioms(solver, [v for v in view], env)
     for constr in constraints:
-        solver.addConstraint(constraint_to_kiwi(constr, env, strength='required'))
+        solver.addConstraint(constraint_to_kiwi(constr, env, strength=strength))
 
     t_x, t_y = kiwi_lookup(view.left_anchor, env), kiwi_lookup(view.top_anchor, env)
     t_b, t_r = kiwi_lookup(view.bottom_anchor, env), kiwi_lookup(view.right_anchor, env)

@@ -14,30 +14,36 @@ from .conformance import Conformance, confs_to_bounds, conformance_range, add_co
 from .typing import IPruningMethod, ISizeBounds
 from .util import anchor_equiv, short_str
 from ..constraint import IConstraint, ConstraintKind, check_against_view
-from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var, constraint_to_kiwi, add_linear_axioms, load_view_from_model, anchor_to_kv, kiwi_lookup, make_kiwi_env, evaluate_constraints, extract_model_valuations
+from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var, constraint_to_kiwi, add_linear_axioms, load_view_from_model, anchor_to_kv, kiwi_lookup, make_kiwi_env, evaluate_constraints, extract_model_valuations, add_linear_containment
 from ..model import IView, IAnchor
 from ..typing import unreachable, NT, to_int, NT_co, NT_contra, to_frac, round_down, round_up, round_frac
 
 from mockdown.model.primitives import RRect
 
-class BlackBoxPruner(IPruningMethod):
+class BlackBoxPruner(IPruningMethod, Generic[NT]):
+
+    example: IView[NT]
+    top_width: IAnchor[NT]
+    top_height: IAnchor[NT]
+    top_x: IAnchor[NT]
+    top_y: IAnchor[NT]
 
     def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, targets: Optional[Sequence[IView[NT]]] = None):
 
-        heights = [v.height for v in examples]
-        widths = [v.width for v in examples]
-        xs = [v.left for v in examples]
-        ys = [v.top for v in examples]
+        heights = [to_frac(v.height) for v in examples]
+        widths = [to_frac(v.width) for v in examples]
+        xs = [to_frac(v.left) for v in examples]
+        ys = [to_frac(v.top) for v in examples]
 
-        min_w = bounds.get('min_w', None) or to_frac(min(widths))
-        max_w = bounds.get('max_w', None) or to_frac(max(widths))
-        min_h = bounds.get('min_h', None) or to_frac(min(heights))
-        max_h = bounds.get('max_h', None) or to_frac(max(heights))
+        min_w = min(bounds.get('min_w', None) or min(widths), min(widths))
+        max_w = max(bounds.get('max_w', None) or max(widths), max(widths))
+        min_h = min(bounds.get('min_h', None) or min(heights), min(heights))
+        max_h = max(bounds.get('max_h', None) or max(heights), max(heights))
 
-        min_x = bounds.get('min_x', None) or to_frac(min(xs))
-        max_x = bounds.get('max_x', None) or to_frac(max(xs))
-        min_y = bounds.get('min_y', None) or to_frac(min(ys))
-        max_y = bounds.get('max_y', None) or to_frac(max(ys))
+        min_x = min(bounds.get('min_x', None) or min(xs), min(xs))
+        max_x = max(bounds.get('max_x', None) or max(xs), max(xs))
+        min_y = min(bounds.get('min_y', None) or min(ys), min(ys))
+        max_y = max(bounds.get('max_y', None) or max(ys), max(ys))
 
         self.min_conf = Conformance(min_w, min_h, min_x, min_y)
         self.max_conf = Conformance(max_w, max_h, max_x, max_y)
@@ -47,12 +53,7 @@ class BlackBoxPruner(IPruningMethod):
 
         assert len(examples) > 0, "Pruner requires non-empty learning examples"
 
-        def get(x: Sequence[IView[NT]]) -> IView[NT]:
-            foo = x[0]
-            return foo
-
-        # TODO: figure out how to get this to typecheck
-        self.example: IView[NT] = examples[0] #get(examples)
+        self.example = examples[0] 
 
         self.top_width = self.example.width_anchor
         self.top_height = self.example.height_anchor
@@ -88,6 +89,7 @@ class BlackBoxPruner(IPruningMethod):
         for conf_idx, conf in enumerate(confs):
             self.add_conf_dims(solver, conf, conf_idx)
             self.add_layout_axioms(solver, conf_idx, self.targets)
+            self.add_containment_axioms(solver, conf_idx, self.example)
 
         for constr_idx, constr in enumerate(constraints):
             cvname = "constr_var" + str(constr_idx)
@@ -126,9 +128,9 @@ class BlackBoxPruner(IPruningMethod):
 
         return (constraints, min_vals, max_vals)
 
-class CegisPruner(BlackBoxPruner):
+class CegisPruner(Generic[NT], BlackBoxPruner[NT]):
 
-    def __init__(self, examples: List[IView[NT]], bounds: ISizeBounds, targets: Optional[List[IView[NT]]] = None):
+    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, targets: Optional[Sequence[IView[NT]]] = None):
         super().__init__(examples, bounds, targets)
 
     def add_counterex_bounds(self, solver: z3.Optimize) -> None:
@@ -357,22 +359,20 @@ class HierarchicalPruner(IPruningMethod):
 
     def __init__(self, examples: List[IView[float]], bounds: ISizeBounds):
 
-        heights = [v.height for v in examples]
-        widths = [v.width for v in examples]
-        xs = [v.left for v in examples]
-        ys = [v.top for v in examples]
+        heights = [to_frac(v.height) for v in examples]
+        widths = [to_frac(v.width) for v in examples]
+        xs = [to_frac(v.left) for v in examples]
+        ys = [to_frac(v.top) for v in examples]
 
-        # print('bounds: ', bounds)
+        min_w = min(bounds.get('min_w', None) or min(widths), min(widths))
+        max_w = max(bounds.get('max_w', None) or max(widths), max(widths))
+        min_h = min(bounds.get('min_h', None) or min(heights), min(heights))
+        max_h = max(bounds.get('max_h', None) or max(heights), max(heights))
 
-        min_w = bounds.get('min_w', None) or to_frac(min(widths))
-        max_w = bounds.get('max_w', None) or to_frac(max(widths))
-        min_h = bounds.get('min_h', None) or to_frac(min(heights))
-        max_h = bounds.get('max_h', None) or to_frac(max(heights))
-
-        min_x = bounds.get('min_x', None) or to_frac(min(xs))
-        max_x = bounds.get('max_x', None) or to_frac(max(xs))
-        min_y = bounds.get('min_y', None) or to_frac(min(ys))
-        max_y = bounds.get('max_y', None) or to_frac(max(ys))
+        min_x = min(bounds.get('min_x', None) or min(xs), min(xs))
+        max_x = max(bounds.get('max_x', None) or max(xs), max(xs))
+        min_y = min(bounds.get('min_y', None) or min(ys), min(ys))
+        max_y = max(bounds.get('max_y', None) or max(ys), max(ys))
 
         self.min_conf = Conformance(min_w, min_h, min_x, min_y)
         self.max_conf = Conformance(max_w, max_h, max_x, max_y)
@@ -421,6 +421,7 @@ class HierarchicalPruner(IPruningMethod):
         linear_solver = kiwisolver.Solver()
         
         add_linear_axioms(linear_solver, targets, env)
+        add_linear_containment(linear_solver, env, focus)
 
         for constr in constrs:
             linear_solver.addConstraint(constraint_to_kiwi(constr, env) | 'strong')

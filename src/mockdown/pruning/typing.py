@@ -91,6 +91,18 @@ class IPruningMethod(Protocol):
                     scores[r] = max(score, scores[r])
 
         return scores
+
+    def add_containment_axioms(self, solver: z3. Optimize, confIdx: int, parent: IView[NT]) -> None:
+        pl, pr = anchor_id_to_z3_var(parent.left_anchor.id, confIdx), anchor_id_to_z3_var(parent.right_anchor.id, confIdx)
+        pt, pb = anchor_id_to_z3_var(parent.top_anchor.id, confIdx), anchor_id_to_z3_var(parent.bottom_anchor.id, confIdx)
+        for child in parent.children:
+            cl, cr = anchor_id_to_z3_var(child.left_anchor.id, confIdx), anchor_id_to_z3_var(child.right_anchor.id, confIdx)
+            ct, cb = anchor_id_to_z3_var(child.top_anchor.id, confIdx), anchor_id_to_z3_var(child.bottom_anchor.id, confIdx)
+
+            solver.add(cl >= pl)
+            solver.add(cr <= pr)
+            solver.add(ct >= pt)
+            solver.add(cb <= pb)
         
     def add_layout_axioms(self, solver: z3.Optimize, confIdx: int, boxes: Iterable[IView[NT]]) -> None:
 
