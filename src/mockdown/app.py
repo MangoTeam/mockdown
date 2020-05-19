@@ -82,4 +82,4 @@ def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) 
     return app
 
 
-default_app = create_app(static_dir='static/', static_path='/')
+# default_app = create_app(static_dir='static/', static_path='/')

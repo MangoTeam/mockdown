@@ -62,7 +62,7 @@ def strictly_ints(n: SupportsFloat) -> int:
     elif isinstance(n, SupportsInt) and float(n) == float(int(n)):
         return int(n)
     else:
-        raise Exception("Only ints allowed!")
+        raise Exception(f"Unexpected non-integer number in view rect: {n}.")
 
 
 class ZViewLoader(_BaseViewLoader[int]):

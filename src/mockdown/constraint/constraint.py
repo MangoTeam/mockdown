@@ -9,7 +9,7 @@ from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstrain
 from mockdown.model import IAnchorID
 
 
-def op_to_str(op: IComparisonOp[Any]):
+def op_to_str(op: IComparisonOp[Any]) -> str:
     return {
         operator.eq: '=',
         operator.le: '≤',

@@ -148,4 +148,5 @@ class View(IView[NT]):
         yield from chain(*map(lambda c: iter(c), self.children))
 
     def __repr__(self) -> str:
-        return f"View(name='{self.name}')"
+        return f"View(name='{self.name}', " \
+               f"l={self.rect.left} t={self.rect.top} r={self.rect.right} b={self.rect.bottom}"

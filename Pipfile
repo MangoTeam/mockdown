@@ -25,6 +25,7 @@ typing-extensions = "*"
 seaborn = "*"
 statsmodels = "*"
 scipy = "*"
+jinja2 = "*"
 
 [requires]
 python_version = "3.8"

@@ -1,7 +1,7 @@
 from collections import deque
 from itertools import chain, tee
 from operator import attrgetter
-from typing import Any, List, Sequence, Set, Tuple
+from typing import Any, Iterable, List, Sequence, Set, Tuple
 
 from intervaltree import IntervalTree  # type: ignore
 
@@ -40,7 +40,7 @@ class VisibilityConstraintInstantiator(IConstraintInstantiator[Any]):
         return list(all_constraints)
 
 
-def pairwise(iterable):
+def pairwise(iterable: Iterable[Any]) -> Iterable[Tuple[Any, Any]]:
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
