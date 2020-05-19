@@ -8,6 +8,7 @@ jupyterlab = "*"
 mypy="*"
 pylint = "*"
 pytest = "*"
+sympy = "*"
 
 [packages]
 click = "*"
@@ -21,6 +22,9 @@ z3-solver = "*"
 kiwisolver = "*"
 Deprecated = "*"
 typing-extensions = "*"
+seaborn = "*"
+statsmodels = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.8"

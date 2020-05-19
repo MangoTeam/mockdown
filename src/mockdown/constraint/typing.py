@@ -37,10 +37,13 @@ class ConstraintKind(Enum):
     # y = ax, where y.attr and x.attr in {width, height}
     SIZE_RATIO = 'size_ratio'
 
+    # # y = ax + b, where y.attr and x.attr in {width, height}, b != 0.
+    # SIZE_MARGIN_RATIO = 'size_margin_ratio'
+
     # y = b, where y.attr in {width, height}
     SIZE_CONSTANT = 'size_constant'
 
-    # y = ax + b, where y.attr = width and x.attr = height, and y = x
+    # y = ax, where y.attr = width and x.attr = height, and y = x
     SIZE_ASPECT_RATIO = 'size_aspect_ratio'
 
     @classmethod
