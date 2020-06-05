@@ -46,7 +46,11 @@ async def synthesize(request: Request) -> JSONResponse:
     templates = engine.instantiation_engine.instantiate(examples)
 
     learning = SimpleConstraintLearning(samples=examples, templates=templates)
-    constraints = learning.learn()
+
+    # todo: pruning should actually make use of candidate sets.
+    constraints = [candidate.constraint
+                   for candidates in learning.learn()
+                   for candidate in candidates]
 
     prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
 

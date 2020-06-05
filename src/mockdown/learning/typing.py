@@ -1,9 +1,16 @@
 from abc import abstractmethod
-from typing import Protocol, Sequence
+from dataclasses import dataclass
+from typing import Protocol, Sequence, List
 
 from mockdown.constraint import IConstraint
 
 
+@dataclass
+class ConstraintCandidate:
+    constraint: IConstraint
+    score: float
+
+
 class IConstraintLearning(Protocol):
     @abstractmethod
-    def learn(self) -> Sequence[IConstraint]: ...
+    def learn(self) -> List[List[ConstraintCandidate]]: ...

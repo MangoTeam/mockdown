@@ -6,7 +6,7 @@ from mockdown.model.view.loader import strictly_ints
 
 
 class TestVisibilityConstraintInstantiator:
-    def test_simple(self):
+    def test_simple(self) -> None:
         loader = ZViewLoader(integerize_fn=strictly_ints)
         view = loader.load_dict({
             'name': 'root',

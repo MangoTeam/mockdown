@@ -1,7 +1,7 @@
 from mockdown.model import ZViewLoader
 
 
-def test_view_is_isomorphic():
+def test_view_is_isomorphic() -> None:
     loader = ZViewLoader()
     v1 = loader.load_dict({
         'name': 'root',

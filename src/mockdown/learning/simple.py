@@ -9,7 +9,7 @@ from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
 from mockdown.constraint.typing import IComparisonOp
 from mockdown.learning.errors import ConstraintFalsified
-from mockdown.learning.typing import IConstraintLearning
+from mockdown.learning.typing import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
 
 Kind = ConstraintKind
@@ -35,7 +35,7 @@ class SimpleConstraintLearning(IConstraintLearning):
         self._tolerance = tolerance
         self._max_denominator = max_denominator
 
-    def learn(self) -> Sequence[IConstraint]:
+    def learn(self) -> List[List[ConstraintCandidate]]:
         # Constants are learned as floats and then rationalized.
         constants: Dict[IConstraint, Dict[str, float]] = {}
         sample_counts: DefaultDict[IConstraint, int] = defaultdict(lambda: 0)
@@ -129,4 +129,4 @@ class SimpleConstraintLearning(IConstraintLearning):
             else:
                 raise Exception("Unsupported IConstraint implementation.")
 
-        return constraints
+        return [[ConstraintCandidate(constraint, 0)] for constraint in constraints]

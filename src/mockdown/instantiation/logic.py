@@ -8,16 +8,16 @@ from ..constraint import ConstraintKind
 from ..constraint.factory import ConstraintFactory
 from ..model import Attribute, IView, IAnchor, AnchorID
 from ..constraint import *
+from ..typing import NT
 
 
-def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]], debug=False) \
+def valid_constraints(root: IView[NT], visibilities: List[Tuple[IAnchor[NT], IAnchor[NT]]], debug: bool = False) \
         -> Generator[IConstraint, None, None]:
     """
     Computes the valid constraint pairs (or singletons) for various
     types of constraint.
     """
 
-    debug = True
     outfile = "debug.pl"
 
     # Note: Prolog is a singleton!
@@ -35,17 +35,18 @@ def valid_constraints(root: IView, visibilities: List[Tuple[IAnchor, IAnchor]], 
 
             for view in root:
                 prolog.assertz(f"view('{view.name}')")
-                if (debug): dbfile.write(f"view('{view.name}').\n")
+                if debug:
+                    dbfile.write(f"view('{view.name}').\n")
                 for child in view.children:
                     prolog.assertz(f"parent('{view.name}', '{child.name}')")
-                    if (debug): dbfile.write(f"parent('{view.name}', '{child.name}').\n")
+                    if debug: dbfile.write(f"parent('{view.name}', '{child.name}').\n")
 
             for vis in visibilities:
                 [a1, a2] = vis
                 a1_term = f"anchor('{a1.view.name}', '{a1.attribute.value}')"
                 a2_term = f"anchor('{a2.view.name}', '{a2.attribute.value}')"
                 prolog.assertz(f"visible({a1_term}, {a2_term})")
-                if (debug): dbfile.write(f"visible({a1_term}, {a2_term}).\n")
+                if debug: dbfile.write(f"visible({a1_term}, {a2_term}).\n")
 
             # todo: Post-process output? Necessary?
 

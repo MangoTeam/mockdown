@@ -13,19 +13,7 @@ MAX_DENOMINATOR = 1000
 PriorCallable = Callable[[NT], Any]
 
 
-class Priors(Generic[NT]):
-    @staticmethod
-    def get_by_kind(constraint_kind: ConstraintKind) -> Dict[ConstraintKind, PriorCallable[NT]]:
-        return {
-            ConstraintKind.POS_LTRB_OFFSET: Priors.lrtb_offset_prior
-        }
-
-    @staticmethod
-    def lrtb_offset_prior(b: NT) -> Any:
-        pass
-
-
-class SimpleConstraintLearning(IConstraintLearning):
+class RegressionLearning(IConstraintLearning):
     """
     This class emulates the old learning method.
 
