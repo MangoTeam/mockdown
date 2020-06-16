@@ -26,6 +26,8 @@ seaborn = "*"
 statsmodels = "*"
 scipy = "*"
 jinja2 = "*"
+sympy = "*"
+treelib = "*"
 
 [requires]
 python_version = "3.8"

@@ -1,15 +1,19 @@
 import json
 import tempfile
 import webbrowser
-from fractions import Fraction
-from typing import TextIO, Type
+from pprint import pprint
+from typing import TextIO
 
 import click
+import sympy as sym  # type:ignore
 import uvicorn  # type: ignore
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from mockdown.app import create_app
-from mockdown.model import QViewLoader, RViewLoader, ZViewLoader
+from mockdown.engine import DefaultMockdownEngine
+from mockdown.instantiation import VisibilityConstraintInstantiator
+from mockdown.learning.simple import SimpleConstraintLearning
+from mockdown.model.view import ViewLoader
 
 
 @click.group()
@@ -21,22 +25,44 @@ def cli() -> None:
 @click.argument('input', type=click.File('r'))
 @click.option('-nt',
               '--numeric-type',
-              type=click.Choice(['R', 'Q', 'Z'], case_sensitive=False),
-              default='R',
-              help="Numeric type of input: real, rational, or integer.")
+              type=click.Choice(['N', 'R', 'Q', 'Z'], case_sensitive=False),
+              default='N',
+              help="Numeric type of input: number, real, rational, or integer.")
 def run(input: TextIO, numeric_type: str) -> None:
-    examples_json = json.load(input)
-    if not isinstance(examples_json, list):
-        examples_json = [examples_json]
+    examples_json = json.load(input)["examples"]
 
-    loader = {
-        'R': RViewLoader,
-        'Q': QViewLoader,
-        'Z': ZViewLoader
-    }[numeric_type]()  # todo: be able to actuallys supply non-default options
+    # Note: sym.Number _should_ generally "do the right thing"...
+    number_factory = {
+        'N': sym.Number,
+        'R': sym.Float,
+        'Q': sym.Rational,
+        'Z': sym.Integer
+    }[numeric_type]
+
+    engine = DefaultMockdownEngine()
+    loader = ViewLoader(number_factory=sym.Number)
+    instantiator = VisibilityConstraintInstantiator()
+
+    # 1. Load Examples
 
     examples = [loader.load_dict(ex_json) for ex_json in examples_json]
-    print(examples)
+    pprint(examples)
+
+    # 2. Instantiate Templates
+    templates = instantiator.instantiate(examples)
+    pprint(templates)
+
+    # 3. Learn Constants.
+    learning = SimpleConstraintLearning(samples=examples, templates=templates)
+    constraints = [candidate.constraint
+                   for candidates in learning.learn()
+                   for candidate in candidates]
+
+    print(json.dumps(
+        [cn.to_dict() for cn in constraints],
+        ensure_ascii=False,
+        indent=2,
+    ))
 
 
 @click.command()

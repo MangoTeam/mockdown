@@ -3,7 +3,9 @@ import operator
 from collections import defaultdict
 from dataclasses import replace
 from fractions import Fraction
-from typing import Any, DefaultDict, Dict, List, Optional, Sequence
+from typing import Any, DefaultDict, Dict, List, Optional, Sequence, cast
+
+import sympy as sym  # type: ignore
 
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
@@ -27,7 +29,7 @@ class SimpleConstraintLearning(IConstraintLearning):
 
     def __init__(self,
                  templates: Sequence[IConstraint],
-                 samples: Sequence[IView[float]],
+                 samples: Sequence[IView[sym.Number]],
                  tolerance: float = DEFAULT_TOLERANCE,
                  max_denominator: int = MAX_DENOMINATOR):
         self._templates = templates
@@ -37,15 +39,19 @@ class SimpleConstraintLearning(IConstraintLearning):
 
     def learn(self) -> List[List[ConstraintCandidate]]:
         # Constants are learned as floats and then rationalized.
-        constants: Dict[IConstraint, Dict[str, float]] = {}
+        constants: Dict[IConstraint, Dict[str, sym.Number]] = {}
         sample_counts: DefaultDict[IConstraint, int] = defaultdict(lambda: 0)
         falsified: DefaultDict[IConstraint, bool] = defaultdict(lambda: False)
 
-        def widen_bound(op: IComparisonOp[Any], old: float, new: float) -> float:
+        def widen_bound(op: IComparisonOp[Any], old: sym.Number, new: sym.Number) -> sym.Number:
             if op == operator.le:
-                return max(old, new)
+                mx = sym.Max(old, new)
+                assert isinstance(mx, sym.Number)
+                return mx
             elif op == operator.ge:
-                return min(old, new)
+                mn = sym.Min(old, new)
+                assert isinstance(mn, sym.Number)
+                return mn
             else:
                 raise Exception("unsupported operator")
 
@@ -113,15 +119,15 @@ class SimpleConstraintLearning(IConstraintLearning):
 
             constraint: Optional[IConstraint] = None
             if isinstance(template, LinearConstraint):
-                a_frac = Fraction(values['a']).limit_denominator(self._max_denominator)
-                b_frac = Fraction(values['b']).limit_denominator(self._max_denominator)
+                a_frac = sym.Rational(values['a']).limit_denominator(self._max_denominator)
+                b_frac = sym.Rational(values['b']).limit_denominator(self._max_denominator)
                 constraint = replace(template,
                                      a=a_frac,
                                      b=b_frac,
                                      sample_count=sample_counts[template],)
                 constraints.append(constraint)
             elif isinstance(template, ConstantConstraint):
-                b_frac = Fraction(values['b']).limit_denominator(self._max_denominator)
+                b_frac = sym.Rational(values['b']).limit_denominator(self._max_denominator)
                 constraint = replace(template,
                                      b=b_frac,
                                      sample_count=sample_counts[template])

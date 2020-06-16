@@ -5,13 +5,15 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
+from sympy import RealNumber, Number
 from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 
 from .engine import DefaultMockdownEngine
+from .instantiation import VisibilityConstraintInstantiator
 from .learning.simple import SimpleConstraintLearning
 from .model import IView
-from .model.view.loader import RViewLoader
+from .model.view.loader import ViewLoader
 from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory
 
 # We don't have stubs for these.
@@ -32,18 +34,17 @@ async def synthesize(request: Request) -> JSONResponse:
     bounds: ISizeBounds = request_json.get('bounds', {})
 
     engine = DefaultMockdownEngine()
-
-    # RViewLoader just loads everything as floats.
-    loader = RViewLoader()
+    loader = ViewLoader(number_factory=Number)
+    instantiator = VisibilityConstraintInstantiator()
 
     # Product a list of examples (IView's).
-    examples: List[IView[float]] = [
+    examples: List[IView[Number]] = [
         loader.load_dict(example_json)
         for example_json
         in examples_json
     ]
 
-    templates = engine.instantiation_engine.instantiate(examples)
+    templates = instantiator.instantiate(examples)
 
     learning = SimpleConstraintLearning(samples=examples, templates=templates)
 

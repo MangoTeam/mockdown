@@ -1,17 +1,12 @@
-from fractions import Fraction
-from typing import NoReturn, Tuple, TypeVar, Union
+from typing import NoReturn, Tuple, TypeVar
 
-AnyNum = Union[int, float, Fraction]
+from sympy import Number  # type: ignore
 
-_T = TypeVar('_T')
-Tuple4 = Tuple[_T, _T, _T, _T]
-
-NT = TypeVar('NT', int, float, Fraction)
-NT_co = TypeVar('NT_co', int, float, Fraction, covariant=True)
-NT_contra = TypeVar('NT_contra', int, float, Fraction, contravariant=True)
-
+_ElT = TypeVar('_ElT')
+Tuple4 = Tuple[_ElT, _ElT, _ElT, _ElT]
 
 # (NT = Numeric Type)
+NT = TypeVar('NT', bound=Number)
 
 def unreachable(x: NoReturn) -> NoReturn:
     """
@@ -21,7 +16,7 @@ def unreachable(x: NoReturn) -> NoReturn:
     >     A = 1
     >     B = 2
     >     C = 3
-    >
+    >thon
     > def foo_name(foo: Foo) -> str:
     >     if foo is Foo.A:
     >         return "apple"

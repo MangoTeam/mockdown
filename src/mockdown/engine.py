@@ -1,10 +1,10 @@
 from abc import abstractmethod
-from typing import Protocol, Sequence, Set
+from typing import Protocol, Sequence
 
-from .model import IView
-from .constraint import IConstraint
-from .instantiation import IConstraintInstantiator, VisibilityConstraintInstantiator
-from .typing import NT, NT_co
+from mockdown.constraint import IConstraint
+from mockdown.instantiation import IConstraintInstantiator, VisibilityConstraintInstantiator
+from mockdown.model import IView
+from mockdown.typing import NT
 
 
 class IMockdownEngine(Protocol[NT]):

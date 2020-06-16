@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from fractions import Fraction
+from numbers import Rational
 from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar
 
 from ..model import IAnchorID
@@ -67,8 +68,8 @@ class IConstraint:
     y_id: IAnchorID
     x_id: Optional[IAnchorID]
 
-    a: Fraction
-    b: Fraction
+    a: Rational
+    b: Rational
 
     op: IComparisonOp[Any]
     priority: Priority

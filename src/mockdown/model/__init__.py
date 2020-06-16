@@ -1,8 +1,8 @@
 from .anchor import Anchor, AnchorID
 from .edge import Edge
-from .primitives import Attribute, ZRect, ZSize
+from .primitives import Attribute
 from .typing import IAnchor, IAnchorID, IEdge, IView
-from .view import IViewBuilder, QViewBuilder, RViewBuilder, View, ZViewBuilder, QViewLoader, RViewLoader, ZViewLoader
+from .view import View, IViewBuilder, ViewBuilder, IViewLoader, ViewLoader
 
 __all__ = [
     'IAnchorID',
@@ -13,13 +13,8 @@ __all__ = [
     'IView',
     'View',
     'IViewBuilder',
-    'RViewBuilder',
-    'QViewBuilder',
-    'ZViewBuilder',
-    'RViewLoader',
-    'QViewLoader',
-    'ZViewLoader',
+    'ViewBuilder',
+    'IViewLoader',
+    'ViewLoader',
     'Attribute',
-    'ZRect',
-    'ZSize'
 ]

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import operator
 from dataclasses import dataclass, field
-from fractions import Fraction
 from typing import Any, Dict, Optional, final
+
+from sympy import Rational  # type: ignore
 
 from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority
 from mockdown.model import IAnchorID
@@ -28,8 +29,8 @@ class ConstantConstraint(IConstraint):
     y_id: IAnchorID
     x_id: Optional[IAnchorID] = field(default=None, init=False)
 
-    a: Fraction = field(default=Fraction('0'), init=False)
-    b: Fraction = Fraction('0')
+    a: Rational = field(default=Rational(0), init=False)
+    b: Rational = Rational(0)
 
     op: IComparisonOp[Any] = operator.eq
     priority: Priority = PRIORITY_REQUIRED
@@ -66,8 +67,8 @@ class LinearConstraint(IConstraint):
     y_id: IAnchorID
     x_id: IAnchorID
 
-    a: Fraction = Fraction('1')
-    b: Fraction = Fraction('0')
+    a: Rational = Rational(1)
+    b: Rational = Rational(0)
 
     op: IComparisonOp[Any] = operator.eq
     priority: Priority = PRIORITY_REQUIRED

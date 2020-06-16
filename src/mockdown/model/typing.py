@@ -3,8 +3,8 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Iterator, Optional, Protocol, Sequence, Tuple
 
-from mockdown.model.primitives import Attribute, IRect, ISize, ViewName
-from mockdown.typing import NT, NT_co
+from mockdown.model.primitives import Attribute, IRect, ViewName
+from mockdown.typing import NT
 
 
 class IAnchorID(Protocol):
@@ -88,10 +88,6 @@ class IView(Protocol[NT]):
     @property
     def center_y(self) -> NT:
         return self.rect.center_y
-
-    @property
-    def size(self) -> ISize[NT]:
-        return self.rect.size
 
     @property
     @abstractmethod
