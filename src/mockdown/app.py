@@ -12,7 +12,7 @@ from .engine import DefaultMockdownEngine
 from .learning.simple import SimpleConstraintLearning
 from .model import IView
 from .model.view.loader import RViewLoader, QViewLoader
-from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory, CegisPruner, bounds_from_json
+from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory, CegisPruner, bounds_from_json, MarginPruner, DynamicPruner
 
 
 """
@@ -22,7 +22,9 @@ PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
     'none': lambda x, y: (lambda constraints: (constraints, {}, {})),
     'baseline': BlackBoxPruner, 
     'cegis': CegisPruner,
-    'hierarchical': HierarchicalPruner
+    'hierarchical': HierarchicalPruner,
+    'margins': MarginPruner,
+    'dynamic': DynamicPruner
 }
 
 async def synthesize(request: Request) -> JSONResponse:

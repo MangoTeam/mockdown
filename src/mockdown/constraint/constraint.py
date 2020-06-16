@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Any, Dict, Optional, final
 
-from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority
+from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority, prio_to_json
 from mockdown.model import IAnchorID
 
 
@@ -49,7 +49,7 @@ class ConstantConstraint(IConstraint):
                 operator.ge: '≥'
             }[self.op],
             'b': str(self.b),
-            'priority': str(self.priority),
+            'strength': prio_to_json(self.priority),
             'kind': self.kind.value
         }
 
@@ -90,6 +90,6 @@ class LinearConstraint(IConstraint):
             'a': str(self.a),
             'x': str(self.x_id),
             'b': str(self.b),
-            'priority': str(self.priority),
+            'strength': prio_to_json(self.priority),
             'kind': self.kind.value
         }

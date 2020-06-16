@@ -40,7 +40,9 @@ def add_linear_axioms(solver: kiwisolver.Solver, targets: List[IView[NT]], env: 
 
         for anchor in box.anchors:
             kiwivar = kiwi_lookup(anchor, env)
+            solver.addConstraint((kiwivar <= 10000.0) | 'weak')
             solver.addConstraint((kiwivar >= 0.0) | strength)
+            
 
         
 

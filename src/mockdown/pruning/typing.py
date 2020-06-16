@@ -1,18 +1,23 @@
-from typing import Callable, List, TypedDict, Optional, Protocol, Dict, Tuple, Iterable, Any, cast
+from typing import Callable, List, TypedDict, Optional, Protocol, Dict, Tuple, Iterable, Any, cast, Sequence, Set
 
 from fractions import Fraction
 
 from ..typing import NT
-from ..integration import anchor_id_to_z3_var
+from ..integration import anchor_id_to_z3_var, constraint_to_z3_expr
 
 from .util import anchor_equiv
 
 from z3 import z3  # type: ignore
 
-from dataclasses import fields, dataclass
+from dataclasses import fields, dataclass, replace
+
+import operator
+
+from more_itertools import first_true
 
 from mockdown.model import IView
 from mockdown.constraint import IConstraint, ConstraintKind
+from mockdown.constraint.typing import PRIORITY_STRONG
 
 class ISizeBounds(TypedDict, total=False):
     min_w: Optional[Fraction]
@@ -36,76 +41,132 @@ def bounds_from_json(it: Dict[Any, Any]) -> ISizeBounds:
 class IPruningMethod(Protocol):
     def __call__(self, cns: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]: ...
 
-    def is_whole(self, c: IConstraint) -> bool:
-        steps = [0.05 * x for x in range(20)]
-        bestDiff: float = min([abs(s - c.a) for s in steps])
-        return bestDiff <= 0.01
+    # def is_whole(self, c: IConstraint) -> bool:
+    #     steps = [0.05 * x for x in range(20)]
+    #     bestDiff: float = min([abs(s - c.a) for s in steps])
+    #     return bestDiff <= 0.01
 
+    def whole_score(self, c: IConstraint) -> int:
+        score = 1
+        if c.x_id:
+            if c.a.denominator < 25:
+                score *= 10
+            if c.a.denominator < 10:
+                score *= 10
+            if c.a.denominator > 100:
+                # we probably don't want this...
+                return 1
+        if c.b.denominator < 25:
+            score *= 10
+        if c.b.denominator < 10:
+            score *= 10
+        if c.b.denominator > 100:
+            # we probably don't want this...
+            return 1
+        return score
+
+    def dump_constraints(self, path: str, view: IView[NT], cns: List[IConstraint]) -> None:
+        solver = z3.Optimize()
+        self.add_layout_axioms(solver, 0, view, x_dim=True, tracking=False)
+        self.add_layout_axioms(solver, 0, view, x_dim=False, tracking=False)
+        for ci, c in enumerate(cns):
+            solver.assert_and_track(constraint_to_z3_expr(c, 0), f's{str(ci)}')
+        with open(path, 'w') as outfile:
+            print(solver.sexpr(), file=outfile)
+        return
     def make_pairs(self, constraints: List[IConstraint]) -> List[Tuple[IConstraint, IConstraint]]:
         return [(c, cp) for c in constraints for cp in constraints if anchor_equiv(c, cp) and c.op != cp.op]
+
+
+    def combine_bounds(self, constraints: List[IConstraint]) -> List[IConstraint]:
+        output: Set[IConstraint] = set()
+        for c in constraints:
+            other = first_true(iterable=constraints, pred=lambda t: anchor_equiv(c, t) and c.op != t.op, default=c)
+            if other != c and abs(other.b - c.b) < 5:
+                output.add(replace(c, op=operator.eq, b=(other.b + c.b)/2, priority=PRIORITY_STRONG))
+            else:
+                output.add(c)
+        return list(output)
+
+
+    def merge_pairs(self, pairs: List[Tuple[IConstraint, IConstraint]]) -> List[IConstraint]:
+        output: List[IConstraint] = []
+        for a, b in pairs:
+            if a.b == b.b:
+                output.append(replace(a, op=operator.eq))
+            else:
+                output.append(a)
+                output.append(b)
+        return output
 
     def build_biases(self, constraints: List[IConstraint]) -> Dict[IConstraint, float]:
         scores = {c: 1.0 for c in constraints}
 
-        pairs = self.make_pairs(constraints)
-        # print([(x.shortStr(), y.shortStr()) for (x,y) in pairs][0])
 
-        # reward specific constraint
+        # reward specific constraints
         for c in constraints:
-            score = 10
+            score = 1
             # aspect ratios and size constraint are specific the more samples behind them
             if c.kind is ConstraintKind.SIZE_ASPECT_RATIO:
-                # print(c, c.is_falsified)
                 score = 1 if c.is_falsified else 100 * c.sample_count
             elif c.kind is ConstraintKind.SIZE_RATIO:
-                # and doubly specific when the constants are nice
-                if self.is_whole(c):
-                    score = 1000 * c.sample_count
-                else:
-                    score = 100 * c.sample_count
-            # positions are specific if they're paired and the pairs are close together
-            elif c.kind in ConstraintKind.get_position_kinds():
-                score = 1000
-                # for simplicity we update pairs after this loop
+                score *= self.whole_score(c) * c.sample_count
+            elif c.kind in ConstraintKind.get_position_kinds() or c.kind is ConstraintKind.SIZE_OFFSET:
 
+                if c.op == operator.eq:
+
+                    diff = abs(c.b)
+                    # map > 500 => 10
+                    # 0 => 1000
+                    # everything else linearly
+                    upper = 500
+                    lower = 0
+                    if diff > upper:
+                        score = 10
+                    else:
+                        # a * upper + b = 10
+                        # a * 0 +  b = 1000
+                        # b = 1000, a  = -990/upper
+                        score = (-990) / upper * diff + 1000
+                else:
+                    score = 10 # penalize leq/geq
+
+            elif c.kind is ConstraintKind.SIZE_CONSTANT:
+
+                
+
+                if c.op == operator.eq:
+                    score = 1000
+                else:
+                    score = 10 # penalize leq/geq
+
+                score *= self.whole_score(c) * c.sample_count
             scores[c] = score
-
-        for (l, r) in pairs:
-            if l.kind in ConstraintKind.get_position_kinds():
-                assert r.kind in ConstraintKind.get_position_kinds()
-
-                diff = l.b + r.b
-                # map > 500 => 10
-                # 0 => 10000
-                # everything else linearly
-                upper = 500
-                lower = 0
-                if diff > upper:
-                    score = 10
-                else:
-                    # a * upper + b = 10
-                    # a * 0 +  b = 10000
-                    # b = 10000, a  = -9990/upper
-                    score = (-9990) / upper * diff + 10000
-                    scores[l] = max(score, scores[l])
-                    scores[r] = max(score, scores[r])
 
         return scores
 
-    def add_containment_axioms(self, solver: z3. Optimize, confIdx: int, parent: IView[NT]) -> None:
+    def add_containment_axioms(self, solver: z3. Optimize, confIdx: int, parent: IView[NT], x_dim: bool) -> None:
         pl, pr = anchor_id_to_z3_var(parent.left_anchor.id, confIdx), anchor_id_to_z3_var(parent.right_anchor.id, confIdx)
         pt, pb = anchor_id_to_z3_var(parent.top_anchor.id, confIdx), anchor_id_to_z3_var(parent.bottom_anchor.id, confIdx)
         for child in parent.children:
             cl, cr = anchor_id_to_z3_var(child.left_anchor.id, confIdx), anchor_id_to_z3_var(child.right_anchor.id, confIdx)
             ct, cb = anchor_id_to_z3_var(child.top_anchor.id, confIdx), anchor_id_to_z3_var(child.bottom_anchor.id, confIdx)
 
-            solver.add(cl >= pl)
-            solver.add(cr <= pr)
-            solver.add(ct >= pt)
-            solver.add(cb <= pb)
-        
-    def add_layout_axioms(self, solver: z3.Optimize, confIdx: int, boxes: Iterable[IView[NT]]) -> None:
+            # if child.left_anchor.value >= parent.left_anchor.value:
 
+            if x_dim:
+                solver.add(cl >= pl)
+                # if child.right_anchor.value <= parent.right_anchor.value:
+                solver.add(cr <= pr)
+                # if child.top_anchor.value >= parent.top_anchor.value:
+            else:
+                solver.add(ct >= pt)
+                # if child.bottom_anchor.value <= parent.bottom_anchor.value:
+                solver.add(cb <= pb)
+            
+            
+        
+    def add_layout_axioms(self, solver: z3.Optimize, confIdx: int, boxes: Iterable[IView[NT]], x_dim: bool, tracking: bool = False) -> None:
         for box in boxes:
             w, h = anchor_id_to_z3_var(box.width_anchor.id, confIdx), \
                    anchor_id_to_z3_var(box.height_anchor.id, confIdx)
@@ -119,13 +180,45 @@ class IPruningMethod(Protocol):
             heightAx = h == (b - t)
 
             # print('adding axioms:', widthAx, heightAx, w>=0, h >= 0)
-            solver.add(widthAx)
-            solver.add(heightAx)
-            solver.add(c_x == (l + r)/2) 
-            solver.add(c_y == (t + b)/2)
 
-            for anchor in box.anchors:
-                solver.add(anchor_id_to_z3_var(anchor.id, confIdx) >= 0) 
+            if tracking:
+                if x_dim:
+                    raise Exception('unimplemented')
+                solver.assert_and_track(widthAx, f'{box.name}-wax-{str(confIdx)}')
+                solver.assert_and_track(heightAx, f'{box.name}-hax-{str(confIdx)}')
+                solver.assert_and_track(c_x == (l + r)/2, f'{box.name}-cx-{str(confIdx)}') 
+                solver.assert_and_track(c_y == (t + b)/2, f'{box.name}-cy-{str(confIdx)}')
+
+                for idx, anchor in enumerate(box.anchors):
+                    solver.assert_and_track(anchor_id_to_z3_var(anchor.id, confIdx) >= 0, f'{box.name}-pos-{str(confIdx)}-{str(idx)}') 
+            else:
+                if x_dim:
+                    solver.add(widthAx)
+                    solver.add(c_x == (l + r)/2) 
+                    for anchor in box.x_anchors:
+                        solver.add(anchor_id_to_z3_var(anchor.id, confIdx) >= 0) 
+                else:
+                    solver.add(heightAx)
+                    solver.add(c_y == (t + b)/2)
+                    for anchor in box.y_anchors:
+                        solver.add(anchor_id_to_z3_var(anchor.id, confIdx) >= 0) 
+                
+
+            
 
 
 PruningMethodFactory = Callable[[List[IView[NT]], ISizeBounds], IPruningMethod]
+
+
+class MarginPruner(IPruningMethod):
+    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds):
+        pass
+    def __call__(self, cns: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
+        return ([c for c in cns if c.kind == ConstraintKind.POS_LTRB_OFFSET or c.kind == ConstraintKind.POS_LTRB_OFFSET], {}, {})
+            
+class DynamicPruner(IPruningMethod):
+    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds):
+        pass
+    def __call__(self, cns: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
+        return ([replace(c, priority=PRIORITY_STRONG) for c in cns], {}, {})
+    

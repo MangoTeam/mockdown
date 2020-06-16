@@ -82,6 +82,12 @@ class View(IView[NT]):
         return [self.left_anchor, self.right_anchor, self.top_anchor, self.bottom_anchor, self.center_x_anchor, self.center_y_anchor, self.height_anchor, self.width_anchor]
 
     @property
+    def x_anchors(self) -> List[IAnchor[NT]]:
+        return [self.left_anchor, self.right_anchor, self.width_anchor, self.center_x_anchor]
+    @property
+    def y_anchors(self) -> List[IAnchor[NT]]:
+        return [self.top_anchor, self.bottom_anchor, self.height_anchor, self.center_y_anchor]
+    @property
     def names(self) -> Iterator[str]:
         # print('boxes:', [bx for bx in self])
         for box in [self, *self.children]:
@@ -97,7 +103,7 @@ class View(IView[NT]):
         :param name: the name of the view to get.
         :param default: the default to return if a view is not found.
         :param include_self: if true, then this element is itself included in the lookup.
-        :param deep: if true, then the search recursive.
+        :param deep: if true, then the search is recursive.
         """
         try:
             if include_self and self.name == name:

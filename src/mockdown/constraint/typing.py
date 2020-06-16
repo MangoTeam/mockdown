@@ -20,6 +20,9 @@ PRIORITY_STRONG: Priority = (1, 0, 0)
 PRIORITY_MEDIUM: Priority = (0, 1, 0)
 PRIORITY_WEAK: Priority = (0, 0, 1)
 
+def prio_to_json(p: Priority) -> str:
+    return str(list(p))
+
 
 class ConstraintKind(Enum):
     # y = x + b, where y.attr and x.attr in {left, right, top, bottom}

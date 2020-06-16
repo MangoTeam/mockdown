@@ -124,6 +124,12 @@ def visible_pairs(view: IView[NT], deep: bool = True) -> List[Tuple[IEdge[NT], I
             pairs.append(pair)
             pairs.append((pair[0].view.center_y_edge, pair[1].view.center_y_edge))
 
+    # print('horizontal visibility pairs:')
+    # print(pairs)
+    # print('for hierarchy: ')
+    # print(children)
+    # raise Exception('foo')
+
     for y_ev in y_events:
         # Cast a horizontal line through vertical intervals.
         data = deque(sorted(map(attrgetter('data'), y_itree[y_ev]), key=x_sort_key))

@@ -45,7 +45,7 @@ def confs_to_bounds(lo_c: Conformance, hi_c: Conformance) -> ISizeBounds:
 # def view_to_conf(view: IView[NT]) -> Conformance:
 
 
-def conformance_range(lower: Conformance, upper: Conformance) -> List[Conformance]:
+def conformance_range(lower: Conformance, upper: Conformance, scale: int = 10) -> List[Conformance]:
 
     # if not (lower < upper or lower == upper):
     #     if (lower > upper):
@@ -55,8 +55,7 @@ def conformance_range(lower: Conformance, upper: Conformance) -> List[Conformanc
     #     else:
     #         raise Exception("incomparable arguments to range: [%s, %s]" % (lower, upper))
     
-    # create 10 evenly spaced conformances on the range [min conf...max conf]
-    scale = 10
+    # create several evenly spaced conformances on the range [min conf...max conf]
     # print(upper, lower)
     diff_h = Fraction(upper.height - lower.height, scale)
     diff_w = Fraction(upper.width - lower.width, scale)
@@ -111,3 +110,6 @@ def add_conf_dims(solver: z3.Optimize, conf: Conformance, confIdx: int, targets:
         solver.add(top_h_v == conf.height)
         solver.add(top_x_v == conf.x)
         solver.add(top_y_v == conf.y)
+
+def conf_zip(conf: Conformance, view: IView[NT]) -> List[Tuple[IAnchor[NT], Fraction]]:
+    return [(view.left_anchor, conf.x), (view.top_anchor, conf.y), (view.width_anchor, conf.width), (view.height_anchor, conf.height)]
