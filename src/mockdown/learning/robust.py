@@ -1,4 +1,6 @@
-from typing import Any, Callable, Dict, Generic, Sequence
+from typing import Any, Callable, Sequence
+
+from sympy import Number
 
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.learning.typing import IConstraintLearning
@@ -13,7 +15,7 @@ MAX_DENOMINATOR = 1000
 PriorCallable = Callable[[NT], Any]
 
 
-class RegressionLearning(IConstraintLearning):
+class RobustLearning(IConstraintLearning):
     """
     This class emulates the old learning method.
 
@@ -22,9 +24,14 @@ class RegressionLearning(IConstraintLearning):
 
     def __init__(self,
                  templates: Sequence[IConstraint],
-                 samples: Sequence[IView[float]]):
+                 samples: Sequence[IView[Number]],
+                 confidence_threshold: int = 0.95):
+        """
+        :param confidence_threshold: cutoff for returned constraints, 0-1.
+        """
         self._templates = templates
         self._samples = samples
+        self._confidence_threshold = confidence_threshold
 
     def learn(self) -> Sequence[IConstraint]:
         pass

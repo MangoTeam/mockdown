@@ -4,7 +4,7 @@ from typing import TextIO
 import sympy as sym
 
 from mockdown.instantiation import VisibilityConstraintInstantiator
-from mockdown.learning.simple import SimpleConstraintLearning
+from mockdown.learning.simple import SImpleLearning
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner
 
@@ -46,7 +46,7 @@ def run(input_io: TextIO, numeric_type: str, pruning_method: str) -> dict:
     templates = instantiator.instantiate(examples)
 
     # 3. Learn Constants.
-    learning = SimpleConstraintLearning(samples=examples, templates=templates)
+    learning = SImpleLearning(samples=examples, templates=templates)
     constraints = [candidate.constraint
                    for candidates in learning.learn()
                    for candidate in candidates]

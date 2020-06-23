@@ -2,8 +2,7 @@ import math
 import operator
 from collections import defaultdict
 from dataclasses import replace
-from fractions import Fraction
-from typing import Any, DefaultDict, Dict, List, Optional, Sequence, cast
+from typing import Any, DefaultDict, Dict, List, Optional, Sequence
 
 import sympy as sym  # type: ignore
 
@@ -20,7 +19,7 @@ DEFAULT_TOLERANCE = 0.01  # maximum difference of 1%
 MAX_DENOMINATOR = 1000
 
 
-class SimpleConstraintLearning(IConstraintLearning):
+class SImpleLearning(IConstraintLearning):
     """
     This class emulates the old learning method.
 
