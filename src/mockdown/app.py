@@ -1,69 +1,35 @@
-from typing import Any, Dict, List
+import io
+import json
+from typing import Any, Dict
 
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
-from sympy import RealNumber, Number
 from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 
-from .engine import DefaultMockdownEngine
-from .instantiation import VisibilityConstraintInstantiator
-from .learning.simple import SimpleConstraintLearning
-from .model import IView
-from .model.view.loader import ViewLoader
-from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory
-
-# We don't have stubs for these.
-
-"""
-This dictionary contains *factories* that produce pruning methods!
-"""
-PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
-    'none': lambda x, y: (lambda constraints: constraints),
-    'baseline': BlackBoxPruner,
-    'hierarchical': HierarchicalPruner,
-}
+from mockdown.run import run as run_mockdown
 
 
 async def synthesize(request: Request) -> JSONResponse:
     request_json = await request.json()
-    examples_json = request_json['examples']
-    bounds: ISizeBounds = request_json.get('bounds', {})
 
-    engine = DefaultMockdownEngine()
-    loader = ViewLoader(number_factory=Number)
-    instantiator = VisibilityConstraintInstantiator()
+    # todo: move these into an `opts` object in the input json.
+    opts = {
+        'numeric_type': request_json.pop('numeric_type', 'N'),
+        'pruning_method': request_json.pop('pruning', 'none')
+    }
 
-    # Product a list of examples (IView's).
-    examples: List[IView[Number]] = [
-        loader.load_dict(example_json)
-        for example_json
-        in examples_json
-    ]
+    # Kind of a hack, we rewrite the JSON back as a string, as that's whast
+    # the cli.run interface expected (it expects a TextIO it can call json.load on)
+    req_io = io.StringIO()
+    json.dump(request_json, req_io)
+    req_io.seek(0)
 
-    templates = instantiator.instantiate(examples)
-
-    learning = SimpleConstraintLearning(samples=examples, templates=templates)
-
-    # todo: pruning should actually make use of candidate sets.
-    constraints = [candidate.constraint
-                   for candidates in learning.learn()
-                   for candidate in candidates]
-
-    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
-
-    pruned_constraints = prune(constraints)
-
-    res = [
-        constraint.to_dict()
-        for constraint
-        in pruned_constraints
-    ]
-
-    return JSONResponse(res)
+    result = run_mockdown(req_io, **opts)
+    return JSONResponse(result)
 
 
 def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) -> Starlette:
@@ -85,6 +51,5 @@ def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) 
     )
 
     return app
-
 
 # default_app = create_app(static_dir='static/', static_path='/')

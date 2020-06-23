@@ -1,19 +1,14 @@
 import json
 import tempfile
 import webbrowser
-from pprint import pprint
 from typing import TextIO
 
 import click
-import sympy as sym  # type:ignore
 import uvicorn  # type: ignore
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from mockdown.app import create_app
-from mockdown.engine import DefaultMockdownEngine
-from mockdown.instantiation import VisibilityConstraintInstantiator
-from mockdown.learning.simple import SimpleConstraintLearning
-from mockdown.model.view import ViewLoader
+from mockdown.run import run as run_mockdown
 
 
 @click.group()
@@ -21,48 +16,30 @@ def cli() -> None:
     pass
 
 
+@cli.resultcallback()
+def process_result(result: dict) -> None:
+    click.echo(json.dumps(
+        result,
+        ensure_ascii=False,
+        indent=2,
+    ))
+
+
 @click.command()
-@click.argument('input', type=click.File('r'))
+@click.argument('input_io', type=click.File('r'))
 @click.option('-nt',
               '--numeric-type',
               type=click.Choice(['N', 'R', 'Q', 'Z'], case_sensitive=False),
               default='N',
               help="Numeric type of input: number, real, rational, or integer.")
-def run(input: TextIO, numeric_type: str) -> None:
-    examples_json = json.load(input)["examples"]
-
-    # Note: sym.Number _should_ generally "do the right thing"...
-    number_factory = {
-        'N': sym.Number,
-        'R': sym.Float,
-        'Q': sym.Rational,
-        'Z': sym.Integer
-    }[numeric_type]
-
-    engine = DefaultMockdownEngine()
-    loader = ViewLoader(number_factory=sym.Number)
-    instantiator = VisibilityConstraintInstantiator()
-
-    # 1. Load Examples
-
-    examples = [loader.load_dict(ex_json) for ex_json in examples_json]
-    pprint(examples)
-
-    # 2. Instantiate Templates
-    templates = instantiator.instantiate(examples)
-    pprint(templates)
-
-    # 3. Learn Constants.
-    learning = SimpleConstraintLearning(samples=examples, templates=templates)
-    constraints = [candidate.constraint
-                   for candidates in learning.learn()
-                   for candidate in candidates]
-
-    print(json.dumps(
-        [cn.to_dict() for cn in constraints],
-        ensure_ascii=False,
-        indent=2,
-    ))
+@click.option('-pm',
+              '--pruning-method',
+              type=click.Choice(['none', 'baseline', 'hierarchical'], case_sensitive=False),
+              default='none',
+              help="Pruning method to use: baseline or hierarchical.")
+def run(input_io: TextIO, numeric_type: str, pruning_method: str) -> dict:
+    # Note, this return value is intercepted by `process_result` above!
+    return run_mockdown(input_io, numeric_type, pruning_method)
 
 
 @click.command()
