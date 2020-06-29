@@ -1,12 +1,8 @@
 import json
-from abc import ABC
-from typing import Any, Dict, Protocol, TextIO
-
-from sympy import Number  # type: ignore
+from typing import Any, Dict, Protocol, TextIO, Type
 
 from mockdown.model import IView
 from mockdown.model.view import ViewBuilder
-from mockdown.model.view.typing import NumberFactory
 from mockdown.typing import NT
 
 
@@ -16,15 +12,13 @@ class IViewLoader(Protocol[NT]):
     def load_file(self, src: TextIO) -> IView[NT]: ...
 
 
-class _BaseViewLoader(IViewLoader[NT], ABC):
+class ViewLoader(IViewLoader[NT]):
+    def __init__(self: IViewLoader[NT], number_type: Type[NT]):
+        self.number_type = number_type
+
     def load_file(self, src: TextIO) -> IView[NT]:
         d = json.load(src)
         return self.load_dict(d)
-
-
-class ViewLoader(_BaseViewLoader[Number]):
-    def __init__(self, number_factory: NumberFactory):
-        self.number_factory = number_factory
 
     def load_dict(self, data: Dict[str, Any]) -> IView[NT]:
         def recurse(d: Dict[str, Any]) -> ViewBuilder:
@@ -35,4 +29,4 @@ class ViewLoader(_BaseViewLoader[Number]):
                 return ViewBuilder(name=d['name'], rect=d['rect'], children=child_builders)
 
         builder = recurse(data)
-        return builder.build(number_factory=self.number_factory)
+        return builder.build(number_type=self.number_type)

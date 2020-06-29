@@ -57,6 +57,7 @@ class IView(Protocol[NT]):
     parent: Optional[IView[NT]]
 
     # Implement IRect by delegation.
+    # IRect isn't explicitly implemented because mypy is dumb.
     @property
     def left(self) -> NT:
         return self.rect.left

@@ -1,12 +1,15 @@
-from typing import NoReturn, Tuple, TypeVar
+from __future__ import annotations
 
-from sympy import Number  # type: ignore
+from typing import NoReturn, Tuple, TypeVar, Type
+
+import sympy as sym
 
 _ElT = TypeVar('_ElT')
 Tuple4 = Tuple[_ElT, _ElT, _ElT, _ElT]
 
 # (NT = Numeric Type)
-NT = TypeVar('NT', bound=Number)
+NT = TypeVar('NT', bound=sym.Number)
+
 
 def unreachable(x: NoReturn) -> NoReturn:
     """

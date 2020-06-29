@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from enum import Enum
-from fractions import Fraction
-from numbers import Rational
 from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar
 
-from ..model import IAnchorID
+import sympy as sym
+
+from mockdown.model import IAnchorID
 
 T = TypeVar('T')
 
@@ -68,8 +68,8 @@ class IConstraint:
     y_id: IAnchorID
     x_id: Optional[IAnchorID]
 
-    a: Rational
-    b: Rational
+    a: sym.Rational
+    b: sym.Rational
 
     op: IComparisonOp[Any]
     priority: Priority
@@ -79,6 +79,8 @@ class IConstraint:
     @property
     def is_falsified(self) -> bool:
         return False
+
+    def to_expr(self) -> sym.Expr: ...
 
     def to_dict(self) -> Dict[str, str]: ...
 

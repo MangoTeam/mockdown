@@ -40,8 +40,8 @@ def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) 
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
     app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
 
-    class StdoutTimingClient(TimingClient):
-        def timing(self, metric_name, timing, tags=None) -> None:
+    class StdoutTimingClient(TimingClient):  # type: ignore
+        def timing(self, metric_name, timing, tags=None) -> None:  # type: ignore
             print(metric_name, timing, tags)
 
     app.add_middleware(

@@ -1,7 +1,7 @@
 from numbers import Number as PyNumber
 from typing import Union, Callable
 
-from sympy import Number
+import sympy as sym
 
-NumberConvertible = Union[str, PyNumber, Number]
-NumberFactory = Callable[[NumberConvertible], Number]
+NumberConvertible = Union[str, int, float, sym.Number]
+NumberFactory = Callable[[NumberConvertible], sym.Number]

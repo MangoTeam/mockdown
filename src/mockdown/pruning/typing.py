@@ -13,6 +13,3 @@ class ISizeBounds(TypedDict):
 
 class IPruningMethod(Protocol):
     def __call__(self, cns: List[IConstraint]) -> List[IConstraint]: ...
-
-
-PruningMethodFactory = Callable[[List[IView], ISizeBounds], IPruningMethod]

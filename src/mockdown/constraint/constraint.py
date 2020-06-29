@@ -4,7 +4,7 @@ import operator
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, final
 
-from sympy import Rational  # type: ignore
+import sympy as sym
 
 from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority
 from mockdown.model import IAnchorID
@@ -29,8 +29,8 @@ class ConstantConstraint(IConstraint):
     y_id: IAnchorID
     x_id: Optional[IAnchorID] = field(default=None, init=False)
 
-    a: Rational = field(default=Rational(0), init=False)
-    b: Rational = Rational(0)
+    a: sym.Rational = field(default=sym.Rational(0), init=False)
+    b: sym.Rational = sym.Rational(0)
 
     op: IComparisonOp[Any] = operator.eq
     priority: Priority = PRIORITY_REQUIRED
@@ -67,8 +67,8 @@ class LinearConstraint(IConstraint):
     y_id: IAnchorID
     x_id: IAnchorID
 
-    a: Rational = Rational(1)
-    b: Rational = Rational(0)
+    a: sym.Rational = sym.Rational(1)
+    b: sym.Rational = sym.Rational(0)
 
     op: IComparisonOp[Any] = operator.eq
     priority: Priority = PRIORITY_REQUIRED
@@ -94,3 +94,16 @@ class LinearConstraint(IConstraint):
             'priority': str(self.priority),
             'kind': self.kind.value
         }
+
+
+# @final
+# @dataclass(eq=True, frozen=True)
+# class SymbolicConstraint(IConstraint):
+#     kind: ConstraintKind
+#     expr: Expr
+#
+#     def __post_init__(self):
+#         pass
+#
+#     @property
+#     def x_id(self) -> IAnchorID:

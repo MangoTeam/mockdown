@@ -1,15 +1,15 @@
 import json
-from typing import TextIO
+from typing import TextIO, List, Dict
 
 import sympy as sym
 
 from mockdown.instantiation import VisibilityConstraintInstantiator
-from mockdown.learning.simple import SImpleLearning
+from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner
 
 
-def run(input_io: TextIO, numeric_type: str, pruning_method: str) -> dict:
+def run(input_io: TextIO, numeric_type: str, pruning_method: str) -> List[Dict[str, str]]:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
@@ -35,7 +35,7 @@ def run(input_io: TextIO, numeric_type: str, pruning_method: str) -> dict:
         'hierarchical': HierarchicalPruner,
     }[pruning_method]
 
-    loader = ViewLoader(number_factory=sym.Number)
+    loader = ViewLoader(number_type=sym.Number)
     instantiator = VisibilityConstraintInstantiator()
 
     # 1. Load Examples
@@ -46,7 +46,7 @@ def run(input_io: TextIO, numeric_type: str, pruning_method: str) -> dict:
     templates = instantiator.instantiate(examples)
 
     # 3. Learn Constants.
-    learning = SImpleLearning(samples=examples, templates=templates)
+    learning = SimpleLearning(samples=examples, templates=templates)
     constraints = [candidate.constraint
                    for candidates in learning.learn()
                    for candidate in candidates]

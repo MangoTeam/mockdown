@@ -4,7 +4,7 @@ from collections import defaultdict
 from dataclasses import replace
 from typing import Any, DefaultDict, Dict, List, Optional, Sequence
 
-import sympy as sym  # type: ignore
+import sympy as sym
 
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
@@ -19,7 +19,7 @@ DEFAULT_TOLERANCE = 0.01  # maximum difference of 1%
 MAX_DENOMINATOR = 1000
 
 
-class SImpleLearning(IConstraintLearning):
+class SimpleLearning(IConstraintLearning):
     """
     This class emulates the old learning method.
 
@@ -44,11 +44,11 @@ class SImpleLearning(IConstraintLearning):
 
         def widen_bound(op: IComparisonOp[Any], old: sym.Number, new: sym.Number) -> sym.Number:
             if op == operator.le:
-                mx = sym.Max(old, new)
+                mx = sym.Max(old, new)  # type: ignore
                 assert isinstance(mx, sym.Number)
                 return mx
             elif op == operator.ge:
-                mn = sym.Min(old, new)
+                mn = sym.Min(old, new)  # type: ignore
                 assert isinstance(mn, sym.Number)
                 return mn
             else:
@@ -65,7 +65,7 @@ class SImpleLearning(IConstraintLearning):
                     assert y is not None, f"Could not find anchor f{template.y_id} in sample #{i}"
                     if template.kind in {Kind.POS_LTRB_OFFSET, Kind.SIZE_OFFSET}:
                         assert x is not None
-                        a = 1.0
+                        a = sym.Number(1.0)
                         b = y.value - x.value
 
                         if sample_counts[template] > 0:
@@ -75,7 +75,7 @@ class SImpleLearning(IConstraintLearning):
                         constants[template] = {'a': a, 'b': b}
                     elif template.kind is Kind.SIZE_CONSTANT:
                         assert x is None
-                        a = 0.0
+                        a = sym.Number(0.0)
                         b = y.value
 
                         if sample_counts[template] > 0:
@@ -86,7 +86,7 @@ class SImpleLearning(IConstraintLearning):
                     elif template.kind in {Kind.SIZE_RATIO, Kind.SIZE_ASPECT_RATIO}:
                         assert x is not None
                         a = y.value / x.value
-                        b = 0.0
+                        b = sym.Number(0.0)
 
                         if sample_counts[template] > 0:
                             old_a = constants[template]['a']
@@ -123,7 +123,7 @@ class SImpleLearning(IConstraintLearning):
                 constraint = replace(template,
                                      a=a_frac,
                                      b=b_frac,
-                                     sample_count=sample_counts[template],)
+                                     sample_count=sample_counts[template], )
                 constraints.append(constraint)
             elif isinstance(template, ConstantConstraint):
                 b_frac = sym.Rational(values['b']).limit_denominator(self._max_denominator)

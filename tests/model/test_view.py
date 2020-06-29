@@ -1,8 +1,10 @@
-from mockdown.model import ZViewLoader
+import sympy as sym
+
+from mockdown.model import ViewLoader
 
 
 def test_view_is_isomorphic() -> None:
-    loader = ZViewLoader()
+    loader = ViewLoader(number_type=sym.Integer)
     v1 = loader.load_dict({
         'name': 'root',
         'rect': (0, 0, 100, 100),

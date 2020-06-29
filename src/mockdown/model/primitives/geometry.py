@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from fractions import Fraction
-from typing import Protocol, cast
-
-from sympy import Number, Float  # type: ignore
+from typing import Protocol
 
 from ...typing import NT
 
@@ -34,27 +31,27 @@ class IRect(Protocol[NT]):
 
 
 @dataclass(eq=True)
-class Rect(IRect[Number]):
+class Rect(IRect[NT]):
     """
     Implementation of IRect for sympy's Number types.
     """
-    left: Number
-    top: Number
-    right: Number
-    bottom: Number
+    left: NT
+    top: NT
+    right: NT
+    bottom: NT
 
     @property
-    def width(self) -> Number:
+    def width(self) -> NT:
         return self.right - self.left
 
     @property
-    def height(self) -> Number:
+    def height(self) -> NT:
         return self.bottom - self.top
 
     @property
-    def center_x(self) -> Number:
+    def center_x(self) -> NT:
         return (self.left + self.right) / 2
 
     @property
-    def center_y(self) -> Number:
+    def center_y(self) -> NT:
         return (self.top + self.bottom) / 2
