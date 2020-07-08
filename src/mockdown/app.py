@@ -16,11 +16,7 @@ from mockdown.run import run as run_mockdown
 async def synthesize(request: Request) -> JSONResponse:
     request_json = await request.json()
 
-    # todo: move these into an `opts` object in the input json.
-    opts = {
-        'numeric_type': request_json.pop('numeric_type', 'N'),
-        'pruning_method': request_json.pop('pruning', 'none')
-    }
+    options = request_json.pop('options', {})
 
     # Kind of a hack, we rewrite the JSON back as a string, as that's whast
     # the cli.run interface expected (it expects a TextIO it can call json.load on)
@@ -28,7 +24,7 @@ async def synthesize(request: Request) -> JSONResponse:
     json.dump(request_json, req_io)
     req_io.seek(0)
 
-    result = run_mockdown(req_io, **opts)
+    result = run_mockdown(req_io, options)
     return JSONResponse(result)
 
 
