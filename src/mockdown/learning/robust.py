@@ -18,8 +18,15 @@ class RobustLearningInvariant:
     template: IConstraint
 
     def train(self, sample: IView[sym.Number]) -> None:
-        self.template.kind
-        raise NotImplementedError
+        if self.template.is_constant:
+            self._train_constant(self, sample)
+        else:
+            raise NotImplementedError
+
+    def _train_constant(self, sample: IView[sym.Number]) -> None:
+
+
+    # def _train_constant(self, sample: IView[sym.N]):
 
     def to_constraints(self) -> List[IConstraint]:
         raise NotImplementedError

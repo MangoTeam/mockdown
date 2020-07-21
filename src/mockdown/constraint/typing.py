@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from enum import Enum
 from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar
 
@@ -26,9 +27,6 @@ class ConstraintKind(Enum):
     # y = x + b, where y.attr and x.attr in {left, right, top, bottom}
     POS_LTRB_OFFSET = 'pos_lrtb_offset'
 
-    # y = ax + b, where y.attr and x.attr in {left, right, top, bottom}
-    POS_LTRB_GENERAL = 'pos_lrtb_general'
-
     # y = x, where y.attr and x.attr in {center_x, center_y}
     POS_CENTERING = 'pos_centering'
 
@@ -51,6 +49,37 @@ class ConstraintKind(Enum):
 
     # y = ax, where y.attr = width and x.attr = height, and y = x
     SIZE_ASPECT_RATIO = 'size_aspect_ratio'
+
+    # # y = ax + b, where y.attr = width and x.attr = height, and y = x, b != 0.
+    SIZE_ASPECT_RATIO_GENERAL = 'size_aspect_ratio_general'
+
+    @property
+    def is_constant_form(self) -> bool:
+        return self in {
+            ConstraintKind.SIZE_CONSTANT,
+            ConstraintKind.SIZE_CONSTANT_BOUND
+        }
+
+    @property
+    def is_add_only_form(self) -> bool:
+        return self in {
+            ConstraintKind.POS_LTRB_OFFSET,
+            ConstraintKind.SIZE_OFFSET,
+        }
+
+    @property
+    def is_mul_only_form(self) -> bool:
+        return self in {
+            ConstraintKind.SIZE_RATIO,
+            ConstraintKind.SIZE_ASPECT_RATIO,
+        }
+
+    @property
+    def is_general_form(self) -> bool:
+        return self in {
+            ConstraintKind.SIZE_RATIO_GENERAl,
+            ConstraintKind.SIZE_ASPECT_RATIO_GENERAL
+        }
 
     @classmethod
     def get_position_kinds(cls) -> Set[ConstraintKind]:
@@ -80,6 +109,15 @@ class IConstraint:
     priority: Priority
 
     sample_count: int
+
+    @property
+    @abstractmethod
+    def is_constant(self) -> bool: ...
+
+    @property
+    @abstractmethod
+    def is_one_variable(self) -> bool:
+        return self.kind
 
     @property
     def is_falsified(self) -> bool:
