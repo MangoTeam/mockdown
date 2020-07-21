@@ -39,10 +39,15 @@ class ConstraintKind(Enum):
     SIZE_RATIO = 'size_ratio'
 
     # # y = ax + b, where y.attr and x.attr in {width, height}, b != 0.
-    # SIZE_MARGIN_RATIO = 'size_margin_ratio'
+    SIZE_RATIO_GENERAl = 'size_ratio_general'
 
     # y = b, where y.attr in {width, height}
     SIZE_CONSTANT = 'size_constant'
+
+    # y = b, where y.attr in {width, height} but a priority-resolvable bound.
+    # Note: should only be emitted when values are too far apart (noisy?) to
+    # determine any more reasonable candidate.
+    SIZE_CONSTANT_BOUND = 'size_constant_bound'
 
     # y = ax, where y.attr = width and x.attr = height, and y = x
     SIZE_ASPECT_RATIO = 'size_aspect_ratio'
@@ -79,6 +84,19 @@ class IConstraint:
     @property
     def is_falsified(self) -> bool:
         return False
+
+    @property
+    def is_template(self) -> bool:
+        return self.sample_count == 0
+
+    @property
+    def is_required(self) -> bool:
+        return self.priority == PRIORITY_REQUIRED
+
+    @property
+    def resolves_ambiguity(self) -> bool:
+        return self.is_required and \
+               self.kind == ConstraintKind.SIZE_CONSTANT
 
     def to_expr(self) -> sym.Expr: ...
 

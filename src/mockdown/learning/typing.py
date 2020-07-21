@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Protocol, Sequence, List
+from typing import Protocol, List
 
 from mockdown.constraint import IConstraint
 

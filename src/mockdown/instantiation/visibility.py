@@ -13,7 +13,7 @@ from mockdown.model import IEdge, IView
 from mockdown.typing import NT
 
 
-class VisibilityConstraintInstantiator(IConstraintInstantiator[Any]):
+class VisibilityConstraintInstantiator(IConstraintInstantiator[NT]):
     def instantiate(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
         edge_pair_sets = [
             visible_pairs(example, deep=True)

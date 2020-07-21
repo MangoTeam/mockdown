@@ -8,7 +8,7 @@ jupyterlab = "*"
 mypy="*"
 pylint = "*"
 pytest = "*"
-sympy = "*"
+hypothesis = "*"
 
 [packages]
 click = "*"
