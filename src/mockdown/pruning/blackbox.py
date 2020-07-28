@@ -1,5 +1,7 @@
 from typing import Dict, List, AbstractSet, Set, Tuple, Optional, Collection, Any, cast, Generic, Protocol, Sequence, Iterator, FrozenSet
 
+from enum import Enum
+
 from dataclasses import asdict, replace
 
 import operator
@@ -45,6 +47,8 @@ def is_x_constr(c: IConstraint) -> bool:
         return c.y_id.attribute in hs_attrs
 
 
+LogLevel = Enum('LogLevel', 'NONE ALL')
+
 class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
     example: IView[NT]
@@ -53,6 +57,7 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
     top_x: IAnchor[NT]
     top_y: IAnchor[NT]
     solve_unambig: bool
+    log_level: LogLevel
 
     def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, solve_unambig: bool, targets: Optional[Sequence[IView[NT]]] = None):
 
@@ -91,6 +96,7 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
         self.targets: Sequence[IView[NT]] = targets or [x for x in self.example]
 
         self.solve_unambig = solve_unambig
+        self.log_level = LogLevel.NONE
 
 
     def add_determinism(self, solver: z3.Optimize, cmap: Dict[str, IConstraint], x_dim: bool) -> None:
@@ -323,8 +329,9 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
                 for control in invalid_cand:
                     control_term = z3.And(control_term, z3.Bool(control))
                 solver.add(z3.Not(control_term))
-            # with open("debug-%s-invalids-%d.smt2" % (self.example.name, iters), 'w') as debugout:
-            #     print(solver.sexpr(), file=debugout)
+            if self.log_level == LogLevel.ALL:
+                with open("debug-%s-invalids-%d.smt2" % (self.example.name, iters), 'w') as debugout:
+                    print(solver.sexpr(), file=debugout)
 
             
 
@@ -361,7 +368,7 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
                         placement_term = z3.And(placement_term, anchor_id_to_z3_var(c_anc.id, conf_idx) == concrete_value)
                 solver.add(z3.Not(placement_term))
 
-                if self.example.name == 'box13' and x_dim:
+                if self.example.name == 'box13' and x_dim and self.log_level == LogLevel.ALL:
                     with open("debug-%s-determ-%d.smt2" % (self.example.name, iters), 'w') as debugout:
                         print(solver.sexpr(), file=debugout)
 
@@ -472,10 +479,11 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
         # self.add_determinism(x_solver, x_names, x_dim=True)
         # self.add_determinism(y_solver, y_names, x_dim=False)
 
-        with open("debug-%s-initial-x.smt2" % self.example.name, 'w') as debugout:
-            print(x_solver.sexpr(), file=debugout)
-        with open("debug-%s-initial-y.smt2" % self.example.name, 'w') as debugout:
-            print(y_solver.sexpr(), file=debugout)
+        if self.log_level == LogLevel.ALL:
+            with open("debug-%s-initial-x.smt2" % self.example.name, 'w') as debugout:
+                print(x_solver.sexpr(), file=debugout)
+            with open("debug-%s-initial-y.smt2" % self.example.name, 'w') as debugout:
+                print(y_solver.sexpr(), file=debugout)
 
         if self.solve_unambig:
             print('solving for unambiguous horizontal layout')
@@ -554,8 +562,9 @@ class CegisPruner(Generic[NT], BlackBoxPruner[NT]):
             for conf_idx in range(len(confs)):
                 solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, conf_idx)))
 
-        with open("debug-synth.smt2", 'w') as debugout:
-            print(solver.sexpr(), file=debugout)
+        if self.log_level == LogLevel.ALL:
+            with open("debug-synth.smt2", 'w') as debugout:
+                print(solver.sexpr(), file=debugout)
 
         # print("solving synth")
         chk = solver.check()
@@ -750,6 +759,7 @@ class HierarchicalPruner(IPruningMethod):
         self.top_y = self.hierarchy.top_anchor
 
         self.solve_unambig = solve_unambig
+        self.log_level = LogLevel.NONE
 
     def relevant_constraints(self, focus: IView[NT], c: IConstraint) -> bool:
 
@@ -812,8 +822,9 @@ class HierarchicalPruner(IPruningMethod):
             else:
                 y_solver.add(constraint_to_z3_expr(constr, z3_idx))
 
-        # with open("parent-dims-%s.smt2" % focus.name, 'w') as debugout:
-        #     print(solver.sexpr(), file=debugout)
+        if self.log_level == LogLevel.ALL:
+            with open("parent-dims-%s.smt2" % focus.name, 'w') as debugout:
+                print(solver.sexpr(), file=debugout)
         
         for child in focus.children:
             c_w, c_h = anchor_id_to_z3_var(child.width_anchor.id, z3_idx), anchor_id_to_z3_var(child.height_anchor.id, z3_idx)
@@ -927,6 +938,7 @@ class HierarchicalPruner(IPruningMethod):
                 focus_output, mins, maxes = ceg_solver(relevant)
             else:
                 bb_solver = BlackBoxPruner(focus_examples, bounds, self.solve_unambig, targets=targets)
+                bb_solver.log_level = self.log_level
                 focus_output, mins, maxes = bb_solver(relevant)
 
             output_constrs |= set(focus_output)
@@ -953,9 +965,9 @@ class HierarchicalPruner(IPruningMethod):
                     clo, chi = child_confs[child.name]['min'], child_confs[child.name]['max']
 
                 worklist.append((child, [fe.children[ci] for fe in focus_examples], clo, chi))
-            
-            with open('constraints.json', 'a') as debugout:
-                print([short_str(c) for c in focus_output], file=debugout)
+            if self.log_level == LogLevel.ALL:
+                with open('constraints.json', 'a') as debugout:
+                    print([short_str(c) for c in focus_output], file=debugout)
 
         print('done with hierarchical pruning! finishing up...')
         if integrate: 
