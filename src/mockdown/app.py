@@ -15,11 +15,15 @@ from .model.view.loader import RViewLoader, QViewLoader
 from .pruning import BlackBoxPruner, HierarchicalPruner, ISizeBounds, PruningMethodFactory, CegisPruner, bounds_from_json, MarginPruner, DynamicPruner
 
 
+def avg_children(v: Any) -> float:
+    return sum([len(box.children) for box in v if len(box.children) > 0])/len([x for x in v if len(x.children) > 0])
+
+
 """
 This dictionary contains *factories* that produce pruning methods!
 """
 PRUNING_METHODS: Dict[str, PruningMethodFactory] = {
-    'none': lambda x, y: (lambda constraints: (constraints, {}, {})),
+    'none': MarginPruner,
     'baseline': BlackBoxPruner, 
     'cegis': CegisPruner,
     'hierarchical': HierarchicalPruner,
@@ -31,6 +35,7 @@ async def synthesize(request: Request) -> JSONResponse:
     request_json = await request.json()
     examples_json = request_json['examples']
     bounds = bounds_from_json(request_json.get('bounds', {}))
+    unambig = request_json['unambig']
 
     engine = DefaultMockdownEngine()
 
@@ -49,9 +54,11 @@ async def synthesize(request: Request) -> JSONResponse:
     learning = SimpleConstraintLearning(samples=examples, templates=templates)
     constraints = learning.learn()
 
-    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds)
+    prune = PRUNING_METHODS[request_json.get('pruning', 'none')](examples, bounds, unambig)
 
-    amount_before = len(constraints)
+    # amount_before = len(constraints)
+    print('number of elements:', len([x for x in examples[0]]))
+    print('avg children: ', avg_children(examples[0]))
 
     pruned_constraints = prune(constraints)[0]
 
@@ -61,7 +68,9 @@ async def synthesize(request: Request) -> JSONResponse:
         in pruned_constraints
     ]
 
-    print("picking reduced %d to %d" % (amount_before, len(res)))
+    # print("picking reduced %d to %d" % (amount_before, len(res)))
+
+    print('output constraints: ', len(pruned_constraints))
 
     return JSONResponse(res)
 

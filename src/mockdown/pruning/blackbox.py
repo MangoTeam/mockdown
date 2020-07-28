@@ -45,12 +45,6 @@ def is_x_constr(c: IConstraint) -> bool:
         return c.y_id.attribute in hs_attrs
 
 
-class SanityConnectedCorners(IPruningMethod, Generic[NT]):
-    def __init__(self, examples: Sequence[IView[NT]]):
-        pass
-    def __call__(self, constraints: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
-        pass
-
 class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
     example: IView[NT]
@@ -58,8 +52,9 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
     top_height: IAnchor[NT]
     top_x: IAnchor[NT]
     top_y: IAnchor[NT]
+    solve_unambig: bool
 
-    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, targets: Optional[Sequence[IView[NT]]] = None):
+    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, solve_unambig: bool, targets: Optional[Sequence[IView[NT]]] = None):
 
         heights = [to_frac(v.height) for v in examples]
         widths = [to_frac(v.width) for v in examples]
@@ -95,8 +90,8 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
         self.targets: Sequence[IView[NT]] = targets or [x for x in self.example]
 
+        self.solve_unambig = solve_unambig
 
-    
 
     def add_determinism(self, solver: z3.Optimize, cmap: Dict[str, IConstraint], x_dim: bool) -> None:
 
@@ -109,8 +104,10 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
         # group constraints by their y_anchorid and include the z3 constraint name
 
-        constrs_by_id : Dict[str, List[Tuple[str, IConstraint]]] = {str(a.id) : [] for box in self.example for a in box.anchors if box.name != self.example.name}
+        constrs_by_id : Dict[str, List[Tuple[str, IConstraint]]] = {str(a.id) : [] for box in self.targets for a in box.anchors if box.name != self.example.name}
         for z3_name, constr in cmap.items():
+            if constr.y_id.view_name == self.example.name:
+                continue
             key = str(constr.y_id)
             constrs_by_id[key].append((z3_name, constr))
 
@@ -308,7 +305,7 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
         return add_conf_dims(solver, conf, confIdx, (self.top_x, self.top_y, self.top_width, self.top_height))
 
-    def synth_unambiguous(self, solver: z3.Optimize, names_map: Dict[str, IConstraint], confs: List[Conformance], x_dim: bool) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
+    def synth_unambiguous(self, solver: z3.Optimize, names_map: Dict[str, IConstraint], confs: List[Conformance], x_dim: bool, dry_run: bool) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
     
         solver.push()
         invalid_candidates: Set[FrozenSet[str]] = set()
@@ -344,29 +341,43 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
                 for control in new_cand:
                     solver.add(z3.Bool(control))
 
-                for conf_idx in range(len(confs)):
+                # for conf_idx in range(len(confs)):
+                conf_idx = len(confs)//2
 
-                    
 
-                    names = [str(a.id) for box in [self.example] + list(self.example.children) for a in get_ancs(box)]
-                    
-                    vals = extract_model_valuations(old_model, conf_idx, names)
-                    for p_anc in get_ancs(self.example):
-                        concrete_value = vals[str(p_anc.id)]
-                        solver.add(anchor_id_to_z3_var(p_anc.id, conf_idx) == concrete_value)
-
-                    for child in self.example.children:
-                        placement_term = z3.BoolVal(True)
-                        for c_anc in get_ancs(child):
-                            concrete_value = vals[str(c_anc.id)]
-                            placement_term = z3.And(placement_term, anchor_id_to_z3_var(c_anc.id, conf_idx) == concrete_value)
-                        solver.add(z3.Not(placement_term))
-
-                with open("debug-%s-determ-%d.smt2" % (self.example.name, iters), 'w') as debugout:
-                    print(solver.sexpr(), file=debugout)
-
+                names = [str(a.id) for box in [self.example] + list(self.targets) for a in get_ancs(box)]
                 
-                if solver.check() == z3.sat:
+                vals = extract_model_valuations(old_model, conf_idx, names)
+                for p_anc in get_ancs(self.example):
+                    concrete_value = vals[str(p_anc.id)]
+                    solver.add(anchor_id_to_z3_var(p_anc.id, conf_idx) == concrete_value)
+
+                placement_term = z3.BoolVal(True)
+                for child in self.targets:
+                    if child.name == self.example.name:
+                        continue
+                    for c_anc in get_ancs(child):
+                        concrete_value = vals[str(c_anc.id)]
+                        placement_term = z3.And(placement_term, anchor_id_to_z3_var(c_anc.id, conf_idx) == concrete_value)
+                solver.add(z3.Not(placement_term))
+
+                if self.example.name == 'box13' and x_dim:
+                    with open("debug-%s-determ-%d.smt2" % (self.example.name, iters), 'w') as debugout:
+                        print(solver.sexpr(), file=debugout)
+
+                if dry_run or solver.check() == z3.unsat:
+                    print('took %d iters' % iters)
+                    constr_decls = [v for v in old_model.decls() if v.name() in names_map]
+                    output = [names_map[v.name()] for v in constr_decls if old_model.get_interp(v)]
+
+                    def get_ancs(v: IView[NT]) -> List[IAnchor[NT]]:
+                        return v.x_anchors if x_dim else v.y_anchors
+                    names = [str(a.id) for box in [self.example] + list(self.targets) for a in get_ancs(box)]
+
+                    min_vals, max_vals = extract_model_valuations(old_model, 0, names), extract_model_valuations(old_model, len(confs)-1, names)
+                    return (output, min_vals, max_vals)
+                
+                elif solver.check() == z3.sat:
                     # candidate is invalid
                     if new_cand in invalid_candidates:
                         raise Exception('inconceivable')
@@ -378,16 +389,9 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
                     continue
                 else:
                     # print('found it! with check value:', str(solver.check()))
-                    print('took %d iters' % iters)
-                    constr_decls = [v for v in old_model.decls() if v.name() in names_map]
-                    output = [names_map[v.name()] for v in constr_decls if old_model.get_interp(v)]
-
-                    def get_ancs(v: IView[NT]) -> List[IAnchor[NT]]:
-                        return v.x_anchors if x_dim else v.y_anchors
-                    names = [str(a.id) for box in [self.example] + list(self.example.children) for a in get_ancs(box)]
-
-                    min_vals, max_vals = extract_model_valuations(old_model, 0, names), extract_model_valuations(old_model, conf_idx, names)
-                    return (output, min_vals, max_vals)
+                    print('unknown?', solver.check())
+                    raise Exception('unexpected solver output')
+                    
             else:
                 raise Exception('cant find a solution')
 
@@ -396,20 +400,16 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
             if constr.x_id:
                 yv = self.example.find_anchor(constr.y_id)
                 if yv and yv.view.is_parent_of_name(constr.x_id.view_name):
-                    biases[constr] = score * 1000
+                    biases[constr] = score * 10
         return biases
 
     def __call__(self, constraints: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
 
-        constraints = [c for c in constraints if c.kind != ConstraintKind.SIZE_ASPECT_RATIO]
-        # print('before combining:')
-        # print([short_str(c) for c in constraints])
-        constraints = self.combine_bounds(constraints)
-        # print('middle combining:')
-        # print([short_str(c) for c in constraints])
-        constraints = list(filter(lambda c: c.op == operator.eq, constraints))
+        constraints = self.filter_constraints(constraints)
         # print('after combining:')
         # print([short_str(c) for c in constraints])
+
+        print('candidates: ', len(constraints))
 
 
         if (len(constraints) == 0): 
@@ -419,12 +419,21 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
                     defaults[str(anchor.id)] = to_frac(anchor.value)
             return (constraints, defaults, defaults)
 
+        def add_box16w_hack(weights: Dict[IConstraint, float]) -> Dict[IConstraint, float]:
+            for constr, weight in weights.items():
+                if constr.y_id.view_name == 'box15' and constr.kind == ConstraintKind.SIZE_CONSTANT:
+                    weights[constr] = 1000000
+            return weights
+
         x_names: Dict[str, IConstraint] = {}
         y_names: Dict[str, IConstraint] = {}
         x_solver = z3.Optimize()
         y_solver = z3.Optimize()
-        biases = self.reward_parent_relative(self.build_biases(constraints))
-        # biases = {x: 1.0 for x in biases}
+        biases = self.build_biases(constraints)
+        if self.solve_unambig:
+            biases = self.reward_parent_relative(biases)
+        # biases = add_box16w_hack(biases)
+        # biases = {k: 1 for k in biases}
 
         confs = conformance_range(self.min_conf, self.max_conf, scale=5)
 
@@ -444,14 +453,10 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
             
 
         for conf_idx, conf in enumerate(confs):
-            # self.add_conf_dims(x_solver, conf, conf_idx, x_dim=True)
-            # self.add_conf_dims(y_solver, conf, conf_idx, x_dim=False)
             self.add_conf_dims(x_solver, conf, conf_idx)
             self.add_conf_dims(y_solver, conf, conf_idx)
             self.add_layout_axioms(x_solver, conf_idx, self.targets, x_dim=True)
             self.add_layout_axioms(y_solver, conf_idx, self.targets, x_dim=False)
-            self.add_containment_axioms(x_solver, conf_idx, self.example, x_dim=True)
-            self.add_containment_axioms(y_solver, conf_idx, self.example, x_dim=False)
 
             for constr_idx, constr in enumerate(constraints):
                 cvname = "constr_var" + str(constr_idx)
@@ -464,36 +469,24 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
             
 
-        self.add_determinism(x_solver, x_names, x_dim=True)
-        self.add_determinism(y_solver, y_names, x_dim=False)
+        # self.add_determinism(x_solver, x_names, x_dim=True)
+        # self.add_determinism(y_solver, y_names, x_dim=False)
 
-        with open("debug-%s-initial.smt2" % self.example.name, 'w') as debugout:
-            print(solver.sexpr(), file=debugout)
+        with open("debug-%s-initial-x.smt2" % self.example.name, 'w') as debugout:
+            print(x_solver.sexpr(), file=debugout)
+        with open("debug-%s-initial-y.smt2" % self.example.name, 'w') as debugout:
+            print(y_solver.sexpr(), file=debugout)
 
-        # print("solving")
-
-        # spin until we find a deterministic solution
-        # psuedocode: 
-        # initialize invalids to {}.
-        # while true:
-        #     invalidate all of the invalids. check. 
-        #     if SAT:
-        #         the solution is a new candidate. 
-                
-        #         pop the state. push the state.
-
-        #         assert the candidate, negate the model and check again.
-        #         if the check is sat:
-        #         the candidate is invalid. add candidate to invalids. pop the state, push the state, and continue.
-        #         if the check is unsat:
-        #         the candidate is a solution! return it.
-
-        #     if UNSAT:
-        #         we can't find a candidate. yikes. error out.
-        print('solving for unambiguous horizontal layout')
-        x_cs, x_min, x_max = self.synth_unambiguous(x_solver, x_names, confs, x_dim=True)
-        print('solving for unambiguous vertical layout')
-        y_cs, y_min, y_max = self.synth_unambiguous(y_solver, y_names, confs, x_dim=False)
+        if self.solve_unambig:
+            print('solving for unambiguous horizontal layout')
+            x_cs, x_min, x_max = self.synth_unambiguous(x_solver, x_names, confs, x_dim=True, dry_run=False)
+            print('solving for unambiguous vertical layout')
+            y_cs, y_min, y_max = self.synth_unambiguous(y_solver, y_names, confs, x_dim=False, dry_run=False)
+        else:
+            print('solving for horizontal layout')
+            x_cs, x_min, x_max = self.synth_unambiguous(x_solver, x_names, confs, x_dim=True, dry_run=True)
+            print('solving for vertical layout')
+            y_cs, y_min, y_max = self.synth_unambiguous(y_solver, y_names, confs, x_dim=False, dry_run=True)
 
         return (x_cs + y_cs, dict(x_min, **y_min), dict(x_max, **y_max))
 
@@ -726,7 +719,7 @@ class CegisPruner(Generic[NT], BlackBoxPruner[NT]):
 
 class HierarchicalPruner(IPruningMethod):
 
-    def __init__(self, examples: List[IView[float]], bounds: ISizeBounds):
+    def __init__(self, examples: List[IView[float]], bounds: ISizeBounds, solve_unambig: bool):
 
         heights = [to_frac(v.height) for v in examples]
         widths = [to_frac(v.width) for v in examples]
@@ -755,6 +748,8 @@ class HierarchicalPruner(IPruningMethod):
         self.top_height = self.hierarchy.height_anchor
         self.top_x = self.hierarchy.left_anchor
         self.top_y = self.hierarchy.top_anchor
+
+        self.solve_unambig = solve_unambig
 
     def relevant_constraints(self, focus: IView[NT], c: IConstraint) -> bool:
 
@@ -792,8 +787,8 @@ class HierarchicalPruner(IPruningMethod):
 
         self.add_layout_axioms(x_solver, z3_idx, all_boxes, x_dim=True)
         self.add_layout_axioms(y_solver, z3_idx, all_boxes, x_dim=False)
-        self.add_containment_axioms(x_solver, z3_idx, focus, x_dim=True)
-        self.add_containment_axioms(y_solver, z3_idx, focus, x_dim=False)
+        # self.add_containment_axioms(x_solver, z3_idx, focus, x_dim=True)
+        # self.add_containment_axioms(y_solver, z3_idx, focus, x_dim=False)
 
         output: Dict[str, Dict[str, Conformance]] = {}
 
@@ -873,7 +868,7 @@ class HierarchicalPruner(IPruningMethod):
             yield ConstantConstraint(kind=kind, y_id=var.id, b=bound, op=operator.le)
 
     def integrate_constraints(self, examples: List[IView[NT]], min_c: Conformance, max_c: Conformance, constraints: List[IConstraint]) -> List[IConstraint]:
-        result = BlackBoxPruner(examples, confs_to_bounds(min_c, max_c))(constraints)[0]
+        result = BlackBoxPruner(examples, confs_to_bounds(min_c, max_c), self.solve_unambig)(constraints)[0]
         diff = set(constraints) - set(result)
         if len(diff) > 0:
             print('pruning during integration: ', [short_str(c) for c in diff])
@@ -883,7 +878,7 @@ class HierarchicalPruner(IPruningMethod):
     # sanity check: kiwi and z3 should both accept entire set of output constraints
     def validate_output_constrs(self, constraints: Set[IConstraint]) -> None:
         solver = z3.Optimize()
-        bb_solver = BlackBoxPruner([self.hierarchy], confs_to_bounds(self.min_conf, self.max_conf))
+        bb_solver = BlackBoxPruner([self.hierarchy], confs_to_bounds(self.min_conf, self.max_conf), self.solve_unambig)
         baseline_set = set(bb_solver(list(constraints))[0])
         # print('output vs accepted:', len(output), len(constraints))
         
@@ -931,7 +926,7 @@ class HierarchicalPruner(IPruningMethod):
                 ceg_solver = CegisPruner(focus_examples, bounds, targets = targets)
                 focus_output, mins, maxes = ceg_solver(relevant)
             else:
-                bb_solver = BlackBoxPruner(focus_examples, bounds, targets=targets)
+                bb_solver = BlackBoxPruner(focus_examples, bounds, self.solve_unambig, targets=targets)
                 focus_output, mins, maxes = bb_solver(relevant)
 
             output_constrs |= set(focus_output)

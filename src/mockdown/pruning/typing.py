@@ -62,7 +62,7 @@ class IPruningMethod(Protocol):
             score *= 10
         if c.b.denominator > 100:
             # we probably don't want this...
-            return 1
+            return score
         return score
 
     def dump_constraints(self, path: str, view: IView[NT], cns: List[IConstraint]) -> None:
@@ -108,40 +108,34 @@ class IPruningMethod(Protocol):
             score = 1
             # aspect ratios and size constraint are specific the more samples behind them
             if c.kind is ConstraintKind.SIZE_ASPECT_RATIO:
-                score = 1 if c.is_falsified else 100 * c.sample_count
+                score = 1 if c.is_falsified else 100
             elif c.kind is ConstraintKind.SIZE_RATIO:
-                score *= self.whole_score(c) * c.sample_count
+                score = 100
             elif c.kind in ConstraintKind.get_position_kinds() or c.kind is ConstraintKind.SIZE_OFFSET:
 
                 if c.op == operator.eq:
 
                     diff = abs(c.b)
-                    # map > 500 => 10
+                    # map > 100 => 10
                     # 0 => 1000
                     # everything else linearly
-                    upper = 500
+                    upper = 25
                     lower = 0
                     if diff > upper:
                         score = 10
                     else:
-                        # a * upper + b = 10
-                        # a * 0 +  b = 1000
-                        # b = 1000, a  = -990/upper
                         score = (-990) / upper * diff + 1000
                 else:
                     score = 10 # penalize leq/geq
 
             elif c.kind is ConstraintKind.SIZE_CONSTANT:
 
-                
-
                 if c.op == operator.eq:
                     score = 1000
                 else:
                     score = 10 # penalize leq/geq
 
-                score *= self.whole_score(c) * c.sample_count
-            scores[c] = score
+            scores[c] = score * self.whole_score(c) # * c.sample_count
 
         return scores
 
@@ -163,6 +157,8 @@ class IPruningMethod(Protocol):
                 solver.add(ct >= pt)
                 # if child.bottom_anchor.value <= parent.bottom_anchor.value:
                 solver.add(cb <= pb)
+
+            self.add_containment_axioms(solver, confIdx, child, x_dim)
             
             
         
@@ -202,23 +198,28 @@ class IPruningMethod(Protocol):
                     solver.add(c_y == (t + b)/2)
                     for anchor in box.y_anchors:
                         solver.add(anchor_id_to_z3_var(anchor.id, confIdx) >= 0) 
+
+    def filter_constraints(self, constraints: List[IConstraint], elim_uneq: bool = True) -> List[IConstraint]:
+        constraints = [c for c in constraints if c.kind != ConstraintKind.SIZE_ASPECT_RATIO]
+        constraints = self.combine_bounds(constraints)
+        if elim_uneq: constraints = list(filter(lambda c: c.op == operator.eq, constraints))
+        return constraints
                 
 
             
 
 
-PruningMethodFactory = Callable[[List[IView[NT]], ISizeBounds], IPruningMethod]
+PruningMethodFactory = Callable[[List[IView[NT]], ISizeBounds, bool], IPruningMethod]
 
 
 class MarginPruner(IPruningMethod):
-    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds):
+    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, unambig: bool):
         pass
     def __call__(self, cns: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
-        return ([c for c in cns if c.kind == ConstraintKind.POS_LTRB_OFFSET or c.kind == ConstraintKind.POS_LTRB_OFFSET], {}, {})
+        return (self.filter_constraints([c for c in cns if c.kind == ConstraintKind.POS_LTRB_OFFSET or c.kind == ConstraintKind.POS_LTRB_OFFSET], elim_uneq=False), {}, {})
             
 class DynamicPruner(IPruningMethod):
-    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds):
+    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, unambig: bool):
         pass
     def __call__(self, cns: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
-        return ([replace(c, priority=PRIORITY_STRONG) for c in cns], {}, {})
-    
+        return (self.filter_constraints([replace(c, priority=PRIORITY_STRONG) for c in cns]), {}, {})
