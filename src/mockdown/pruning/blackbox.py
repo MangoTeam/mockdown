@@ -140,7 +140,7 @@ class BlackBoxPruner(IPruningMethod):
                 else:
                     score = 100 * c.sample_count
             # positions are specific if they're paired and the pairs are close together
-            elif c.kind in ConstraintKind.get_position_kinds():
+            elif c.kind in ConstraintKind.position_kinds:
                 score = 1000
                 # for simplicity we update pairs after this loop
 
@@ -150,8 +150,8 @@ class BlackBoxPruner(IPruningMethod):
             default[c] = score
 
         for (l, r) in pairs:
-            if l.kind in ConstraintKind.get_position_kinds():
-                assert r.kind in ConstraintKind.get_position_kinds()
+            if l.kind in ConstraintKind.position_kinds:
+                assert r.kind in ConstraintKind.position_kinds
 
                 diff = l.b + r.b
                 # map > 500 => 10
@@ -341,10 +341,10 @@ class HierarchicalPruner(BlackBoxPruner):
                     return True
             return False
         else:
-            if c.kind in ConstraintKind.get_position_kinds():
+            if c.kind in ConstraintKind.position_kinds:
                 return focus.is_parent_of_name(c.y_id.view_name) or (
                     focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
-            elif c.kind in ConstraintKind.get_size_kinds():
+            elif c.kind in ConstraintKind.size_kinds:
                 return focus.is_parent_of_name(c.y_id.view_name) or (
                     focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
             else:
@@ -411,7 +411,7 @@ class HierarchicalPruner(BlackBoxPruner):
                 else:
                     score = 100 * c.sample_count
             # positions are specific if they're paired and the pairs are close together
-            elif c.kind in ConstraintKind.get_position_kinds():
+            elif c.kind in ConstraintKind.position_kinds:
                 score = 1000
                 # for simplicity we update pairs after this loop
 
@@ -421,8 +421,8 @@ class HierarchicalPruner(BlackBoxPruner):
             default[c] = score
 
         for (l, r) in pairs:
-            if l.kind in ConstraintKind.get_position_kinds():
-                assert r.kind in ConstraintKind.get_position_kinds()
+            if l.kind in ConstraintKind.position_kinds:
+                assert r.kind in ConstraintKind.position_kinds
 
                 diff = l.b + r.b
                 # map > 500 => 10

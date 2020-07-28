@@ -24,7 +24,7 @@ class RobustLearningInvariant:
             raise NotImplementedError
 
     def _train_constant(self, sample: IView[sym.Number]) -> None:
-
+        pass
 
     # def _train_constant(self, sample: IView[sym.N]):
 
@@ -54,7 +54,8 @@ class RobustLearning(IConstraintLearning):
         invs = [RobustLearningInvariant(tpl for tpl in self._templates)]
 
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
+    print("hello")
 #     golden = 4.0 / 7.0
 #     perturbs = []
 #

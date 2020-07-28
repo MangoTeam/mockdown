@@ -57,6 +57,11 @@ def candidate_rationals(n: Union[sym.Float, float],
                         max_denominator: int = 100,
                         abs_eps: float = 0.5,
                         rel_eps: float = 0.05) -> List[CandidateRational]:
+    """
+    Iterates through the best rational approximations (convergents and semiconvergents)
+    of a given real number, discarding any results that exceed either a relative or absolute
+    error tolerance.
+    """
     q = n if isinstance(n, sym.Rational) else sym.Rational(n)
     q = q.limit_denominator(max_denominator)
     cf = sym.continued_fraction(q)

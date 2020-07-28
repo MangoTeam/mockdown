@@ -24,6 +24,13 @@ PRIORITY_WEAK: Priority = (0, 0, 1)
 
 
 class ConstraintKind(Enum):
+    _ignore_ = ['constant_forms',
+                'add_only_forms',
+                'mul_only_forms',
+                'general_forms',
+                'position_kinds',
+                'size_kinds']
+
     # y = x + b, where y.attr and x.attr in {left, right, top, bottom}
     POS_LTRB_OFFSET = 'pos_lrtb_offset'
 
@@ -55,45 +62,60 @@ class ConstraintKind(Enum):
 
     @property
     def is_constant_form(self) -> bool:
-        return self in {
-            ConstraintKind.SIZE_CONSTANT,
-            ConstraintKind.SIZE_CONSTANT_BOUND
-        }
+        return self in ConstraintKind.constant_forms
 
     @property
     def is_add_only_form(self) -> bool:
-        return self in {
-            ConstraintKind.POS_LTRB_OFFSET,
-            ConstraintKind.SIZE_OFFSET,
-        }
+        return self in ConstraintKind.add_only_forms
 
     @property
     def is_mul_only_form(self) -> bool:
-        return self in {
-            ConstraintKind.SIZE_RATIO,
-            ConstraintKind.SIZE_ASPECT_RATIO,
-        }
+        return self in ConstraintKind.mul_only_forms
 
     @property
     def is_general_form(self) -> bool:
-        return self in {
-            ConstraintKind.SIZE_RATIO_GENERAl,
-            ConstraintKind.SIZE_ASPECT_RATIO_GENERAL
-        }
+        return self in ConstraintKind.general_forms
 
-    @classmethod
-    def get_position_kinds(cls) -> Set[ConstraintKind]:
-        return {cls.POS_LTRB_OFFSET,
-                cls.POS_LTRB_GENERAL,
-                cls.POS_CENTERING}
+    @property
+    def is_position_kind(self) -> bool:
+        return self in ConstraintKind.position_kinds
 
-    # noinspection PyPep8Naming
-    @classmethod
-    def get_size_kinds(cls) -> Set[ConstraintKind]:
-        return {cls.SIZE_OFFSET,
-                cls.SIZE_RATIO,
-                cls.SIZE_CONSTANT,
-                cls.SIZE_ASPECT_RATIO}
+    @property
+    def is_size_kind(self) -> bool:
+        return self in ConstraintKind.size_kinds
+
+
+ConstraintKind.constant_forms = frozenset({
+    ConstraintKind.SIZE_CONSTANT,
+    ConstraintKind.SIZE_CONSTANT_BOUND
+})
+
+ConstraintKind.add_only_forms = frozenset({
+    ConstraintKind.POS_LTRB_OFFSET,
+    ConstraintKind.SIZE_OFFSET,
+})
+
+ConstraintKind.mul_only_forms = frozenset({
+    ConstraintKind.SIZE_RATIO,
+    ConstraintKind.SIZE_ASPECT_RATIO,
+})
+
+ConstraintKind.general_forms = frozenset({
+    ConstraintKind.SIZE_RATIO_GENERAl,
+    ConstraintKind.SIZE_ASPECT_RATIO_GENERAL
+})
+
+ConstraintKind.position_kinds = frozenset({
+    ConstraintKind.POS_LTRB_OFFSET,
+    ConstraintKind.POS_CENTERING
+})
+
+ConstraintKind.size_kinds = frozenset({
+    ConstraintKind.SIZE_OFFSET,
+    ConstraintKind.SIZE_RATIO,
+    ConstraintKind.SIZE_CONSTANT,
+    ConstraintKind.SIZE_ASPECT_RATIO
+})
 
 
 class IConstraint:
