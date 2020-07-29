@@ -1,7 +1,7 @@
 import json
 import tempfile
 import webbrowser
-from typing import TextIO, Literal
+from typing import TextIO, Literal, Optional
 
 import click
 import uvicorn  # type: ignore
@@ -9,6 +9,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from mockdown.app import create_app
 from mockdown.run import run as run_mockdown, MockdownResults
+from mockdown.typing import Tuple4
 
 
 @click.group()
@@ -23,20 +24,32 @@ def cli() -> None:
               '--numeric-type',
               type=click.Choice(['N', 'R', 'Q', 'Z'], case_sensitive=False),
               default='N',
+              show_default=True,
               help="Numeric type of input: number, real, rational, or integer.")
 @click.option('-pm',
               '--pruning-method',
               type=click.Choice(['none', 'baseline', 'hierarchical'], case_sensitive=False),
               default='none',
+              show_default=True,
               help="Pruning method to use: baseline or hierarchical.")
+@click.option('-pb',
+              '--pruning-bounds',
+              nargs=4,
+              type=str,
+              default=['-', '-', '-', '-'],
+              show_default=True,
+              metavar="MIN_W MIN_H MAX_W MAX_H",
+              help="Bounds within which to do pruning. Use - for unspecified.")
 def run(input: TextIO,
         output: TextIO,
         numeric_type: Literal["N", "Z", "Q", "R"],
-        pruning_method: Literal["none", "baseline", "hierarchical"]) -> MockdownResults:
+        pruning_method: Literal["none", "baseline", "hierarchical"],
+        pruning_bounds: Tuple4[str]) -> MockdownResults:
     # Note, this return value is intercepted by `process_result` above!
     results = run_mockdown(input, options=dict(
         numeric_type=numeric_type,
-        pruning_method=pruning_method
+        pruning_method=pruning_method,
+        pruning_bounds=tuple((int(s) if s.isnumeric() else None for s in pruning_bounds))
     ))
 
     click.echo(json.dumps(

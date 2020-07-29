@@ -8,11 +8,14 @@ from mockdown.instantiation import VisibilityConstraintInstantiator
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner
+from mockdown.typing import Tuple4
 
 
 class MockdownOptions(TypedDict, total=False):
     numeric_type: Literal["N", "Z", "Q", "R"]
     pruning_method: Literal["none", "baseline", "hierarchical"]
+    pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
+
     include_axioms: bool
     debug: bool
 
@@ -34,7 +37,13 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
     input_data = json.load(input_io)
 
     examples_data = input_data["examples"]
-    bounds = input_data.get('bounds', {})
+    bounds = options.get('pruning_bounds', (None, None, None, None))
+    bounds_dict = {
+        'min_w': bounds[0],
+        'min_h': bounds[1],
+        'max_w': bounds[2],
+        'max_h': bounds[3]
+    }
 
     # Note: sym.Number _should_ generally "do the right thing"...
     number_type = {
@@ -71,7 +80,7 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
                    for candidate in candidates]
 
     # 4. Pruning.
-    prune = pruner_factory(examples, bounds)
+    prune = pruner_factory(examples, bounds_dict)
     pruned_constraints = prune(constraints)
 
     result: MockdownResults = {
