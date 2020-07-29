@@ -1,0 +1,49 @@
+{
+  "_comment": "One child, 4:3 aspect ratio, fixed 10px top offset, 30px left/right offset.",
+  "examples": [
+    {
+      "_comment": "Default 100x100.",
+      "name": "root",
+      "rect": [0, 0, 100, 200],
+      "children": [
+        {
+          "name": "child",
+          "rect": [30, 10, 70, 40]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched twice as wide.",
+      "name": "root",
+      "rect": [0, 0, 200, 200],
+      "children": [
+        {
+          "name": "child",
+          "rect": [30, 10, 170, 115]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched thrice as wide.",
+      "name": "root",
+      "rect": [0, 0, 300, 200],
+      "children": [
+        {
+          "name": "child",
+          "rect": [30, 10, 270, 190]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched twice as tall (child should remain the same).",
+      "name": "root",
+      "rect": [0, 0, 100, 400],
+      "children": [
+        {
+          "name": "child",
+          "rect": [30, 10, 70, 40]
+        }
+      ]
+    }
+  ]
+}
