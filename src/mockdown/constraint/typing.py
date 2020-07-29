@@ -133,19 +133,6 @@ class IConstraint:
     sample_count: int
 
     @property
-    @abstractmethod
-    def is_constant(self) -> bool: ...
-
-    @property
-    @abstractmethod
-    def is_one_variable(self) -> bool:
-        return self.kind
-
-    @property
-    def is_falsified(self) -> bool:
-        return False
-
-    @property
     def is_template(self) -> bool:
         return self.sample_count == 0
 
@@ -155,8 +142,7 @@ class IConstraint:
 
     @property
     def resolves_ambiguity(self) -> bool:
-        return self.is_required and \
-               self.kind == ConstraintKind.SIZE_CONSTANT
+        return (not self.is_required) and self.kind == ConstraintKind.SIZE_CONSTANT
 
     def to_expr(self) -> sym.Expr: ...
 

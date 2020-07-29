@@ -2,7 +2,7 @@ import sympy as sym
 from hypothesis import given
 from hypothesis.strategies import fractions, composite
 
-from mockdown.learning.util import cf_normalize, cf_sb_parent
+from mockdown.learning.math.cfutil import cf_normalize, cf_sb_parent
 
 
 @composite

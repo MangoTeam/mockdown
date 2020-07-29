@@ -53,7 +53,7 @@ class CandidateRational(NamedTuple):
     rel_err: float
 
 
-def candidate_rationals(n: Union[sym.Float, float],
+def _old_candidate_rationals(n: Union[sym.Float, float],
                         max_denominator: int = 100,
                         abs_eps: float = 0.5,
                         rel_eps: float = 0.05) -> List[CandidateRational]:

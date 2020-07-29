@@ -37,10 +37,6 @@ class ConstantConstraint(IConstraint):
 
     sample_count: int = 0
 
-    @property
-    def is_constant(self) -> bool:
-        return True
-
     def __repr__(self) -> str:
         b = str(self.b) if self.sample_count > 0 else "_"
         return f"{self.y_id} {op_to_str(self.op)} b"
@@ -78,10 +74,6 @@ class LinearConstraint(IConstraint):
     priority: Priority = PRIORITY_REQUIRED
 
     sample_count: int = 0
-
-    @property
-    def is_constant(self) -> bool:
-        return True
 
     def __repr__(self) -> str:
         a = str(self.a) if self.sample_count > 0 else "_"

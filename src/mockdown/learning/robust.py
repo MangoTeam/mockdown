@@ -16,20 +16,12 @@ MAX_DENOMINATOR = 1000
 @dataclass
 class RobustLearningInvariant:
     template: IConstraint
+    samples: List[IView[sym.Number]]
 
-    def train(self, sample: IView[sym.Number]) -> None:
-        if self.template.is_constant:
-            self._train_constant(self, sample)
-        else:
-            raise NotImplementedError
 
-    def _train_constant(self, sample: IView[sym.Number]) -> None:
-        pass
 
-    # def _train_constant(self, sample: IView[sym.N]):
-
-    def to_constraints(self) -> List[IConstraint]:
-        raise NotImplementedError
+    # def to_constraints(self) -> List[IConstraint]:
+    #     raise NotImplementedError
 
 
 class RobustLearning(IConstraintLearning):
