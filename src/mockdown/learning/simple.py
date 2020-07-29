@@ -70,7 +70,13 @@ class SimpleLearning(IConstraintLearning):
 
                         if sample_counts[template] > 0:
                             old_b = constants[template]['b']
-                            b = widen_bound(template.op, old=old_b, new=b)
+
+                            if template.op == operator.eq:
+                                if not math.isclose(old_b, b, rel_tol=self._tolerance):
+                                    raise ConstraintFalsified(template)
+                                # otherwise leave the original value.
+                            else:
+                                b = widen_bound(template.op, old=old_b, new=b)
 
                         constants[template] = {'a': a, 'b': b}
                     elif template.kind is Kind.SIZE_CONSTANT:
@@ -80,7 +86,13 @@ class SimpleLearning(IConstraintLearning):
 
                         if sample_counts[template] > 0:
                             old_b = constants[template]['b']
-                            b = widen_bound(template.op, old=old_b, new=b)
+
+                            if template.op == operator.eq:
+                                if not math.isclose(old_b, b, rel_tol=self._tolerance):
+                                    raise ConstraintFalsified(template)
+                                # otherwise leave the original value.
+                            else:
+                                b = widen_bound(template.op, old=old_b, new=b)
 
                         constants[template] = {'a': a, 'b': b}
                     elif template.kind in {Kind.SIZE_RATIO, Kind.SIZE_ASPECT_RATIO}:

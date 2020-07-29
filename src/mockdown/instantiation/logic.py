@@ -59,7 +59,7 @@ def valid_constraints(root: IView[NT], visibilities: List[Tuple[IAnchor[NT], IAn
 
             for answer in prolog.query("absolute_size(V, A)"):
                 v, a = [answer[k] for k in ('V', 'A')]
-                for op in [operator.le, operator.ge]:
+                for op in [operator.le, operator.ge, operator.eq]:
                     yield ConstraintFactory.create(kind=ConstraintKind.SIZE_CONSTANT,
                                                    x_id=None, y_id=AnchorID(v, Attribute(a)),
                                                    op=op)
@@ -73,7 +73,7 @@ def valid_constraints(root: IView[NT], visibilities: List[Tuple[IAnchor[NT], IAn
 
             for answer in prolog.query("spacing(V, A, W, B)"):
                 v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-                for op in [operator.le, operator.ge]:
+                for op in [operator.le, operator.ge, operator.eq]:
                     yield ConstraintFactory.create(kind=ConstraintKind.POS_LTRB_OFFSET,
                                                    x_id=AnchorID(v, Attribute(a)),
                                                    y_id=AnchorID(w, Attribute(b)),
@@ -81,7 +81,7 @@ def valid_constraints(root: IView[NT], visibilities: List[Tuple[IAnchor[NT], IAn
 
             for answer in prolog.query("alignment(V, A, W, B)"):
                 v, a, w, b = [answer[k] for k in ('V', 'A', 'W', 'B')]
-                for op in [operator.le, operator.ge]:
+                for op in [operator.le, operator.ge, operator.eq]:
                     yield ConstraintFactory.create(kind=ConstraintKind.POS_LTRB_OFFSET,
                                                    x_id=AnchorID(v, Attribute(a)),
                                                    y_id=AnchorID(w, Attribute(b)),

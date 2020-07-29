@@ -18,14 +18,16 @@ class RobustLearningTask:
     Learns a single template given some set of samples.
     Many of these are used at once for learning invariants for an entire layout.
     """
+    _template: IConstraint
+    _samples: List[IView[sym.Number]]
+    _is_falsified: bool
+
     def __init__(self,
                  template: IConstraint,
                  samples: List[IView[sym.Number]]):
         self._template = template
         self._samples = samples
         self._is_falsified = False
-
-
 
     # def to_constraints(self) -> List[IConstraint]:
     #     raise NotImplementedError
@@ -37,19 +39,20 @@ class RobustLearning(IConstraintLearning):
 
     The one difference is that it rationalizes its output.
     """
+    _templates: List[IConstraint]
+    _samples: List[IView[sym.Number]]
+
     def __init__(self,
                  templates: List[IConstraint],
-                 samples: List[IView[sym.Number]],
-                 confidence_threshold: int = 0.95):
+                 samples: List[IView[sym.Number]]):
         """
         :param confidence_threshold: cutoff for returned constraints, 0-1.
         """
         self._templates = templates
         self._samples = samples
-        self._confidence_threshold = confidence_threshold
 
-    def learn(self) -> Sequence[IConstraint]:
-        invs = [RobustLearningTask(tpl for tpl in self._templates)]
+    def learn(self) -> List[List[IConstraint]]:
+        tasks = [RobustLearningTask(tpl, self._samples) for tpl in self._templates]
 
 
 if __name__ == '__main__':
