@@ -26,6 +26,12 @@ def cli() -> None:
               default='N',
               show_default=True,
               help="Numeric type of input: number, real, rational, or integer.")
+@click.option('-lm',
+              '--learning-method',
+              type=click.Choice(['simple', 'robust'], case_sensitive=False),
+              default='simple',
+              show_default=True,
+              help="Learning method to use: simple or robust.")
 @click.option('-pm',
               '--pruning-method',
               type=click.Choice(['none', 'baseline', 'hierarchical'], case_sensitive=False),
@@ -43,11 +49,13 @@ def cli() -> None:
 def run(input: TextIO,
         output: TextIO,
         numeric_type: Literal["N", "Z", "Q", "R"],
-        pruning_method: Literal["none", "baseline", "hierarchical"],
+        learning_method: Literal['simple', 'robust'],
+        pruning_method: Literal['none', 'baseline', 'hierarchical'],
         pruning_bounds: Tuple4[str]) -> MockdownResults:
     # Note, this return value is intercepted by `process_result` above!
     results = run_mockdown(input, options=dict(
         numeric_type=numeric_type,
+        learning_method=learning_method,
         pruning_method=pruning_method,
         pruning_bounds=tuple((int(s) if s.isnumeric() else None for s in pruning_bounds))
     ))

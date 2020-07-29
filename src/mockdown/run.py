@@ -5,6 +5,7 @@ import sympy as sym
 
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import VisibilityConstraintInstantiator
+from mockdown.learning.robust import RobustLearning
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner
@@ -13,7 +14,10 @@ from mockdown.typing import Tuple4
 
 class MockdownOptions(TypedDict, total=False):
     numeric_type: Literal["N", "Z", "Q", "R"]
-    pruning_method: Literal["none", "baseline", "hierarchical"]
+
+    learning_method: Literal['simple', 'robust']
+
+    pruning_method: Literal['none', 'baseline', 'hierarchical']
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
 
     include_axioms: bool
@@ -53,6 +57,11 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
         'Z': sym.Integer
     }[options.get('numeric_type', 'N')]
 
+    learning_factory = {
+        'simple': SimpleLearning,
+        'robust': RobustLearning
+    }[options.get('learning_method', 'simple')]
+
     pruner_factory = {
         'none': lambda x, y: (lambda cns: cns),
         'baseline': BlackBoxPruner,
@@ -74,7 +83,7 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
     templates = instantiator.instantiate(examples)
 
     # 3. Learn Constants.
-    learning = SimpleLearning(samples=examples, templates=templates)
+    learning = learning_factory(samples=examples, templates=templates)
     constraints = [candidate.constraint
                    for candidates in learning.learn()
                    for candidate in candidates]

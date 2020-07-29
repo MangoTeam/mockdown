@@ -1,11 +1,13 @@
+import time
 from dataclasses import dataclass, field
+from operator import methodcaller
 from typing import Sequence, List
 from multiprocessing import Pool
 
 import sympy as sym
 
 from mockdown.constraint import ConstraintKind, IConstraint
-from mockdown.learning.typing import IConstraintLearning
+from mockdown.learning.typing import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
 
 Kind = ConstraintKind
@@ -30,6 +32,9 @@ class RobustLearningTask:
         self._samples = samples
         self._is_falsified = False
 
+    def learn_constraints(self) -> List[IConstraint]:
+        return []
+
     # def to_constraints(self) -> List[IConstraint]:
     #     raise NotImplementedError
 
@@ -52,12 +57,14 @@ class RobustLearning(IConstraintLearning):
         self._templates = templates
         self._samples = samples
 
-    def learn(self) -> List[List[IConstraint]]:
+    def learn(self) -> List[List[ConstraintCandidate]]:
         tasks = [RobustLearningTask(tpl, self._samples) for tpl in self._templates]
 
         with Pool() as pool:
-            # result = pool.map_async(lambda t: t.)
-            pass
+            result = pool.map_async(methodcaller('learn_constraints'), tasks).get(timeout=30)
+            print(result)
+
+        return []
 
 
 if __name__ == '__main__':
