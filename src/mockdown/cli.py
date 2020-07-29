@@ -1,14 +1,14 @@
 import json
 import tempfile
 import webbrowser
-from typing import TextIO
+from typing import TextIO, Literal
 
 import click
 import uvicorn  # type: ignore
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from mockdown.app import create_app
-from mockdown.run import run as run_mockdown
+from mockdown.run import run as run_mockdown, MockdownResults
 
 
 @click.group()
@@ -16,17 +16,9 @@ def cli() -> None:
     pass
 
 
-@cli.resultcallback()
-def process_result(result: dict) -> None:
-    click.echo(json.dumps(
-        result,
-        ensure_ascii=False,
-        indent=2,
-    ))
-
-
 @click.command()
-@click.argument('input_io', type=click.File('r'))
+@click.argument('input', type=click.File('r'))
+@click.argument('output', type=click.File('w'))
 @click.option('-nt',
               '--numeric-type',
               type=click.Choice(['N', 'R', 'Q', 'Z'], case_sensitive=False),
@@ -37,9 +29,21 @@ def process_result(result: dict) -> None:
               type=click.Choice(['none', 'baseline', 'hierarchical'], case_sensitive=False),
               default='none',
               help="Pruning method to use: baseline or hierarchical.")
-def run(input_io: TextIO, numeric_type: str, pruning_method: str) -> dict:
+def run(input: TextIO,
+        output: TextIO,
+        numeric_type: Literal["N", "Z", "Q", "R"],
+        pruning_method: Literal["none", "baseline", "hierarchical"]) -> MockdownResults:
     # Note, this return value is intercepted by `process_result` above!
-    return run_mockdown(input_io, numeric_type, pruning_method)
+    results = run_mockdown(input, options=dict(
+        numeric_type=numeric_type,
+        pruning_method=pruning_method
+    ))
+
+    click.echo(json.dumps(
+        results,
+        ensure_ascii=False,
+        indent=2,
+    ), file=output)
 
 
 @click.command()

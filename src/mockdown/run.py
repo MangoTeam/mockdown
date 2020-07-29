@@ -17,12 +17,12 @@ class MockdownOptions(TypedDict, total=False):
     debug: bool
 
 
-class MockdownResult(TypedDict):
+class MockdownResults(TypedDict):
     constraints: List[Dict[str, str]]
     axioms: Optional[List[str]]
 
 
-def run(input_io: TextIO, options: MockdownOptions) -> MockdownResult:
+def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
@@ -74,7 +74,7 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResult:
     prune = pruner_factory(examples, bounds)
     pruned_constraints = prune(constraints)
 
-    result: MockdownResult = {
+    result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],
         'axioms': None
     }

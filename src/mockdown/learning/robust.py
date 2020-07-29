@@ -13,10 +13,17 @@ DEFAULT_TOLERANCE = 0.01  # maximum difference of 1%
 MAX_DENOMINATOR = 1000
 
 
-@dataclass
-class RobustLearningInvariant:
-    template: IConstraint
-    samples: List[IView[sym.Number]]
+class RobustLearningTask:
+    """
+    Learns a single template given some set of samples.
+    Many of these are used at once for learning invariants for an entire layout.
+    """
+    def __init__(self,
+                 template: IConstraint,
+                 samples: List[IView[sym.Number]]):
+        self._template = template
+        self._samples = samples
+        self._is_falsified = False
 
 
 
@@ -30,10 +37,9 @@ class RobustLearning(IConstraintLearning):
 
     The one difference is that it rationalizes its output.
     """
-
     def __init__(self,
-                 templates: Sequence[IConstraint],
-                 samples: Sequence[IView[sym.Number]],
+                 templates: List[IConstraint],
+                 samples: List[IView[sym.Number]],
                  confidence_threshold: int = 0.95):
         """
         :param confidence_threshold: cutoff for returned constraints, 0-1.
@@ -43,7 +49,7 @@ class RobustLearning(IConstraintLearning):
         self._confidence_threshold = confidence_threshold
 
     def learn(self) -> Sequence[IConstraint]:
-        invs = [RobustLearningInvariant(tpl for tpl in self._templates)]
+        invs = [RobustLearningTask(tpl for tpl in self._templates)]
 
 
 if __name__ == '__main__':
