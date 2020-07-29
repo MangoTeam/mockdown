@@ -12,7 +12,7 @@ T = TypeVar('T')
 
 
 class IComparisonOp(Protocol[T]):
-    # This weird naming makes mypy happy (aligns with operator.eq, etc)
+    # This weird naming makes mypy happy (aligns with operator.eq, resources)
     def __call__(self, __a: T, __b: T) -> T: ...
 
 
