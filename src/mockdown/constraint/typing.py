@@ -131,6 +131,7 @@ class IConstraint:
     priority: Priority
 
     sample_count: int
+    is_falsified: bool
 
     @property
     def is_template(self) -> bool:

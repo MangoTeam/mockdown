@@ -36,6 +36,7 @@ class ConstantConstraint(IConstraint):
     priority: Priority = PRIORITY_REQUIRED
 
     sample_count: int = 0
+    is_falsified: bool = False
 
     def __repr__(self) -> str:
         b = str(self.b) if self.sample_count > 0 else "_"
@@ -74,6 +75,7 @@ class LinearConstraint(IConstraint):
     priority: Priority = PRIORITY_REQUIRED
 
     sample_count: int = 0
+    is_falsified: bool = False
 
     def __repr__(self) -> str:
         a = str(self.a) if self.sample_count > 0 else "_"

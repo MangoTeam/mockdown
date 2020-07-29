@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Sequence, List
+from multiprocessing import Pool
 
 import sympy as sym
 
@@ -53,6 +54,10 @@ class RobustLearning(IConstraintLearning):
 
     def learn(self) -> List[List[IConstraint]]:
         tasks = [RobustLearningTask(tpl, self._samples) for tpl in self._templates]
+
+        with Pool() as pool:
+            # result = pool.map_async(lambda t: t.)
+            pass
 
 
 if __name__ == '__main__':
