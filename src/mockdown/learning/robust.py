@@ -16,7 +16,7 @@ Kind = ConstraintKind
 
 RESOLUTION = 100
 EXPECTED_STEPS = 5
-ABS_TOL = 0.025
+REL_TOL = 0.05
 
 T = TypeVar('T')
 
@@ -47,9 +47,6 @@ class RobustLearningTask:
     def learn_multipliers(self, xs: np.ndarray, ys: np.ndarray) -> List[Tuple[Rational, float]]:
         print(f"\nLearning {self._template}")
 
-        xs = xs + np.random.normal(0, 1, len(xs))
-        ys = ys + np.random.normal(0, 1, len(ys))
-
         samples = (ys / xs).astype(np.float)
         print(f"  samples: {ys} / {xs} = {samples}")
         mean, median, std = np.mean(samples), np.median(samples), np.std(samples)
@@ -69,9 +66,10 @@ class RobustLearningTask:
             m, b, r, p, _, = stats.linregress(xs, ys)
         p_score = (1 - p) if (m > 0) and (r is not np.nan) else 0
 
-        balls = [set(q_ball(s, abs_tol=ABS_TOL)) for s in samples]
-        candidates = np.array(sorted(set.intersection(*balls)))
-        if len(candidates) == 0:
+        # todo: how should candidates be picked? Intersection doesn't seem to cut it wiht a good bit of noise.
+        balls = [set(q_ball(s, rel_tol=REL_TOL)) for s in samples]
+        candidates = np.array(sorted(set.union(*balls)))
+        if len(set.intersection(*balls)) == 0:
             print("No candidates in intersection of balls.")
             return []
         # min_s = np.min(samples)
@@ -95,11 +93,11 @@ class RobustLearningTask:
             rat_scores = stats.rv_discrete(values=([0], [1])).cdf(irrs - min_irr)
         else:
             alpha = 1 + EXPECTED_STEPS
-            beta = 1 + (n - EXPECTED_STEPS)
+            beta = 1 + (RESOLUTION - EXPECTED_STEPS)
             # todo: volatility probably comes from value of n changing depending on candidates.
             # This distribution should depend on the _samples_, not the _candidates_!
             # But it should be affected by the rationality of the samples... but via approximation? How?
-            rat_scores = 1 - stats.betabinom(20, alpha, beta).cdf(irrs - min_irr)
+            rat_scores = 1 - stats.betabinom(RESOLUTION, alpha, beta).cdf(irrs - min_irr)
 
         if std != 0:
             err_scores = 1 - np.abs(special.erf((candidates.astype(np.float) - mean) / (sqrt(2) * std)))
@@ -130,10 +128,17 @@ class RobustLearningTask:
                 for s in examples]
             ).astype(np.float)
 
+            xs = xs + np.random.normal(0, 1, len(xs))
+            ys = ys + np.random.normal(0, 1, len(ys))
+
+            # Case where intersection does not contain 1/2!
+            # ys = np.array([51.83606911, 99.94197667, 148.70577392, 49.857942 ])
+            # xs = np.array([97.76571442, 200.41336267, 300.1858343, 99.62446605])
+
             # Compute observed sample a-values.
             # These might be rationals, or reals. The rest of the process is agnostic.
             a_candidates = self.learn_multipliers(xs, ys)
-            candidates = [ConstraintCandidate(template.subst(a=a), score) for (a, score) in a_candidates if not isclose(score, 0, abs_tol=0.01)]
+            candidates = [ConstraintCandidate(template.subst(a=a), score) for (a, score) in a_candidates if not isclose(score, 0, abs_tol=0.05)]
             print("Candidates:")
             pprint(candidates, indent=2)
             return candidates
@@ -172,7 +177,7 @@ class RobustLearning(IConstraintLearning):
 
         for task in tasks:
             scored_constraints = task.learn_constraints()
-            constraint_set = list(filter(lambda sc: sc.score > 0.5, sorted(scored_constraints, key=lambda sc: sc.score, reverse=True)))
+            constraint_set = list(filter(lambda sc: sc.score > 0, sorted(scored_constraints, key=lambda sc: sc.score, reverse=True)))
             constraint_sets.append(constraint_set)
 
         # with Pool(1) as pool:
