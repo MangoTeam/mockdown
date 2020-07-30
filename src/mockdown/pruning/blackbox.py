@@ -377,7 +377,7 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
                         print(solver.sexpr(), file=debugout)
 
                 if dry_run or solver.check() == z3.unsat:
-                    print('took %d iters' % iters)
+                    if self.log_level != LogLevel.NONE: print('took %d iters' % iters)
                     constr_decls = [v for v in old_model.decls() if v.name() in names_map]
                     output = [names_map[v.name()] for v in constr_decls if old_model.get_interp(v)]
 
@@ -420,7 +420,7 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
         # print('after combining:')
         # print([short_str(c) for c in constraints])
 
-        print('candidates: ', len(constraints))
+        if self.log_level != LogLevel.NONE: print('candidates: ', len(constraints))
 
 
         if (len(constraints) == 0): 
@@ -443,7 +443,6 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
         biases = self.build_biases(constraints)
         if self.solve_unambig:
             biases = self.reward_parent_relative(biases)
-        print(biases)
         # biases = add_box16w_hack(biases)
         # biases = {k: 1 for k in biases}
 
@@ -491,14 +490,14 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
                 print(y_solver.sexpr(), file=debugout)
 
         if self.solve_unambig:
-            print('solving for unambiguous horizontal layout')
+            if self.log_level != LogLevel.NONE: print('solving for unambiguous horizontal layout')
             x_cs, x_min, x_max = self.synth_unambiguous(x_solver, x_names, confs, x_dim=True, dry_run=False)
-            print('solving for unambiguous vertical layout')
+            if self.log_level != LogLevel.NONE: print('solving for unambiguous vertical layout')
             y_cs, y_min, y_max = self.synth_unambiguous(y_solver, y_names, confs, x_dim=False, dry_run=False)
         else:
-            print('solving for horizontal layout')
+            if self.log_level != LogLevel.NONE: print('solving for horizontal layout')
             x_cs, x_min, x_max = self.synth_unambiguous(x_solver, x_names, confs, x_dim=True, dry_run=True)
-            print('solving for vertical layout')
+            if self.log_level != LogLevel.NONE: print('solving for vertical layout')
             y_cs, y_min, y_max = self.synth_unambiguous(y_solver, y_names, confs, x_dim=False, dry_run=True)
 
         return (x_cs + y_cs, dict(x_min, **y_min), dict(x_max, **y_max))
@@ -719,8 +718,8 @@ class HierarchicalPruner(IPruningMethod):
 
         while len(worklist) > 0:
             focus, focus_examples, min_c, max_c = worklist.pop()
-            # if debug: print('solving for ', focus, 'with bounds ', min_c, max_c)
-            print('solving for ', focus, 'with bounds ', min_c, max_c)
+            if self.log_level != LogLevel.NONE: 
+                print('solving for ', focus, 'with bounds ', min_c, max_c)
 
             relevant = [c for c in constraints if self.relevant_constraints(focus, c)]
 
@@ -766,7 +765,7 @@ class HierarchicalPruner(IPruningMethod):
 
         if debug and validate: self.validate_output_constrs(output_constrs)
 
-        self.dump_constraints("output.smt2", self.hierarchy, list(output_constrs))
+        if self.log_level != LogLevel.NONE: self.dump_constraints("output.smt2", self.hierarchy, list(output_constrs))
 
         return (list(output_constrs), {}, {})
 

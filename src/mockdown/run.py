@@ -38,8 +38,8 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
     It is in its own file to prevent import cycles between cli and app!
     """
 
-    print('options:')
-    print(options)
+    # print('options:')
+    # print(options)
     debug = options.get('debug', False)
 
     input_data = json.load(input_io)

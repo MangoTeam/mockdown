@@ -26,9 +26,8 @@ def to_int(x: NT) -> int:
 def to_frac(x: NT) -> Fraction:
     if (isinstance(x, Fraction)):
         return x
-    elif (isinstance(x, sym.Rational)):
-        num,denom = x.as_numer_denom()
-        return Fraction(int(num), int(denom))
+    elif (isinstance(x, sym.Expr)):
+        return Fraction(float(x.evalf()))
     else: 
         print('error, unknown type:')
         print(type(x))
