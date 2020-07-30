@@ -8,15 +8,15 @@ from scipy import stats
 from sympy import Rational, Number, continued_fraction  # type: ignore
 
 from mockdown.constraint import ConstraintKind, IConstraint
-from mockdown.learning.math.sequences import q_ball
+from mockdown.learning.math.sequences import q_ball, ext_farey
 from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
 
 Kind = ConstraintKind
 
 RESOLUTION = 100
-EXPECTED_STEPS = 5
-REL_TOL = 0.015
+EXPECTED_STEPS = 1
+ABS_TOL = 0.025
 
 T = TypeVar('T')
 
@@ -47,17 +47,20 @@ class RobustLearningTask:
     def learn_multipliers(self, xs: np.ndarray, ys: np.ndarray) -> List[Tuple[Rational, float]]:
         print(f"\nLearning {self._template}")
 
-        xs = xs + np.random.normal(0, REL_TOL / 3, len(xs))
-        ys = ys + np.random.normal(0, REL_TOL / 3, len(ys))
+        xs = xs + np.random.normal(0, 5 / 3, len(xs))
+        ys = ys + np.random.normal(0, 5 / 3, len(ys))
 
         samples = (ys / xs).astype(np.float)
         print(f"  samples: {ys} / {xs} = {samples}")
-        mean, std = np.mean(samples), np.std(samples)
+        mean, median, std = np.mean(samples), np.median(samples), np.std(samples)
         print(f"  mean:    {mean}")
+        print(f"  median:  {median}")
         print(f"  std:     {std}")
 
-        cov_mat = np.cov(xs, ys, bias=True)
+        cov_mat = np.cov(xs, ys, bias=False)
+        print(cov_mat)
         eigvals = np.linalg.eigvals(cov_mat)
+        print(eigvals)
         d_score = max(eigvals) / sum(eigvals)  # proportion of variance explained by 1 dimension.
 
         if np.min(xs) == np.max(xs):
@@ -66,21 +69,33 @@ class RobustLearningTask:
             m, b, r, p, _, = stats.linregress(xs, ys)
         p_score = (1 - p) if (m > 0) and (r is not np.nan) else 0
 
-        balls = [set(q_ball(s, rel_tol=REL_TOL)) for s in samples]
-        candidates = np.array(sorted(set.union(*balls)))
+        balls = [set(q_ball(s, abs_tol=ABS_TOL)) for s in samples]
+        candidates = np.array(sorted(set.intersection(*balls)))
+        if len(candidates) == 0:
+            print("No candidates in intersection of balls.")
+            return []
+        # min_s = np.min(samples)
+        # max_s = np.max(samples)
+        # candidates = np.array(
+        #     list(sorted(filter(lambda q: min_s < q < max_s, ext_farey(RESOLUTION)))),
+        #     dtype=np.object
+        # )
 
         irrs = np.fromiter((irrationality(c) for c in candidates), dtype=np.int)
         max_irr = np.max(irrs)
         min_irr = np.min(irrs)
-        # n = max_irr - min_irr
+        n = max_irr - min_irr
 
+        # TODO: WHY IS THE RAT_SCORE SO VOLATILE?!
         if max_irr == min_irr:
             # Handle the degenerate noiseless case.
+            # todo: is this needed if we use beta = 1 + (res - exp)?
+            print("degenerate")
             rat_scores = stats.rv_discrete(values=([0], [1])).cdf(irrs - min_irr)
         else:
             alpha = 1 + EXPECTED_STEPS
-            beta = 1 + (RESOLUTION - EXPECTED_STEPS)
-            rat_scores = 1 - stats.betabinom(RESOLUTION, alpha, beta).cdf(irrs - min_irr)
+            beta = 1 + (n - EXPECTED_STEPS)
+            rat_scores = 1 - stats.betabinom(n, alpha, beta).cdf(irrs)
 
         if std != 0:
             err_scores = 1 - np.abs(special.erf((candidates.astype(np.float) - mean) / (sqrt(2) * std)))
@@ -90,8 +105,8 @@ class RobustLearningTask:
         print("Scores:")
         print(f"  Dim: {d_score}")
         print(f"  P:   {p_score}")
-        # print(f"  Rat: {rat_scores}")
-        # print(f"  Err: {err_scores}")
+        print(f"  Rat: {rat_scores}")
+        print(f"  Err: {err_scores}")
         scores = d_score * p_score * rat_scores * err_scores
 
         return list(zip(candidates, scores))
@@ -114,7 +129,7 @@ class RobustLearningTask:
             # Compute observed sample a-values.
             # These might be rationals, or reals. The rest of the process is agnostic.
             a_candidates = self.learn_multipliers(xs, ys)
-            candidates = [ConstraintCandidate(template.subst(a=a), score) for (a, score) in a_candidates if not isclose(score, 0)]
+            candidates = [ConstraintCandidate(template.subst(a=a), score) for (a, score) in a_candidates if not isclose(score, 0, abs_tol=0.01)]
             print("Candidates:")
             pprint(candidates, indent=2)
             return candidates
