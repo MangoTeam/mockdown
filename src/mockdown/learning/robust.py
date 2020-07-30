@@ -15,7 +15,7 @@ from mockdown.model import IView
 Kind = ConstraintKind
 
 RESOLUTION = 100
-EXPECTED_STEPS = 1
+EXPECTED_STEPS = 5
 ABS_TOL = 0.025
 
 T = TypeVar('T')
@@ -47,8 +47,8 @@ class RobustLearningTask:
     def learn_multipliers(self, xs: np.ndarray, ys: np.ndarray) -> List[Tuple[Rational, float]]:
         print(f"\nLearning {self._template}")
 
-        xs = xs + np.random.normal(0, 5 / 3, len(xs))
-        ys = ys + np.random.normal(0, 5 / 3, len(ys))
+        xs = xs + np.random.normal(0, 1, len(xs))
+        ys = ys + np.random.normal(0, 1, len(ys))
 
         samples = (ys / xs).astype(np.float)
         print(f"  samples: {ys} / {xs} = {samples}")
@@ -85,8 +85,9 @@ class RobustLearningTask:
         max_irr = np.max(irrs)
         min_irr = np.min(irrs)
         n = max_irr - min_irr
+        print(min_irr, n, max_irr)
 
-        # TODO: WHY IS THE RAT_SCORE SO VOLATILE?!
+        # TODO: WHY IS THE RAT_SCORE SO DAMN VOLATILE?!
         if max_irr == min_irr:
             # Handle the degenerate noiseless case.
             # todo: is this needed if we use beta = 1 + (res - exp)?
@@ -95,7 +96,10 @@ class RobustLearningTask:
         else:
             alpha = 1 + EXPECTED_STEPS
             beta = 1 + (n - EXPECTED_STEPS)
-            rat_scores = 1 - stats.betabinom(n, alpha, beta).cdf(irrs)
+            # todo: volatility probably comes from value of n changing depending on candidates.
+            # This distribution should depend on the _samples_, not the _candidates_!
+            # But it should be affected by the rationality of the samples... but via approximation? How?
+            rat_scores = 1 - stats.betabinom(20, alpha, beta).cdf(irrs - min_irr)
 
         if std != 0:
             err_scores = 1 - np.abs(special.erf((candidates.astype(np.float) - mean) / (sqrt(2) * std)))
@@ -105,8 +109,8 @@ class RobustLearningTask:
         print("Scores:")
         print(f"  Dim: {d_score}")
         print(f"  P:   {p_score}")
-        print(f"  Rat: {rat_scores}")
-        print(f"  Err: {err_scores}")
+        # print(f"  Rat: {rat_scores}")
+        # print(f"  Err: {err_scores}")
         scores = d_score * p_score * rat_scores * err_scores
 
         return list(zip(candidates, scores))
