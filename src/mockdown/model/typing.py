@@ -3,8 +3,8 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Iterator, Optional, Protocol, Sequence, Tuple, Any, List, Dict
 
-from mockdown.model.primitives import Attribute, IRect, ISize, ViewName
-from mockdown.typing import NT, NT_co
+from mockdown.model.primitives import Attribute, IRect, ViewName
+from mockdown.typing import NT
 
 
 class IAnchorID(Protocol):
@@ -57,6 +57,7 @@ class IView(Protocol[NT]):
     parent: Optional[IView[NT]]
 
     # Implement IRect by delegation.
+    # IRect isn't explicitly implemented because mypy is dumb.
     @property
     def left(self) -> NT:
         return self.rect.left
@@ -144,10 +145,19 @@ class IView(Protocol[NT]):
     @property
     @abstractmethod
     def names(self) -> Iterator[str]: ...
+    
 
     @property
     @abstractmethod
     def center_y_anchor(self) -> IAnchor[NT]: ...
+
+    @property
+    @abstractmethod
+    def x_anchors(self) -> List[IAnchor[NT]]: ...
+
+    @property
+    @abstractmethod
+    def y_anchors(self) -> List[IAnchor[NT]]: ...
 
     def find_view(self, name: ViewName, include_self: bool = False, deep: bool = False) -> Optional[IView[NT]]:
         ...

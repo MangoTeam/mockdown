@@ -1,6 +1,8 @@
 from typing import List, Tuple, cast, Any, Dict
 from z3 import z3 #type: ignore
 
+import sympy as sym
+
 from fractions import Fraction
 
 from math import floor, ceil
@@ -12,7 +14,7 @@ from mockdown.typing import NT, to_int, to_frac, round_frac, round_up, round_dow
 
 from collections import defaultdict
 
-from mockdown.model.primitives import IRect, RRect, QRect
+from mockdown.model.primitives import Rect
 
 from mockdown.integration import anchor_id_to_z3_var
 
@@ -33,11 +35,11 @@ class Conformance:
         else:
             raise Exception("what")
 
-def from_rect(rect: IRect[NT]) -> Conformance:
+def from_rect(rect: Rect[NT]) -> Conformance:
     return Conformance(to_frac(rect.width), to_frac(rect.height), to_frac(rect.left), to_frac(rect.top))
 
-def to_rect(conf: Conformance) -> QRect:
-    return QRect(conf.x, conf.y, conf.x + conf.width, conf.y + conf.height)
+def to_rect(conf: Conformance) -> Rect[sym.Rational]:
+    return Rect(sym.Rational(conf.x), sym.Rational(conf.y), sym.Rational(conf.x + conf.width), sym.Rational(conf.y + conf.height))
 
 def confs_to_bounds(lo_c: Conformance, hi_c: Conformance) -> ISizeBounds:
     return ISizeBounds({'min_w': lo_c.width, 'min_h': lo_c.height, 'max_w': hi_c.width, 'max_h': hi_c.height})

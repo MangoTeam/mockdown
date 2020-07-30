@@ -1,0 +1,65 @@
+{
+  "_comment": "Two rows, of fixed widths/heights, fixed top offsets (10px), and floated left",
+  "examples": [
+    {
+      "_comment": "Default 100x100.",
+      "name": "root",
+      "rect": [0, 0, 100, 100],
+      "children": [
+        {
+          "name": "left",
+          "rect": [10, 10, 90, 45]
+        },
+        {
+          "name": "left",
+          "rect": [10, 55, 90, 90]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched twice as wide (children shouldn't change).",
+      "name": "root",
+      "rect": [0, 0, 200, 100],
+      "children": [
+        {
+          "name": "left",
+          "rect": [10, 10, 90, 45]
+        },
+        {
+          "name": "left",
+          "rect": [10, 55, 90, 90]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched thrice as wide (children shouldn't change).",
+      "name": "root",
+      "rect": [0, 0, 300, 100],
+      "children": [
+        {
+          "name": "left",
+          "rect": [10, 10, 90, 45]
+        },
+        {
+          "name": "left",
+          "rect": [10, 55, 90, 90]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched twice as tall (children shouldn't change).",
+      "name": "root",
+      "rect": [0, 0, 100, 200],
+      "children": [
+        {
+          "name": "left",
+          "rect": [10, 10, 90, 45]
+        },
+        {
+          "name": "left",
+          "rect": [10, 55, 90, 90]
+        }
+      ]
+    }
+  ]
+}

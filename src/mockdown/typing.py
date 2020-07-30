@@ -1,29 +1,46 @@
-from fractions import Fraction
-from typing import NoReturn, Tuple, TypeVar, Union
+from __future__ import annotations
 
 from math import floor, ceil
 
+from typing import NoReturn, Tuple, TypeVar, Type, Union
+from fractions import Fraction
+
+import sympy as sym
+
 AnyNum = Union[int, float, Fraction]
 
-_T = TypeVar('_T')
-Tuple4 = Tuple[_T, _T, _T, _T]
+_ElT = TypeVar('_ElT')
+Tuple4 = Tuple[_ElT, _ElT, _ElT, _ElT]
 
-NT = TypeVar('NT', int, float, Fraction)
-NT_co = TypeVar('NT_co', int, float, Fraction, covariant=True)
-NT_contra = TypeVar('NT_contra', int, float, Fraction, contravariant=True)
+# (NT = Numeric Type)
+NT = TypeVar('NT', bound=sym.Number)
 
 def to_int(x: NT) -> int:
-    if (isinstance(x, Fraction)):
-        num,denom = x.as_integer_ratio()
+    if (isinstance(x, sym.Rational)):
+        num,denom = x.as_numer_denom()
         return round(num/denom)
     else: 
         return int(x)
 
+
 def to_frac(x: NT) -> Fraction:
     if (isinstance(x, Fraction)):
         return x
+    elif (isinstance(x, sym.Rational)):
+        num,denom = x.as_numer_denom()
+        return Fraction(int(num), int(denom))
     else: 
+        print('error, unknown type:')
+        print(type(x))
+        print(x)
         return Fraction(x)
+
+
+def to_rat(x: NT) -> sym.Rational:
+    if (isinstance(x, sym.Rational)):
+        return x
+    else: 
+        return sym.Rational(x)
 
 
 def round_down(x: NT, places: int = 5) -> Fraction:
@@ -35,7 +52,6 @@ def round_up(x: NT, places: int = 5) -> Fraction:
 def round_frac(x: NT, places: int = 5) -> Fraction:
     return Fraction(round(x * (10 ** places)), 10 ** places)
 
-# (NT = Numeric Type)
 
 def unreachable(x: NoReturn) -> NoReturn:
     """
@@ -45,7 +61,7 @@ def unreachable(x: NoReturn) -> NoReturn:
     >     A = 1
     >     B = 2
     >     C = 3
-    >
+    >thon
     > def foo_name(foo: Foo) -> str:
     >     if foo is Foo.A:
     >         return "apple"

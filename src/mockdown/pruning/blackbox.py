@@ -4,6 +4,8 @@ from enum import Enum
 
 from dataclasses import asdict, replace
 
+import sympy as sym 
+
 import operator
 
 from mockdown.constraint.typing import PRIORITY_STRONG
@@ -26,9 +28,9 @@ from mockdown.constraint.constraint import ConstantConstraint
 from mockdown.model import IAnchorID
 from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var, constraint_to_kiwi, add_linear_axioms, load_view_from_model, anchor_to_kv, kiwi_lookup, make_kiwi_env, evaluate_constraints, extract_model_valuations, add_linear_containment
 from ..model import IView, IAnchor
-from ..typing import unreachable, NT, to_int, NT_co, NT_contra, to_frac, round_down, round_up, round_frac
+from ..typing import unreachable, NT, to_int, to_frac, to_rat, round_down, round_up, round_frac
 
-from mockdown.model.primitives import RRect, h_attrs, v_attrs, Attribute
+from mockdown.model.primitives import h_attrs, v_attrs, Attribute
 
 
 def is_x_constr(c: IConstraint) -> bool:
@@ -61,20 +63,22 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
     def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, solve_unambig: bool, targets: Optional[Sequence[IView[NT]]] = None):
 
+        bounds_frac = {k: to_frac(v) if v else None for k,v in bounds.items()}
+
         heights = [to_frac(v.height) for v in examples]
         widths = [to_frac(v.width) for v in examples]
         xs = [to_frac(v.left) for v in examples]
         ys = [to_frac(v.top) for v in examples]
 
-        min_w = min(bounds.get('min_w', None) or min(widths), min(widths))
-        max_w = max(bounds.get('max_w', None) or max(widths), max(widths))
-        min_h = min(bounds.get('min_h', None) or min(heights), min(heights))
-        max_h = max(bounds.get('max_h', None) or max(heights), max(heights))
+        min_w = min(bounds_frac.get('min_w', None) or min(widths), min(widths))
+        max_w = max(bounds_frac.get('max_w', None) or max(widths), max(widths))
+        min_h = min(bounds_frac.get('min_h', None) or min(heights), min(heights))
+        max_h = max(bounds_frac.get('max_h', None) or max(heights), max(heights))
 
-        min_x = min(bounds.get('min_x', None) or min(xs), min(xs))
-        max_x = max(bounds.get('max_x', None) or max(xs), max(xs))
-        min_y = min(bounds.get('min_y', None) or min(ys), min(ys))
-        max_y = max(bounds.get('max_y', None) or max(ys), max(ys))
+        min_x = min(bounds_frac.get('min_x', None) or min(xs), min(xs))
+        max_x = max(bounds_frac.get('max_x', None) or max(xs), max(xs))
+        min_y = min(bounds_frac.get('min_y', None) or min(ys), min(ys))
+        max_y = max(bounds_frac.get('max_y', None) or max(ys), max(ys))
 
         self.min_conf = Conformance(min_w, min_h, min_x, min_y)
         self.max_conf = Conformance(max_w, max_h, max_x, max_y)
@@ -439,6 +443,7 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
         biases = self.build_biases(constraints)
         if self.solve_unambig:
             biases = self.reward_parent_relative(biases)
+        print(biases)
         # biases = add_box16w_hack(biases)
         # biases = {k: 1 for k in biases}
 
@@ -498,222 +503,6 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
         return (x_cs + y_cs, dict(x_min, **y_min), dict(x_max, **y_max))
 
-class CegisPruner(Generic[NT], BlackBoxPruner[NT]):
-
-    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, targets: Optional[Sequence[IView[NT]]] = None):
-        super().__init__(examples, bounds, targets)
-
-    def add_counterex_bounds(self, solver: z3.Optimize) -> None:
-
-        confIdx = 0
-
-        top_x_v = anchor_id_to_z3_var(self.top_x.id, confIdx)
-        top_y_v = anchor_id_to_z3_var(self.top_y.id, confIdx)
-        top_w_v = anchor_id_to_z3_var(self.top_width.id, confIdx)
-        top_h_v = anchor_id_to_z3_var(self.top_height.id, confIdx)
-        
-        solver.add(top_w_v >= self.min_conf.width)
-        solver.add(top_h_v >= self.min_conf.height)
-        solver.add(top_w_v <= self.max_conf.width)
-        solver.add(top_h_v <= self.max_conf.height)
-
-        solver.add(top_x_v >= self.min_conf.x)
-        solver.add(top_y_v >= self.min_conf.y)
-        solver.add(top_x_v <= self.max_conf.x)
-        solver.add(top_y_v <= self.max_conf.y)
-
-    def get_verif_dims(self, solver: z3.Solver) -> Conformance:
-
-        confIdx = 0
-
-        top_x_v = anchor_id_to_z3_var(self.top_x.id, confIdx)
-        top_y_v = anchor_id_to_z3_var(self.top_y.id, confIdx)
-        top_w_v = anchor_id_to_z3_var(self.top_width.id, confIdx)
-        top_h_v = anchor_id_to_z3_var(self.top_height.id, confIdx)
-
-        m = solver.model()
-        def get(v: z3.Var) -> Fraction:
-            return cast(Fraction, m.get_interp(v).as_fraction())
-
-        return Conformance(get(top_w_v), get(top_h_v), get(top_x_v), get(top_y_v))
-
-
-
-    def synth(self, confs: List[Conformance], constraints: List[IConstraint]) -> List[IConstraint]:
-
-        solver = z3.Optimize()
-
-        namesMap = {}
-        biases = self.build_biases(constraints)
-
-        for conf_idx, conf in enumerate(confs):
-
-            self.add_conf_dims(solver, conf, conf_idx)
-            self.add_layout_axioms(solver, conf_idx, self.targets)
-            
-        
-        for constrIdx, constr in enumerate(constraints):
-            cvname = "constr_var" + str(constrIdx)
-            cvar = z3.Bool(cvname)
-
-            namesMap[cvname] = constr
-            solver.add_soft(cvar, biases[constr])
-
-            for conf_idx in range(len(confs)):
-                solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, conf_idx)))
-
-        if self.log_level == LogLevel.ALL:
-            with open("debug-synth.smt2", 'w') as debugout:
-                print(solver.sexpr(), file=debugout)
-
-        # print("solving synth")
-        chk = solver.check()
-        if (str(chk) == 'sat'):
-
-            constrValues = [v for v in solver.model().decls() if v.name() in namesMap]
-            output = [namesMap[v.name()] for v in constrValues if solver.model().get_interp(v)]
-            # pruned = [short_str(c) for c in constraints if c not in output]
-
-            # for conf_idx in range(len(confs)):
-
-            #     solver_view = load_view_from_model(solver.model(), conf_idx, self.example)
-
-            #     for constr in output:
-            #         if not check_against_view(solver_view, constr):
-            #             print('ERROR z3 model inconsistent with constraint: %s ' % str(constr))
-
-
-            
-            return output
-        elif (str(chk) == 'unsat'):
-            print('unsat!')
-            print('core: ', solver.unsat_core())
-        else:
-            print('unknown: ', chk)
-
-        return constraints
-
-    def simple_verify(self, confs: List[Conformance], constraints: List[IConstraint]) -> Optional[bool]:
-        
-        if len(constraints) < 1:
-            return None
-        
-        solver = z3.Optimize()
-
-        for confIdx, conf in enumerate(confs):
-
-            self.add_conf_dims(solver, conf, confIdx)
-            self.add_layout_axioms(solver, confIdx, self.targets)
-
-            for constr in constraints:
-                solver.add(constraint_to_z3_expr(constr, confIdx))
-
-        chk = solver.check()
-        if (str(chk) == 'sat'):
-            return True
-        elif (str(chk) == 'unsat'):
-            return False
-        else:
-            print('unknown: ', chk)
-            return unreachable(chk)
-    
-    def counterex_verify(self, constraints: List[IConstraint]) -> Optional[Conformance]:
-        
-        if len(constraints) < 1:
-            return None
-        
-        solver = z3.Optimize()
-
-        conf_idx = 0
-
-
-        self.add_counterex_bounds(solver)
-        self.add_layout_axioms(solver, conf_idx, self.example)
-
-        pred = z3.Not(constraint_to_z3_expr(constraints[0], conf_idx))
-
-        for constr in constraints[1:]:
-            pred = z3.Or(z3.Not(constraint_to_z3_expr(constr, conf_idx)), pred)
-
-        solver.add(pred)
-
-        with open("debug-verify-cx.smt2", 'w') as outfile:
-            print(solver.sexpr(), file=outfile)
-
-
-        # print("solving verify with confs", confs)
-        chk = solver.check()
-        
-        if (str(chk) == 'sat'):
-            cx = self.get_verif_dims(solver)
-            return cx
-        elif (str(chk) == 'unsat'):
-            return None
-        else:
-            print('unknown: ', chk)
-            return unreachable(chk)
-
-
-    # NOTE: this complicated CEGIS doesn't seem to work and I'm not sure how to get it to work. Don't use it...
-    def cegis_loop(self, initial_constraints: List[IConstraint]) -> List[IConstraint]:
-        print('starting complex cegis')
-
-        max_iters = 50
-        curr_confs = [self.min_conf, self.max_conf]
-
-        for iter in range(max_iters):
-            candidate = self.synth(curr_confs, initial_constraints)
-
-            possible_cx = self.counterex_verify(candidate)
-
-            if possible_cx:
-                print('counterexample: ', possible_cx)
-                curr_confs += [possible_cx]
-            else:
-                print('done! iters:', iter)
-                return candidate
-        print('WARNING: finished cegis without passing verify, with confs:', curr_confs)
-        return self.synth(curr_confs, initial_constraints)
-
-
-    # Poor man's CEGIS algorithm: for a range of conformances, verify/synth against a sublist of the range
-    def simple_cegis(self, initial_constraints: List[IConstraint]) -> List[IConstraint]:
-        
-        all_confs = conformance_range(self.min_conf, self.max_conf)
-
-        constraints = initial_constraints
-        # print('starting simple CEGIS for ', self.example.name)
-        iters = 0
-        
-        first = all_confs[0]
-        all_confs = all_confs[1:]
-        curr_confs = [first]
-        for conf in all_confs:
-            constraints = self.synth(curr_confs, initial_constraints)
-            
-            finished = self.simple_verify([first] + all_confs, constraints)
-
-            if not finished:
-                # print('new conformance: ', new_conf)
-                curr_confs.append(conf)
-                iters += 1
-            else:
-                print('done in %d iters' % iters)
-                
-                return constraints
-
-        
-        print('WARNING: finished cegis without passing verify, for confs:', curr_confs)
-        
-        return self.synth(curr_confs, constraints)
-
-    def __call__(self, initial_constraints: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
-        raise Exception("unimplemented")
-        # return self.simple_cegis(initial_constraints)
-
-        
-
-
 # assume: the layout of an element is independent from the layout of its children.
 
 # let parent, (u, l) be the next parent, (upper, lower) bound.
@@ -728,22 +517,29 @@ class CegisPruner(Generic[NT], BlackBoxPruner[NT]):
 
 class HierarchicalPruner(IPruningMethod):
 
-    def __init__(self, examples: List[IView[float]], bounds: ISizeBounds, solve_unambig: bool):
+    def __init__(self, examples: List[IView[NT]], bounds: ISizeBounds, solve_unambig: bool):
+
+        bounds_frac = {k: to_frac(v) if v else None for k,v in bounds.items()}
 
         heights = [to_frac(v.height) for v in examples]
         widths = [to_frac(v.width) for v in examples]
         xs = [to_frac(v.left) for v in examples]
         ys = [to_frac(v.top) for v in examples]
+        # print('min_w:')
+        # print(min(widths))
+        # print(type(min(widths)))
+        # print(min(widths) + min(widths))
+        # print(min(min(widths), min(widths)))
 
-        min_w = min(bounds.get('min_w', None) or min(widths), min(widths))
-        max_w = max(bounds.get('max_w', None) or max(widths), max(widths))
-        min_h = min(bounds.get('min_h', None) or min(heights), min(heights))
-        max_h = max(bounds.get('max_h', None) or max(heights), max(heights))
+        min_w = min(bounds_frac.get('min_w', None) or min(widths), min(widths))
+        max_w = max(bounds_frac.get('max_w', None) or max(widths), max(widths))
+        min_h = min(bounds_frac.get('min_h', None) or min(heights), min(heights))
+        max_h = max(bounds_frac.get('max_h', None) or max(heights), max(heights))
 
-        min_x = min(bounds.get('min_x', None) or min(xs), min(xs))
-        max_x = max(bounds.get('max_x', None) or max(xs), max(xs))
-        min_y = min(bounds.get('min_y', None) or min(ys), min(ys))
-        max_y = max(bounds.get('max_y', None) or max(ys), max(ys))
+        min_x = min(bounds_frac.get('min_x', None) or min(xs), min(xs))
+        max_x = max(bounds_frac.get('max_x', None) or max(xs), max(xs))
+        min_y = min(bounds_frac.get('min_y', None) or min(ys), min(ys))
+        max_y = max(bounds_frac.get('max_y', None) or max(ys), max(ys))
 
         self.min_conf = Conformance(min_w, min_h, min_x, min_y)
         self.max_conf = Conformance(max_w, max_h, max_x, max_y)
@@ -775,10 +571,10 @@ class HierarchicalPruner(IPruningMethod):
                     return True
             return False
         else:
-            if c.kind in ConstraintKind.get_position_kinds():
+            if c.kind.is_position_kind:
                 return focus.is_parent_of_name(c.y_id.view_name) or (
                     focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
-            elif c.kind in ConstraintKind.get_size_kinds():
+            elif c.kind.is_size_kind:
                 return focus.is_parent_of_name(c.y_id.view_name) or (
                     focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
             else:
@@ -874,9 +670,9 @@ class HierarchicalPruner(IPruningMethod):
         
         kind = ConstraintKind.SIZE_CONSTANT
         for var, bound in conf_zip(min_c, child):
-            yield ConstantConstraint(kind=kind, y_id=var.id, b=bound, op=operator.ge)
+            yield ConstantConstraint(kind=kind, y_id=var.id, b=sym.Rational(bound), op=operator.ge)
         for var, bound in conf_zip(max_c, child):
-            yield ConstantConstraint(kind=kind, y_id=var.id, b=bound, op=operator.le)
+            yield ConstantConstraint(kind=kind, y_id=var.id, b=sym.Rational(bound), op=operator.le)
 
     def integrate_constraints(self, examples: List[IView[NT]], min_c: Conformance, max_c: Conformance, constraints: List[IConstraint]) -> List[IConstraint]:
         result = BlackBoxPruner(examples, confs_to_bounds(min_c, max_c), self.solve_unambig)(constraints)[0]
@@ -908,7 +704,6 @@ class HierarchicalPruner(IPruningMethod):
 
     def __call__(self, constraints: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
 
-        use_cegis = False
         infer_with_z3 = True
         validate = False
         debug = True
@@ -933,13 +728,9 @@ class HierarchicalPruner(IPruningMethod):
 
             bounds = confs_to_bounds(min_c, max_c)
 
-            if use_cegis:
-                ceg_solver = CegisPruner(focus_examples, bounds, targets = targets)
-                focus_output, mins, maxes = ceg_solver(relevant)
-            else:
-                bb_solver = BlackBoxPruner(focus_examples, bounds, self.solve_unambig, targets=targets)
-                bb_solver.log_level = self.log_level
-                focus_output, mins, maxes = bb_solver(relevant)
+            bb_solver = BlackBoxPruner(focus_examples, bounds, self.solve_unambig, targets=targets)
+            bb_solver.log_level = self.log_level
+            focus_output, mins, maxes = bb_solver(relevant)
 
             output_constrs |= set(focus_output)
 

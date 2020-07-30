@@ -1,7 +1,7 @@
 from collections import deque
 from itertools import chain, tee
 from operator import attrgetter
-from typing import Any, List, Sequence, Set, Tuple
+from typing import Any, Iterable, List, Sequence, Set, Tuple
 
 from intervaltree import IntervalTree  # type: ignore
 
@@ -13,7 +13,7 @@ from mockdown.model import IEdge, IView
 from mockdown.typing import NT
 
 
-class VisibilityConstraintInstantiator(IConstraintInstantiator[Any]):
+class VisibilityConstraintInstantiator(IConstraintInstantiator[NT]):
     def instantiate(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
         edge_pair_sets = [
             visible_pairs(example, deep=True)
@@ -40,7 +40,7 @@ class VisibilityConstraintInstantiator(IConstraintInstantiator[Any]):
         return list(all_constraints)
 
 
-def pairwise(iterable):
+def pairwise(iterable: Iterable[Any]) -> Iterable[Tuple[Any, Any]]:
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)

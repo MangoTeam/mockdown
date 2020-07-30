@@ -49,18 +49,18 @@ class IPruningMethod(Protocol):
     def whole_score(self, c: IConstraint) -> int:
         score = 1
         if c.x_id:
-            if c.a.denominator < 25:
+            if c.a.p < 25:
                 score *= 10
-            if c.a.denominator < 10:
+            if c.a.p < 10:
                 score *= 10
-            if c.a.denominator > 100:
+            if c.a.p > 100:
                 # we probably don't want this...
                 return 1
-        if c.b.denominator < 25:
+        if c.b.p < 25:
             score *= 10
-        if c.b.denominator < 10:
+        if c.b.p < 10:
             score *= 10
-        if c.b.denominator > 100:
+        if c.b.p > 100:
             # we probably don't want this...
             return score
         return score
@@ -111,7 +111,7 @@ class IPruningMethod(Protocol):
                 score = 1 if c.is_falsified else 100
             elif c.kind is ConstraintKind.SIZE_RATIO:
                 score = 100
-            elif c.kind in ConstraintKind.get_position_kinds() or c.kind is ConstraintKind.SIZE_OFFSET:
+            elif c.kind.is_position_kind or c.kind is ConstraintKind.SIZE_OFFSET:
 
                 if c.op == operator.eq:
 
@@ -135,7 +135,7 @@ class IPruningMethod(Protocol):
                 else:
                     score = 10 # penalize leq/geq
 
-            scores[c] = score * self.whole_score(c) # * c.sample_count
+            scores[c] = int(score * self.whole_score(c)) # * c.sample_count
 
         return scores
 

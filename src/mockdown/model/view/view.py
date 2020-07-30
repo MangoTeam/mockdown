@@ -165,7 +165,7 @@ class View(IView[NT]):
         yield from chain(*map(lambda c: iter(c), self.children))
 
     def __repr__(self) -> str:
-        return f"View(name='{self.name}')"
+        return f"View(name='{self.name}', rect={self.rect})"
 
     def to_dict(self) -> Dict[str, Any]:
         
@@ -181,3 +181,4 @@ class View(IView[NT]):
         out = recur(self)
         out['type'] = 'real'
         return out
+        

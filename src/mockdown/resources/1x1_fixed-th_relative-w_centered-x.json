@@ -1,0 +1,49 @@
+{
+  "_comment": "One child, 1/2 ratio width, fixed 50px height, fixed 25px top offset, x-centered.",
+  "examples": [
+    {
+      "_comment": "Default 100x100.",
+      "name": "root",
+      "rect": [0, 0, 100, 100],
+      "children": [
+        {
+          "name": "child",
+          "rect": [25, 25, 75, 75]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched twice as wide.",
+      "name": "root",
+      "rect": [0, 0, 200, 100],
+      "children": [
+        {
+          "name": "child",
+          "rect": [50, 25, 150, 75]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched thrice as wide.",
+      "name": "root",
+      "rect": [0, 0, 300, 100],
+      "children": [
+        {
+          "name": "child",
+          "rect": [75, 25, 125, 75]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched twice as tall (child is not y-centered, should not move).",
+      "name": "root",
+      "rect": [0, 0, 100, 200],
+      "children": [
+        {
+          "name": "child",
+          "rect": [25, 25, 75, 75]
+        }
+      ]
+    }
+  ]
+}

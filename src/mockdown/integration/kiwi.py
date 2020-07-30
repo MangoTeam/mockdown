@@ -4,8 +4,9 @@ from typing import Dict, List, cast, Iterator
 
 from ..constraint import IConstraint
 
-from mockdown.model.view.builder import RViewBuilder
-from mockdown.model.primitives import IRect, QRect
+from mockdown.model.view.builder import IViewBuilder, ViewBuilder as V
+from mockdown.model.primitives import Rect
+import sympy as sym
 
 from mockdown.model import IView, IAnchor, IAnchorID
 from mockdown.typing import NT
@@ -63,15 +64,15 @@ def constraint_to_kiwi(constraint: IConstraint, env: Dict[str, kiwisolver.Variab
     yv = env[str(constraint.y_id)]
     if constraint.x_id:
         xv = env[str(constraint.x_id)]
-        anum, adenom = constraint.a.as_integer_ratio()
-        bnum, bdenom = constraint.b.as_integer_ratio()
+        anum, adenom = map(int, constraint.a.as_numer_denom())
+        bnum, bdenom = map(int, constraint.b.as_numer_denom())
         return constraint.op(yv * adenom * bdenom, xv * anum * bdenom + bnum * adenom) | strength
     else:
         # print("me:", self)
-        bnum, bdenom = constraint.b.as_integer_ratio()
+        bnum, bdenom = map(int, constraint.b.as_numer_denom())
         return constraint.op(yv * bdenom, bnum) | strength
 
-def evaluate_constraints(view: IView[NT], top_rect: QRect, constraints: List[IConstraint], strength: str = 'strong') -> IView[float]:
+def evaluate_constraints(view: IView[NT], top_rect: Rect[sym.Rational], constraints: List[IConstraint], strength: str = 'strong') -> IView[sym.Float]:
     solver = kiwisolver.Solver()
     env = make_kiwi_env([v for v in view])
 
@@ -95,7 +96,7 @@ def evaluate_constraints(view: IView[NT], top_rect: QRect, constraints: List[ICo
         kv = kiwi_lookup(anchor, env)
         return cast(float, kv.value())
             
-    def recurse(seed: IView[NT]) -> RViewBuilder:
+    def recurse(seed: IView[NT]) -> IViewBuilder:
 
         l, t = seed.left_anchor, seed.top_anchor
         r, b = seed.right_anchor, seed.bottom_anchor
@@ -105,6 +106,6 @@ def evaluate_constraints(view: IView[NT], top_rect: QRect, constraints: List[ICo
 
         children = [recurse(inner) for inner in seed.children]
 
-        return RViewBuilder(name=seed.name, rect=rect, children=children)
+        return V(name=seed.name, rect=rect, children=children)
 
-    return recurse(view).build()
+    return recurse(view).build(number_type=sym.Float)
