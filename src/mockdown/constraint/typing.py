@@ -137,6 +137,11 @@ class IConstraint:
     def is_template(self) -> bool:
         return self.sample_count == 0
 
+    @abstractmethod
+    def subst(self, a=None, b=None, sample_count=1) -> IConstraint:
+        """Fill a template by substituting in the provided values."""
+        ...
+
     @property
     def is_required(self) -> bool:
         return self.priority == PRIORITY_REQUIRED
