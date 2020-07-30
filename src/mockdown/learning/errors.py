@@ -1,5 +1,5 @@
 from mockdown.constraint import IConstraint
-from mockdown.learning.typing import IConstraintLearning
+from mockdown.learning.types import IConstraintLearning
 
 
 class ConstraintFalsified(Exception):

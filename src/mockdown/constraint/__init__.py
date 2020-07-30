@@ -1,4 +1,4 @@
-from .typing import ConstraintKind, IConstraint
+from .types import ConstraintKind, IConstraint
 
 __all__ = [
     'ConstraintKind',

@@ -4,7 +4,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Protocol
 
-from ...typing import NT
+from ...types import NT
 
 
 class IRect(Protocol[NT]):

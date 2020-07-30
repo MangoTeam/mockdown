@@ -7,8 +7,8 @@ from typing import Iterator, Optional, Sequence, cast
 from mockdown.model.anchor import Anchor
 from mockdown.model.edge import Edge
 from mockdown.model.primitives import Attribute, IRect, ViewName
-from mockdown.model.typing import IAnchor, IAnchorID, IEdge, IView
-from mockdown.typing import NT
+from mockdown.model.types import IAnchor, IAnchorID, IEdge, IView
+from mockdown.types import NT
 
 
 @dataclass(frozen=True, eq=True)

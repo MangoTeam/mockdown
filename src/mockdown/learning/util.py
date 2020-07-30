@@ -3,7 +3,7 @@ from typing import Any
 
 import sympy as sym
 
-from mockdown.constraint.typing import IComparisonOp
+from mockdown.constraint.types import IComparisonOp
 
 
 def widen_bound(op: IComparisonOp[Any], old: sym.Number, new: sym.Number) -> sym.Number:

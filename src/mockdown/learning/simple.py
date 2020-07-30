@@ -9,7 +9,7 @@ import sympy as sym
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
 from mockdown.learning.errors import ConstraintFalsified
-from mockdown.learning.typing import IConstraintLearning, ConstraintCandidate
+from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.learning.util import widen_bound
 from mockdown.model import IView
 

@@ -1,26 +1,27 @@
-from math import erf, sqrt, isclose
+from math import sqrt, isclose
 from pprint import pprint
-from statistics import stdev, fmean
 from typing import List, TypeVar, Optional, Tuple
 
-from sympy import Rational, Number, continued_fraction, N  # type: ignore
-from sympy.stats import BetaBinomial, FiniteRV, cdf, density  # type: ignore
+import numpy as np
+from scipy import special
+from scipy import stats
+from sympy import Rational, Number, continued_fraction  # type: ignore
 
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.learning.math.sequences import q_ball
-from mockdown.learning.typing import IConstraintLearning, ConstraintCandidate
+from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
 
 Kind = ConstraintKind
 
-MAX_DENOMINATOR = 100
-EXPECTED_STEPS = 1
-REL_TOL = 0.01
+RESOLUTION = 100
+EXPECTED_STEPS = 5
+REL_TOL = 0.015
 
 T = TypeVar('T')
 
 
-def unoptional(arg: Optional[T]) -> T:
+def unopt(arg: Optional[T]) -> T:
     assert arg is not None
     return arg
 
@@ -43,45 +44,57 @@ class RobustLearningTask:
         self._template = template
         self._examples = samples
 
-    def learn_multipliers(self, samples: List[Number]) -> List[Tuple[Rational, float]]:
+    def learn_multipliers(self, xs: np.ndarray, ys: np.ndarray) -> List[Tuple[Rational, float]]:
         print(f"\nLearning {self._template}")
 
-        samples_f = [float(s) for s in samples]
-        print(f"  samples: {samples_f}")
-        mean, std = fmean(samples_f), stdev(samples_f)
+        xs = xs + np.random.normal(0, REL_TOL / 3, len(xs))
+        ys = ys + np.random.normal(0, REL_TOL / 3, len(ys))
+
+        samples = (ys / xs).astype(np.float)
+        print(f"  samples: {ys} / {xs} = {samples}")
+        mean, std = np.mean(samples), np.std(samples)
         print(f"  mean:    {mean}")
         print(f"  std:     {std}")
 
-        balls = [set(q_ball(s, rel_tol=REL_TOL)) for s in samples_f]
-        candidates = list(sorted(set.union(*balls)))
+        cov_mat = np.cov(xs, ys, bias=True)
+        eigvals = np.linalg.eigvals(cov_mat)
+        d_score = max(eigvals) / sum(eigvals)  # proportion of variance explained by 1 dimension.
 
-        irrs = {c: irrationality(c) for c in candidates}
+        if np.min(xs) == np.max(xs):
+            m, b, r, p = np.inf, np.nan, np.nan, np.nan
+        else:
+            m, b, r, p, _, = stats.linregress(xs, ys)
+        p_score = (1 - p) if (m > 0) and (r is not np.nan) else 0
 
-        max_irr = max(irrs.values())
-        min_irr = min(irrs.values())
-        n = max_irr - min_irr
+        balls = [set(q_ball(s, rel_tol=REL_TOL)) for s in samples]
+        candidates = np.array(sorted(set.union(*balls)))
 
-        if n == 0:
+        irrs = np.fromiter((irrationality(c) for c in candidates), dtype=np.int)
+        max_irr = np.max(irrs)
+        min_irr = np.min(irrs)
+        # n = max_irr - min_irr
+
+        if max_irr == min_irr:
             # Handle the degenerate noiseless case.
-            score_dist = FiniteRV('RationalityPrior', {0: 1})
+            rat_scores = stats.rv_discrete(values=([0], [1])).cdf(irrs - min_irr)
         else:
             alpha = 1 + EXPECTED_STEPS
-            beta = 1 + (n - EXPECTED_STEPS)
-            score_dist = BetaBinomial('RationalityPrior', n, alpha, beta)
+            beta = 1 + (RESOLUTION - EXPECTED_STEPS)
+            rat_scores = 1 - stats.betabinom(RESOLUTION, alpha, beta).cdf(irrs - min_irr)
 
-        def r_score_fn(q) -> float:
-            return density(score_dist)[q]
-        r_scores = [N(r_score_fn(irrs[c] - min_irr)) for c in candidates]
+        if std != 0:
+            err_scores = 1 - np.abs(special.erf((candidates.astype(np.float) - mean) / (sqrt(2) * std)))
+        else:
+            err_scores = (candidates == mean).astype(np.float)
 
-        def e_score_fn(q) -> float:
-            # Handle the degenerate noiseless case.
-            if std == 0:
-                return 1 if q == mean else 0
-            return 1 - abs(erf((q - mean) / (sqrt(2) * std)))
-        e_scores = [e_score_fn(c) for c in candidates]
-        scores = [r * e for (r, e) in zip(r_scores, e_scores)]
+        print("Scores:")
+        print(f"  Dim: {d_score}")
+        print(f"  P:   {p_score}")
+        # print(f"  Rat: {rat_scores}")
+        # print(f"  Err: {err_scores}")
+        scores = d_score * p_score * rat_scores * err_scores
 
-        return list(zip(candidates, e_scores))
+        return list(zip(candidates, scores))
 
     def learn_constraints(self) -> List[Tuple[IConstraint, int]]:
         template = self._template
@@ -89,16 +102,21 @@ class RobustLearningTask:
         examples = self._examples
 
         if kind.is_mul_only_form:
-            xs = [unoptional(sample.find_anchor(unoptional(template.x_id))) for sample in examples]
-            ys = [unoptional(sample.find_anchor(template.y_id)) for sample in examples]
+            xs = np.array([
+                unopt(s.find_anchor(unopt(template.x_id))).value
+                for s in examples]
+            ).astype(np.float)
+            ys = np.array([
+                unopt(s.find_anchor(template.y_id)).value
+                for s in examples]
+            ).astype(np.float)
 
             # Compute observed sample a-values.
             # These might be rationals, or reals. The rest of the process is agnostic.
-            a_samples = [y.value / x.value for (x, y) in zip(xs, ys)]
-            a_candidates = self.learn_multipliers(a_samples)
-            candidates = [(template.subst(a=a), score) for (a, score) in a_candidates]
+            a_candidates = self.learn_multipliers(xs, ys)
+            candidates = [ConstraintCandidate(template.subst(a=a), score) for (a, score) in a_candidates if not isclose(score, 0)]
             print("Candidates:")
-            pprint(candidates)
+            pprint(candidates, indent=2)
             return candidates
         else:
             return []
@@ -135,7 +153,8 @@ class RobustLearning(IConstraintLearning):
 
         for task in tasks:
             scored_constraints = task.learn_constraints()
-            constraint_sets.append(sorted(scored_constraints, key=lambda sc: sc[1], reverse=True)[:self._top_k])
+            constraint_set = list(filter(lambda sc: sc.score > 0.5, sorted(scored_constraints, key=lambda sc: sc.score, reverse=True)))
+            constraint_sets.append(constraint_set)
 
         # with Pool(1) as pool:
         #     def run_task(task: RobustLearningTask) -> List[Tuple[IConstraint, int]]:
@@ -145,7 +164,7 @@ class RobustLearning(IConstraintLearning):
         #     result = pool.map_async(methodcaller('learn_constraints'), tasks).get(timeout=30)
         #     print(result)
 
-        return []
+        return constraint_sets
 
 
 if __name__ == '__main__':

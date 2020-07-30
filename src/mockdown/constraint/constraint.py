@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional, final
 
 import sympy as sym
 
-from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority
+from mockdown.constraint.types import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority
 from mockdown.model import IAnchorID
 
 

@@ -4,12 +4,12 @@ import kiwisolver  # type: ignore
 import z3  # type: ignore
 
 from .conformance import Conformance
-from .typing import IPruningMethod, ISizeBounds
+from .types import IPruningMethod, ISizeBounds
 from .util import anchor_equiv, short_str
 from ..constraint import IConstraint, ConstraintKind
 from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var, constraint_to_kiwi
 from ..model import IView
-from ..typing import unreachable
+from ..types import unreachable
 
 
 class BlackBoxPruner(IPruningMethod):

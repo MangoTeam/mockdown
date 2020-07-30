@@ -1,5 +1,5 @@
 from .logic import valid_constraints
-from .typing import IConstraintInstantiator
+from .types import IConstraintInstantiator
 from .visibility import VisibilityConstraintInstantiator, visible_pairs
 
 __all__ = [

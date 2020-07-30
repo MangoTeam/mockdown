@@ -3,7 +3,7 @@ from typing import TypeVar, Type
 import sympy as sym
 
 from mockdown.model import ViewBuilder as V, IView
-from mockdown.typing import NT
+from mockdown.types import NT
 
 
 class TestViewBuilder:

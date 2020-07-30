@@ -4,7 +4,7 @@ from abc import abstractmethod
 from typing import Iterator, Optional, Protocol, Sequence, Tuple
 
 from mockdown.model.primitives import Attribute, IRect, ViewName
-from mockdown.typing import NT
+from mockdown.types import NT
 
 
 class IAnchorID(Protocol):

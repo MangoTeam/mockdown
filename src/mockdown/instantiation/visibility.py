@@ -6,11 +6,11 @@ from typing import Any, Iterable, List, Sequence, Set, Tuple
 from intervaltree import IntervalTree  # type: ignore
 
 from mockdown.constraint import IConstraint
-from mockdown.instantiation.typing import IConstraintInstantiator
+from mockdown.instantiation.types import IConstraintInstantiator
 from mockdown.instantiation.logic import valid_constraints
 
 from mockdown.model import IEdge, IView
-from mockdown.typing import NT
+from mockdown.types import NT
 
 
 class VisibilityConstraintInstantiator(IConstraintInstantiator[NT]):

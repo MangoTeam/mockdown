@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import NoReturn, Tuple, TypeVar, Type
+from typing import NoReturn, Tuple, TypeVar
 
 import sympy as sym
 

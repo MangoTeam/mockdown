@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from typing import Optional, cast
 
 from mockdown.model.primitives import Attribute, ViewName
-from mockdown.model.typing import IAnchor, IAnchorID, IEdge, IView
-from mockdown.typing import NT
+from mockdown.model.types import IAnchor, IAnchorID, IEdge, IView
+from mockdown.types import NT
 
 
 @dataclass(frozen=True, eq=True)

@@ -9,7 +9,7 @@ from mockdown.learning.robust import RobustLearning
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner
-from mockdown.typing import Tuple4
+from mockdown.types import Tuple4
 
 
 class MockdownOptions(TypedDict, total=False):

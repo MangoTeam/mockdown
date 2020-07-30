@@ -1,5 +1,5 @@
 from .blackbox import HierarchicalPruner, BlackBoxPruner
-from .typing import ISizeBounds, IPruningMethod
+from .types import ISizeBounds, IPruningMethod
 
 __all__ = [
     'IPruningMethod',

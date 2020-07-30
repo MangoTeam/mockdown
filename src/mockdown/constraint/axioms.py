@@ -3,7 +3,7 @@ from typing import List
 import sympy as sym
 
 from mockdown.model import IView
-from mockdown.typing import NT
+from mockdown.types import NT
 
 
 def make_axioms(views: List[IView[NT]]) -> List[sym.Expr]:
