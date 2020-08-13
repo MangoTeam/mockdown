@@ -15,6 +15,8 @@ import operator
 
 from more_itertools import first_true
 
+import sys
+
 from mockdown.model import IView
 from mockdown.constraint import IConstraint, ConstraintKind
 from mockdown.constraint.typing import PRIORITY_STRONG
@@ -28,6 +30,24 @@ class ISizeBounds(TypedDict, total=False):
     min_y: Optional[Fraction]
     max_x: Optional[Fraction]
     max_y: Optional[Fraction]
+
+def validate_bounds(bounds: ISizeBounds, view: IView[NT]) -> bool:
+
+
+    def get(fld: str, default: int) -> Fraction:
+        return bounds.get(fld, Fraction(default)) or Fraction(default)
+
+    # if view.height < bounds.get('min_h', : return False
+    if view.width < get('min_w', 0): return False
+    if view.height < get('min_h', 0): return False
+    if view.left < get('min_x', 0): return False
+    if view.top < get('min_y', 0): return False
+    if view.width > get('max_w', sys.maxsize): return False
+    if view.height > get('max_h', sys.maxsize): return False
+    if view.left > get('max_x', sys.maxsize): return False
+    if view.top > get('max_y', sys.maxsize): return False
+
+    return True
 
 def bounds_from_json(it: Dict[Any, Any]) -> ISizeBounds:
     out = {}
