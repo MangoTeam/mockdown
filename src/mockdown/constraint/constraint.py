@@ -6,7 +6,8 @@ from typing import Any, Dict, Optional, final
 
 import sympy as sym
 
-from mockdown.constraint.types import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority
+from mockdown.constraint.types import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority, \
+    priority_to_str
 from mockdown.model import IAnchorID
 
 
@@ -46,7 +47,7 @@ class ConstantConstraint(IConstraint):
 
     def __repr__(self) -> str:
         b = str(self.b) if self.sample_count > 0 else "_"
-        return f"{self.y_id} {op_to_str(self.op)} b"
+        return f"{self.y_id} {op_to_str(self.op)} {self.b}"
 
     def to_dict(self) -> Dict[str, str]:
         return {
@@ -57,7 +58,7 @@ class ConstantConstraint(IConstraint):
                 operator.ge: '≥'
             }[self.op],
             'b': str(self.b),
-            'priority': str(self.priority),
+            'strength': priority_to_str(self.priority),
             'kind': self.kind.value
         }
 
@@ -110,7 +111,7 @@ class LinearConstraint(IConstraint):
             'a': str(self.a),
             'x': str(self.x_id),
             'b': str(self.b),
-            'priority': str(self.priority),
+            'strength': priority_to_str(self.priority),
             'kind': self.kind.value
         }
 

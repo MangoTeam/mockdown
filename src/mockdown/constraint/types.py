@@ -23,6 +23,10 @@ PRIORITY_MEDIUM: Priority = (0, 1, 0)
 PRIORITY_WEAK: Priority = (0, 0, 1)
 
 
+def priority_to_str(p: Priority) -> str:
+    return str(list(p))
+
+
 class ConstraintKind(Enum):
     _ignore_ = ['constant_forms',
                 'add_only_forms',

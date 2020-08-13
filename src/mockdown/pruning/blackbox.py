@@ -1,268 +1,494 @@
-from typing import Dict, List, AbstractSet, Set, Tuple
+import operator
+from dataclasses import replace
+from enum import Enum
+from fractions import Fraction
+from typing import Dict, List, Set, Tuple, Optional, Any, Generic, Sequence, Iterator, FrozenSet
 
-import kiwisolver  # type: ignore
+import sympy as sym
 import z3  # type: ignore
 
-from .conformance import Conformance
-from .types import IPruningMethod, ISizeBounds
-from .util import anchor_equiv, short_str
-from ..constraint import IConstraint, ConstraintKind
-from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var, constraint_to_kiwi
-from ..model import IView
-from ..types import unreachable
+from mockdown.constraint import IConstraint, ConstraintKind
+from mockdown.constraint.constraint import ConstantConstraint
+from mockdown.constraint.types import PRIORITY_STRONG
+from mockdown.integration import constraint_to_z3_expr, anchor_id_to_z3_var, evaluate_constraints, \
+    extract_model_valuations
+from mockdown.model import IView, IAnchor
+from mockdown.model.primitives import h_attrs, v_attrs, Attribute
+from mockdown.pruning.conformance import Conformance, confs_to_bounds, conformance_range, add_conf_dims, to_rect, \
+    conf_zip
+from mockdown.pruning.types import IPruningMethod, ISizeBounds
+from mockdown.pruning.util import short_str
+from mockdown.types import unreachable, NT, to_frac
 
 
-class BlackBoxPruner(IPruningMethod):
+def is_x_constr(c: IConstraint) -> bool:
 
-    def __init__(self, examples: List[IView[float]], bounds: ISizeBounds):
+    hs_attrs = h_attrs | {Attribute.WIDTH}
+    vs_attrs = v_attrs | {Attribute.HEIGHT}
+    if c.x_id:
+        if c.x_id.attribute in hs_attrs and c.y_id.attribute in hs_attrs:
+            return True
+        elif c.x_id.attribute in vs_attrs and c.y_id.attribute in vs_attrs:
+            return False
+        else:
+            print(short_str(c))
+            raise Exception('bad constraint with mixed dimensions')
+    else:
+        return c.y_id.attribute in hs_attrs
 
-        heights = [v.height for v in examples]
-        widths = [v.width for v in examples]
 
-        min_w = bounds.get('min_w', None) or int(min(widths))
-        max_w = bounds.get('max_w', None) or int(max(widths))
-        min_h = bounds.get('min_h', None) or int(min(heights))
-        max_h = bounds.get('max_h', None) or int(max(heights))
+LogLevel = Enum('LogLevel', 'NONE ALL')
 
-        self.min_conf = Conformance(min_w, min_h, 0, 0)
-        self.max_conf = Conformance(max_w, max_h, 0, 0)
+class BlackBoxPruner(IPruningMethod, Generic[NT]):
+
+    example: IView[NT]
+    top_width: IAnchor[NT]
+    top_height: IAnchor[NT]
+    top_x: IAnchor[NT]
+    top_y: IAnchor[NT]
+    solve_unambig: bool
+    log_level: LogLevel
+
+    def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, solve_unambig: bool, targets: Optional[Sequence[IView[NT]]] = None):
+
+        bounds_frac = {k: to_frac(v) if v else None for k,v in bounds.items()}
+
+        heights = [to_frac(v.height) for v in examples]
+        widths = [to_frac(v.width) for v in examples]
+        xs = [to_frac(v.left) for v in examples]
+        ys = [to_frac(v.top) for v in examples]
+
+        min_w = min(bounds_frac.get('min_w', None) or min(widths), min(widths))
+        max_w = max(bounds_frac.get('max_w', None) or max(widths), max(widths))
+        min_h = min(bounds_frac.get('min_h', None) or min(heights), min(heights))
+        max_h = max(bounds_frac.get('max_h', None) or max(heights), max(heights))
+
+        min_x = min(bounds_frac.get('min_x', None) or min(xs), min(xs))
+        max_x = max(bounds_frac.get('max_x', None) or max(xs), max(xs))
+        min_y = min(bounds_frac.get('min_y', None) or min(ys), min(ys))
+        max_y = max(bounds_frac.get('max_y', None) or max(ys), max(ys))
+
+        self.min_conf = Conformance(min_w, min_h, min_x, min_y)
+        self.max_conf = Conformance(max_w, max_h, max_x, max_y)
 
         # print('min conf', self.min_conf)
         # print('max conf', self.max_conf)
 
         assert len(examples) > 0, "Pruner requires non-empty learning examples"
 
+        # print('examples: ', [ex.name for ex in examples])
         self.example = examples[0]
+
 
         self.top_width = self.example.width_anchor
         self.top_height = self.example.height_anchor
         self.top_x = self.example.left_anchor
         self.top_y = self.example.top_anchor
 
-    def genExtraConformances(self, **kwargs: Conformance) -> Set[Conformance]:
-        # create 10 evenly spaced conformances on the range [min height/width...max height/width]
-        extras = set()
-        scale = 10
-        diff_h = (self.max_conf.height - self.min_conf.height) / (scale * 1.0)
-        diff_w = (self.max_conf.width - self.min_conf.width) / (scale * 1.0)
+        self.targets: Sequence[IView[NT]] = targets or [x for x in self.example]
 
-        if diff_h == 0 and diff_w == 0:
-            # print('optimizing!')
-            extras.add(self.max_conf)
-            return extras
+        self.solve_unambig = solve_unambig
+        self.log_level = LogLevel.NONE
 
-        # print('min/max:', self.max_conf, self.max_conf.width)
-        for step in range(0, scale):
-            new_c = Conformance(self.min_conf.width + diff_w * step,
-                                self.min_conf.height + diff_h * step, 0, 0)
-            extras.add(new_c)
 
-        return extras
+    def add_determinism(self, solver: z3.Optimize, cmap: Dict[str, IConstraint], x_dim: bool) -> None:
 
-    # add axioms for width = right - left, width >= 0, height = bottom - top, height >= 0
-    # specialized to a particular conformance
+        # print('candidate constraints: ') 
+        # print([(c[0], short_str(c[1])) for c in cmap.items()])
 
-    # return a map from asserted layout axioms to explanatory strings
-    def addLayoutAxioms(self, solver: z3.Optimize, confIdx: int, **kwargs: IView) -> Dict[str, str]:
+        
+        # deterministic: pick two of necessary dimensions for each box
+            # sum(constraints_by_dimension) = 2
 
-        output = {}
+        # group constraints by their y_anchorid and include the z3 constraint name
 
-        for box in self.example:
-            w, h = anchor_id_to_z3_var(box.width_anchor.id, confIdx), \
-                   anchor_id_to_z3_var(box.height_anchor.id, confIdx)
-            l, r = anchor_id_to_z3_var(box.left_anchor.id, confIdx), \
-                   anchor_id_to_z3_var(box.right_anchor.id, confIdx)
-            t, b = anchor_id_to_z3_var(box.top_anchor.id, confIdx), \
-                   anchor_id_to_z3_var(box.bottom_anchor.id, confIdx)
-            widthAx = w == (r - l)
-            heightAx = h == (b - t)
+        constrs_by_id : Dict[str, List[Tuple[str, IConstraint]]] = {str(a.id) : [] for box in self.targets for a in box.anchors if box.name != self.example.name}
+        for z3_name, constr in cmap.items():
+            if constr.y_id.view_name == self.example.name:
+                continue
+            key = str(constr.y_id)
+            constrs_by_id[key].append((z3_name, constr))
 
-            # print('adding axioms:', widthAx, heightAx, w>=0, h >= 0)
-            solver.assert_and_track(widthAx, "width_ax_%d" % confIdx)
-            output["width_ax_%d" % confIdx] = "%s = (%s - %s)" % (
-                box.width_anchor.name, box.left_anchor.name, box.right_anchor.name)
-            solver.assert_and_track(heightAx, "height_ax_%d" % confIdx)
-            output["height_ax_%d" % confIdx] = "%s = (%s - %s)" % (
-                box.height_anchor.name, box.bottom_anchor.name, box.top_anchor.name)
-            # , heightAx
-            solver.assert_and_track(w >= 0, "pos_w_%d" % confIdx)
-            solver.assert_and_track(h >= 0, "pos_w_%d" % confIdx)
-            output["pos_w_%d" % confIdx] = "%s >= 0" % box.width_anchor.name
-            output["pos_h_%d" % confIdx] = "%s >= 0" % box.height_anchor.name
+        # print('constraints_by_id:')
+        # print(constrs_by_id)
 
-        return output
+        # unique: pick at most one constraint for each dimension
+            # sum(constraints_that_use_dim) = 1
+        for yid, constrs in constrs_by_id.items():
+            sum_prefix = "unique_var_" + yid
+            summand = z3.IntVal(0)
+            for idx, cnstrs in enumerate(constrs):
+                z3_name = cnstrs[0]
+                constr = cnstrs[1]
+                item_var = z3.Int(sum_prefix + str(idx))
+                solver.add(z3.Implies(z3.Bool(z3_name), item_var == 1))
+                solver.add(z3.Implies(z3.Not(z3.Bool(z3_name)), item_var == 0))
+                summand = summand + item_var
+            solver.add(summand <= 1)
+        # # deterministic: for each box, in each dimension, pick constraints for two of the four possible anchors
+        for box in self.targets:
+            if box.name == self.example.name:
+                continue
+            if x_dim:
+                xdims = [box.left_anchor, box.right_anchor, box.width_anchor, box.center_x_anchor]
+                sum_prefix = "determ_x_" + box.name
+                summand = z3.IntVal(0)
+                vidx = 0
+                for var in xdims:
+                    for cnstrs in constrs_by_id[str(var.id)]:
+                        z3_name = cnstrs[0]
+                        constr = cnstrs[1]
+                        item_var = z3.Int(sum_prefix + str(vidx))
+                        solver.add(z3.Implies(z3.Bool(z3_name), item_var == 1))
+                        solver.add(z3.Implies(z3.Not(z3.Bool(z3_name)), item_var == 0))
+                        summand = summand + item_var
 
-    def checkSanity(self, constraints: List[IConstraint]) -> None:
+                        vidx += 1
+                solver.add(summand == 2)
+            else:
+                ydims = [box.top_anchor, box.bottom_anchor, box.height_anchor, box.center_y_anchor]
+                sum_prefix = "determ_y_" + box.name
+                summand = z3.IntVal(0)
+                vidx = 0
+                for var in ydims:
+                    for cnstrs in constrs_by_id[str(var.id)]:
+                        z3_name = cnstrs[0]
+                        constr = cnstrs[1]
+                        item_var = z3.Int(sum_prefix + str(vidx))
+                        solver.add(z3.Implies(z3.Bool(z3_name), item_var == 1))
+                        solver.add(z3.Implies(z3.Not(z3.Bool(z3_name)), item_var == 0))
+                        summand = summand + item_var
 
-        confs = self.genExtraConformances()
+                        vidx += 1
+                solver.add(summand == 2)
 
-        print('checking constraint for sanity:', [short_str(x) for x in constraints])
+        # self.add_linking(solver, cmap, constrs_by_id, x_dim=True)
+        # self.add_linking(solver, cmap, constrs_by_id, x_dim=False)
 
-        for confidx, conf in enumerate(confs):
-            solver = z3.Optimize()
-            self.addConfDims(solver, conf, confidx)
-            self.addLayoutAxioms(solver, confidx)
-            # solver.add
-            for c in constraints:
-                solver.add(constraint_to_z3_expr(c, confidx))
 
-            m = solver.model()
-            chk = solver.check()
+    # TODO: this is horribly slow, and also it's unclear whether it's needed or not. For the moment don't use it.
+    def add_linking(self, solver: z3.Solver, cmap: Dict[str, IConstraint], constrs_by_id: Dict[str, List[Tuple[str, IConstraint]]], x_dim: bool) -> None:
+        # linking: in each set of child dims, at least two child dims must be externally determined
 
-            print('result for', conf)
-            print(str(chk))
+        def layers(box: IView[NT]) -> Iterator[Tuple[IView[NT], List[IView[NT]]]]:
+            # for box in self.
+            yield (box, list(box.children))
+            # yield from chain(*map(layers, box.children))
 
-    def is_whole(self, c: IConstraint) -> bool:
-        steps = [0.05 * x for x in range(20)]
-        best_diff = float(min([abs(s - c.a) for s in steps]))
-        return best_diff <= 0.01
+        # print('layers:')
+        # print(list(filter(lambda pcs: len(pcs[1]) > 0, layers(self.example))))
 
-    def make_pairs(self, constraints: List[IConstraint]) -> List[Tuple[IConstraint, IConstraint]]:
-        return [(c, cp) for c in constraints for cp in constraints if anchor_equiv(c, cp) and c.op != cp.op]
+        def externally_determined(constr: IConstraint, parent: str) -> bool:
+            if constr.kind == ConstraintKind.SIZE_CONSTANT:
+                return True
+            if constr.x_id:
+                return constr.x_id.view_name == parent
+            return True
+        
+        children = self.example.children
+        parent = self.example
+        suff = '_y'
+        if x_dim:
+            suff = '_x'
 
-    def build_biases(self, constraints: List[IConstraint]) -> Dict[IConstraint, float]:
-        default = {c: 1.0 for c in constraints}
+        anchors = z3.DeclareSort('Anchors' + suff)
+        def make(a: IAnchor[NT]) -> Any:
+            return z3.Const(str(a.id) + suff, anchors)
 
-        pairs = self.make_pairs(constraints)
-        # print([(x.shortStr(), y.shortStr()) for (x,y) in pairs][0])
+        
+        root = z3.Const('root' + suff, anchors)
 
-        # reward specific constraint
-        for c in constraints:
-            score = 10
-            # aspect ratios and size constraint are specific the more samples behind them
-            if c.kind is ConstraintKind.SIZE_ASPECT_RATIO:
-                # print(c, c.is_falsified)
-                score = 1 if c.is_falsified else 100 * c.sample_count
-            elif c.kind is ConstraintKind.SIZE_RATIO:
-                # and doubly specific when the constants are nice
-                if self.is_whole(c):
-                    score = 1000 * c.sample_count
-                else:
-                    score = 100 * c.sample_count
-            # positions are specific if they're paired and the pairs are close together
-            elif c.kind in ConstraintKind.position_kinds:
-                score = 1000
-                # for simplicity we update pairs after this loop
+        link_one = z3.Function('link_one' + suff, anchors, anchors, z3.BoolSort())
+        reach = z3.Function('reach' + suff, anchors, anchors, z3.BoolSort())
 
-            # if (isinstance(c, ))
-            if c.is_falsified:
-                score = 1  # discard!
-            default[c] = score
+        v1, v2, v3 = z3.Consts('v1 v2 v3', anchors)
+        reachable = z3.ForAll([v1, v2], z3.Implies(reach(v1, v2), \
+            z3.Or(\
+                z3.Exists([v3], z3.And(link_one(v1, v3), reach(v3, v2))),\
+                link_one(v1,v2)
+            )
+        ))
 
-        for (l, r) in pairs:
-            if l.kind in ConstraintKind.position_kinds:
-                assert r.kind in ConstraintKind.position_kinds
+        not_refl = z3.ForAll([v1], z3.Not(reach(v1, v1)))
 
-                diff = l.b + r.b
-                # map > 500 => 10
-                # 0 => 10000
-                # everything else linearly
-                upper = 500
-                lower = 0
-                if diff > upper:
-                    score = 10
-                else:
-                    # a * upper + b = 10
-                    # a * 0 +  b = 10000
-                    # b = 10000, a  = -9990/upper
-                    score = (-9990) / upper * diff + 10000
-                    default[l] = score
-                    default[r] = score
-
-        return default
-
-    def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int, **kwargs: IView) -> Dict[str, str]:
-        output = {}
-
-        top_x_v = anchor_id_to_z3_var(self.top_x.id, confIdx)
-        top_y_v = anchor_id_to_z3_var(self.top_y.id, confIdx)
-        top_w_v = anchor_id_to_z3_var(self.top_width.id, confIdx)
-        top_h_v = anchor_id_to_z3_var(self.top_height.id, confIdx)
-
-        solver.assert_and_track(top_w_v == conf.width, "top_w_%d" % conf.width)
-        solver.assert_and_track(top_h_v == conf.height, "top_h_%d" % conf.height)
-        solver.assert_and_track(top_x_v == conf.x, "top_x_%d" % conf.x)
-        solver.assert_and_track(top_y_v == conf.y, "top_y_%d" % conf.y)
-
-        output["top_w_%d" % conf.width] = str(top_w_v) + " = " + str(conf.width)
-        output["top_h_%d" % conf.height] = str(top_h_v) + " = " + str(conf.height)
-
-        return output
-
-    def __call__(self, constraints: List[IConstraint]) -> List[IConstraint]:
-
-        # build up all of the constraint as Z3 objects
-
-        # idents = set()
-        solver = z3.Optimize()
-        linearize = False
-
-        namesMap = {}
-        biases = self.build_biases(constraints)
-        axiomMap: Dict[str, str] = {}
-
-        confs = self.genExtraConformances()
-
-        for confIdx, conf in enumerate(confs):
-            axiomMap = {**axiomMap, **self.addConfDims(solver, conf, confIdx=linearize)}
-            axiomMap = {**axiomMap, **self.addLayoutAxioms(solver, confIdx)}
-
-        for constrIdx, constr in enumerate(constraints):
-            cvname = "constr_var" + str(constrIdx)
-            cvar = z3.Bool(cvname)
-
-            namesMap[cvname] = constr
-            solver.add_soft(cvar, biases[constr])
-
-            for confIdx in range(len(confs)):
-                solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, confIdx)))
-
-                # solver.assert_and_track(, cvar)
-
-        sanitys = []
-        for constrIdx, constr in enumerate(constraints):
-            cvname = "constr_var" + str(constrIdx)
-            cvar = z3.Bool(cvname)
-
-            # captures = ['box0.center_x', 'box0.width']
-            captures = ['box0.height']
-
-            if str(constr.y_id) in captures and not constr.kind is ConstraintKind.SIZE_ASPECT_RATIO:
-                sanitys.append(constr)
-        # self.checkSanity(sanitys)
-
-        # print('z3 expr:')
-        with open("debug.smt2", 'w') as debugout:
-            print(solver.sexpr(), file=debugout)
-            # assert False
-
-        print("solving")
-        chk = solver.check()
-        if (str(chk) == 'sat'):
-
-            constrValues = [v for v in solver.model().decls() if v.name() in namesMap]
-            output = [namesMap[v.name()] for v in constrValues if solver.model().get_interp(v)]
-            pruned = [short_str(c) for c in constraints if c not in output]
-            print('output: ', [short_str(o) for o in output])
-            print('pruned: ', pruned)
-
+        # TODO: these types are probably bogus
+        def at_least_two(consts: List[z3.Const]) -> z3.ExprRef:
+            output = z3.BoolVal(False)
+            for l in consts:
+                for r in consts:
+                    if l == r:
+                        continue
+                output = z3.Or(output, z3.And(reach(root, l), reach(root, r)))
             return output
-        elif (str(chk) == 'unsat'):
-            # allConstraints = {**namesMap, **axiomMap}
-            incompat = [axiomMap[str(v)] for v in solver.unsat_core() if str(v) in axiomMap] + [
-                short_str(namesMap[str(c)]) for c in solver.unsat_core() if str(c) in namesMap]
-            print('unsat!')
-            print('core: ', solver.unsat_core())
-            print('pretty: ', incompat)
-            # print('values: ', [solver.model().get_interp(c.y) for c in incompat])
+
+        if x_dim:
+            parent_anchors = [parent.left_anchor, parent.right_anchor, parent.width_anchor, parent.center_x_anchor]
         else:
-            print('unknown: ', chk)
+            parent_anchors = [parent.top_anchor, parent.bottom_anchor, parent.height_anchor, parent.center_y_anchor]
+        for pa in parent_anchors:
+            solver.add(link_one(root, make(pa)))
+            solver.add(z3.Not(link_one(make(pa), root)))
+            
+        all_consts: List[z3.ExprRef] = [make(anc) for anc in parent_anchors] + [root]
+        for box in children:
+            if x_dim:
+                child_anchors = [box.left_anchor, box.right_anchor, box.width_anchor, box.center_x_anchor]
+            else:
+                child_anchors = [box.top_anchor, box.bottom_anchor, box.height_anchor, box.center_y_anchor]
 
-        # print("constraint:")
-        # print(namesMap)
+            for ci in range(len(child_anchors)):
+                c_anc = make(child_anchors[ci])
+                solver.add(z3.Not(link_one(root, c_anc)))
+                for pi, p_anc in enumerate(parent_anchors):
+                    solver.add(z3.Not(link_one(c_anc, make(p_anc))))
+                    if pi != ci:
+                        solver.add(z3.Not(link_one(make(p_anc), c_anc)))
 
-        return constraints
+            for ai, anc in enumerate(child_anchors):
+                for fl_name, constr in constrs_by_id[str(anc.id)]:
+                    if constr.x_id:
+                        source = z3.Const(str(constr.x_id) + suff, anchors)
+                    else:
+                        source = make(parent_anchors[ai])
 
+                    solver.add(z3.Implies(z3.Bool(fl_name), link_one(source, make(anc))))
+                
+                group_by_xid: Dict[str, List[Tuple[str, IConstraint]]] = {str(constr.x_id): [] for _, constr in cmap.items() if constr.x_id}
+                for fl_name, constr in constrs_by_id[str(anc.id)]:
+                        if constr.x_id:
+                            key = str(constr.x_id)
+                        else:
+                            key = 'None'
+                        if key in group_by_xid:
+                            group_by_xid[key].append((fl_name, constr))
+                        else:
+                            group_by_xid[key] = [(fl_name, constr)]
+
+                for source_name, constrs in group_by_xid.items():
+                    if source_name == 'None':
+                        continue
+                    used_any = z3.BoolVal(False)
+                    for fl_name, constr in constrs:
+                        used_any = z3.Or(used_any, z3.Bool(fl_name))
+                    solver.add(z3.Implies(z3.Not(used_any), z3.Not(link_one(z3.Const(source_name, anchors), make(anc)))))
+
+            c_anc_consts = [make(anc) for anc in child_anchors]
+            all_consts += c_anc_consts
+            solver.add(at_least_two(c_anc_consts))
+        
+        for const in all_consts:
+            solver.add(z3.Not(link_one(const, const)))
+
+        # solver.add(at_least_two(c_consts))
+
+        
+
+        # solver.check()
+        # print(solver.sexpr())
+        bounded_bod = z3.BoolVal(False)
+        for const in all_consts:
+            bounded_bod = z3.Or(const == v1, bounded_bod)
+
+        bounded = z3.ForAll([v1], bounded_bod)
+
+        solver.add(not_refl)
+        solver.add(reachable)
+        solver.add(bounded)
+
+        return
+
+    # add axioms for top-level width = right - left, width >= 0, height = bottom - top, height >= 0
+    # specialized to a particular conformance
+    def add_conf_dims(self, solver: z3.Optimize, conf: Conformance, confIdx: int) -> None:
+
+        return add_conf_dims(solver, conf, confIdx, (self.top_x, self.top_y, self.top_width, self.top_height))
+
+    def synth_unambiguous(self, solver: z3.Optimize, names_map: Dict[str, IConstraint], confs: List[Conformance], x_dim: bool, dry_run: bool) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
+    
+        solver.push()
+        invalid_candidates: Set[FrozenSet[str]] = set()
+        iters = 0
+
+        def get_ancs(v: IView[NT]) -> List[IAnchor[NT]]:
+            if x_dim:
+                return v.x_anchors
+            else:
+                return v.y_anchors
+
+        while (True):
+            for invalid_cand in invalid_candidates:
+                control_term = z3.BoolVal(True)
+                for control in invalid_cand:
+                    control_term = z3.And(control_term, z3.Bool(control))
+                solver.add(z3.Not(control_term))
+            if self.log_level == LogLevel.ALL:
+                with open("debug-%s-invalids-%d.smt2" % (self.example.name, iters), 'w') as debugout:
+                    print(solver.sexpr(), file=debugout)
+
+            
+
+
+            if (solver.check() == z3.sat):
+                constr_decls = [v for v in solver.model().decls() if v.name() in names_map]
+                new_cand = frozenset([v.name() for v in constr_decls if solver.model().get_interp(v)])
+                
+                old_model = solver.model()
+
+                solver.pop()
+                solver.push()
+
+                for control in new_cand:
+                    solver.add(z3.Bool(control))
+
+                # for conf_idx in range(len(confs)):
+                conf_idx = len(confs)//2
+
+
+                names = [str(a.id) for box in [self.example] + list(self.targets) for a in get_ancs(box)]
+                
+                vals = extract_model_valuations(old_model, conf_idx, names)
+                for p_anc in get_ancs(self.example):
+                    concrete_value = vals[str(p_anc.id)]
+                    solver.add(anchor_id_to_z3_var(p_anc.id, conf_idx) == concrete_value)
+
+                placement_term = z3.BoolVal(True)
+                for child in self.targets:
+                    if child.name == self.example.name:
+                        continue
+                    for c_anc in get_ancs(child):
+                        concrete_value = vals[str(c_anc.id)]
+                        placement_term = z3.And(placement_term, anchor_id_to_z3_var(c_anc.id, conf_idx) == concrete_value)
+                solver.add(z3.Not(placement_term))
+
+                if self.example.name == 'box13' and x_dim and self.log_level == LogLevel.ALL:
+                    with open("debug-%s-determ-%d.smt2" % (self.example.name, iters), 'w') as debugout:
+                        print(solver.sexpr(), file=debugout)
+
+                if dry_run or solver.check() == z3.unsat:
+                    if self.log_level != LogLevel.NONE: print('took %d iters' % iters)
+                    constr_decls = [v for v in old_model.decls() if v.name() in names_map]
+                    output = [names_map[v.name()] for v in constr_decls if old_model.get_interp(v)]
+
+                    def get_ancs(v: IView[NT]) -> List[IAnchor[NT]]:
+                        return v.x_anchors if x_dim else v.y_anchors
+                    names = [str(a.id) for box in [self.example] + list(self.targets) for a in get_ancs(box)]
+
+                    min_vals, max_vals = extract_model_valuations(old_model, 0, names), extract_model_valuations(old_model, len(confs)-1, names)
+                    return (output, min_vals, max_vals)
+                
+                elif solver.check() == z3.sat:
+                    # candidate is invalid
+                    if new_cand in invalid_candidates:
+                        raise Exception('inconceivable')
+                    # print('new cand: ', new_cand)
+                    invalid_candidates.add(new_cand)
+                    solver.pop()
+                    solver.push()
+                    iters += 1
+                    continue
+                else:
+                    # print('found it! with check value:', str(solver.check()))
+                    print('unknown?', solver.check())
+                    raise Exception('unexpected solver output')
+                    
+            else:
+                raise Exception('cant find a solution')
+
+    def reward_parent_relative(self, biases: Dict[IConstraint, float]) -> Dict[IConstraint, float]:
+        for constr, score in biases.items():
+            if constr.x_id:
+                yv = self.example.find_anchor(constr.y_id)
+                if yv and yv.view.is_parent_of_name(constr.x_id.view_name):
+                    biases[constr] = score * 10
+        return biases
+
+    def __call__(self, constraints: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
+
+        constraints = self.filter_constraints(constraints)
+        # print('after combining:')
+        # print([short_str(c) for c in constraints])
+
+        if self.log_level != LogLevel.NONE: print('candidates: ', len(constraints))
+
+
+        if (len(constraints) == 0): 
+            defaults: Dict[str, Fraction] = {}
+            for box in self.example:
+                for anchor in box.anchors:
+                    defaults[str(anchor.id)] = to_frac(anchor.value)
+            return (constraints, defaults, defaults)
+
+        def add_box16w_hack(weights: Dict[IConstraint, float]) -> Dict[IConstraint, float]:
+            for constr, weight in weights.items():
+                if constr.y_id.view_name == 'box15' and constr.kind == ConstraintKind.SIZE_CONSTANT:
+                    weights[constr] = 1000000
+            return weights
+
+        x_names: Dict[str, IConstraint] = {}
+        y_names: Dict[str, IConstraint] = {}
+        x_solver = z3.Optimize()
+        y_solver = z3.Optimize()
+        biases = self.build_biases(constraints)
+        if self.solve_unambig:
+            biases = self.reward_parent_relative(biases)
+        # biases = add_box16w_hack(biases)
+        # biases = {k: 1 for k in biases}
+
+        confs = conformance_range(self.min_conf, self.max_conf, scale=5)
+
+        for constr_idx, constr in enumerate(constraints):
+            cvname = "constr_var" + str(constr_idx)
+            cvar = z3.Bool(cvname)
+
+            if is_x_constr(constr):
+                solver = x_solver
+                names_map = x_names
+            else:
+                solver = y_solver
+                names_map = y_names
+
+            solver.add_soft(cvar, biases[constr])
+            names_map[cvname] = constr
+            
+
+        for conf_idx, conf in enumerate(confs):
+            self.add_conf_dims(x_solver, conf, conf_idx)
+            self.add_conf_dims(y_solver, conf, conf_idx)
+            self.add_layout_axioms(x_solver, conf_idx, self.targets, x_dim=True)
+            self.add_layout_axioms(y_solver, conf_idx, self.targets, x_dim=False)
+
+            for constr_idx, constr in enumerate(constraints):
+                cvname = "constr_var" + str(constr_idx)
+                cvar = z3.Bool(cvname)
+                if is_x_constr(constr):
+                    solver = x_solver
+                else:
+                    solver = y_solver
+                solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, conf_idx)))
+
+            
+
+        # self.add_determinism(x_solver, x_names, x_dim=True)
+        # self.add_determinism(y_solver, y_names, x_dim=False)
+
+        if self.log_level == LogLevel.ALL:
+            with open("debug-%s-initial-x.smt2" % self.example.name, 'w') as debugout:
+                print(x_solver.sexpr(), file=debugout)
+            with open("debug-%s-initial-y.smt2" % self.example.name, 'w') as debugout:
+                print(y_solver.sexpr(), file=debugout)
+
+        if self.solve_unambig:
+            if self.log_level != LogLevel.NONE: print('solving for unambiguous horizontal layout')
+            x_cs, x_min, x_max = self.synth_unambiguous(x_solver, x_names, confs, x_dim=True, dry_run=False)
+            if self.log_level != LogLevel.NONE: print('solving for unambiguous vertical layout')
+            y_cs, y_min, y_max = self.synth_unambiguous(y_solver, y_names, confs, x_dim=False, dry_run=False)
+        else:
+            if self.log_level != LogLevel.NONE: print('solving for horizontal layout')
+            x_cs, x_min, x_max = self.synth_unambiguous(x_solver, x_names, confs, x_dim=True, dry_run=True)
+            if self.log_level != LogLevel.NONE: print('solving for vertical layout')
+            y_cs, y_min, y_max = self.synth_unambiguous(y_solver, y_names, confs, x_dim=False, dry_run=True)
+
+        return (x_cs + y_cs, dict(x_min, **y_min), dict(x_max, **y_max))
 
 # assume: the layout of an element is independent from the layout of its children.
 
@@ -276,61 +502,52 @@ class BlackBoxPruner(IPruningMethod):
 #     ** add child, (u', l') 
 
 
-class HierarchicalPruner(BlackBoxPruner):
+class HierarchicalPruner(IPruningMethod):
 
-    def __init__(self, examples: List[IView[float]], bounds: ISizeBounds):
+    def __init__(self, examples: List[IView[NT]], bounds: ISizeBounds, solve_unambig: bool):
 
-        heights = [v.height for v in examples]
-        widths = [v.width for v in examples]
+        bounds_frac = {k: to_frac(v) if v else None for k,v in bounds.items()}
 
-        min_w = bounds.get('min_w', None) or int(min(widths))
-        max_w = bounds.get('max_w', None) or int(max(widths))
-        min_h = bounds.get('min_h', None) or int(min(heights))
-        max_h = bounds.get('max_h', None) or int(max(heights))
+        heights = [to_frac(v.height) for v in examples]
+        widths = [to_frac(v.width) for v in examples]
+        xs = [to_frac(v.left) for v in examples]
+        ys = [to_frac(v.top) for v in examples]
+        # print('min_w:')
+        # print(min(widths))
+        # print(type(min(widths)))
+        # print(min(widths) + min(widths))
+        # print(min(min(widths), min(widths)))
 
-        self.min_conf = Conformance(min_w, min_h, 0, 0)
-        self.max_conf = Conformance(max_w, max_h, 0, 0)
+        min_w = min(bounds_frac.get('min_w', None) or min(widths), min(widths))
+        max_w = max(bounds_frac.get('max_w', None) or max(widths), max(widths))
+        min_h = min(bounds_frac.get('min_h', None) or min(heights), min(heights))
+        max_h = max(bounds_frac.get('max_h', None) or max(heights), max(heights))
 
-        # print('min conf', self.min_conf)
-        # print('max conf', self.max_conf)
+        min_x = min(bounds_frac.get('min_x', None) or min(xs), min(xs))
+        max_x = max(bounds_frac.get('max_x', None) or max(xs), max(xs))
+        min_y = min(bounds_frac.get('min_y', None) or min(ys), min(ys))
+        max_y = max(bounds_frac.get('max_y', None) or max(ys), max(ys))
+
+        self.min_conf = Conformance(min_w, min_h, min_x, min_y)
+        self.max_conf = Conformance(max_w, max_h, max_x, max_y)
 
         assert len(examples) > 0, "Pruner requires non-empty learning examples"
 
         self.hierarchy = examples[0]
+        self.examples = examples
 
         self.top_width = self.hierarchy.width_anchor
         self.top_height = self.hierarchy.height_anchor
         self.top_x = self.hierarchy.left_anchor
         self.top_y = self.hierarchy.top_anchor
 
-    def genExtraConformances(self, **kwargs: Conformance) -> Set[Conformance]:
-        lower = kwargs.pop('lower')
-        upper = kwargs.pop('upper')
+        self.solve_unambig = solve_unambig
+        self.log_level = LogLevel.NONE
 
-        # create 10 evenly spaced conformances on the range [min height/width...max height/width]
-        extras = set()
-        scale = 10
-        diff_h = (upper.height - lower.height) / (scale * 1.0)
-        diff_w = (upper.width - lower.width) / (scale * 1.0)
+    def relevant_constraints(self, focus: IView[NT], c: IConstraint) -> bool:
 
-        print('diffs: ', diff_h, diff_w)
-        if diff_h == 0.0 and diff_w == 0.0:
-            print('optimizing!')
-            extras.add(self.max_conf)
-            return extras
-
-        # print('min/max:', self.max_conf, self.max_conf.width)
-        for step in range(0, scale):
-            new_c = Conformance(lower.width + diff_w * step, lower.height + diff_h * step, 0, 0)
-            extras.add(new_c)
-
-        return extras
-
-    def relevantConstraint(self, focus: IView, c: IConstraint) -> bool:
-
-        # Note: "I moved this here inline as it doesn't belong in Constraint."
-        def variables(cn):
-            return {cn.y_id.view_name} or ({cn.x_id.view_name} if cn.x_id is not None else {})
+        def variables(cn: IConstraint) -> Set[str]:
+            return set({cn.y_id.view_name}) or set({cn.x_id.view_name} if cn.x_id is not None else {})
 
         cvs = variables(c)
 
@@ -341,258 +558,203 @@ class HierarchicalPruner(BlackBoxPruner):
                     return True
             return False
         else:
-            if c.kind in ConstraintKind.position_kinds:
+            if c.kind.is_position_kind:
                 return focus.is_parent_of_name(c.y_id.view_name) or (
                     focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
-            elif c.kind in ConstraintKind.size_kinds:
+            elif c.kind.is_size_kind:
                 return focus.is_parent_of_name(c.y_id.view_name) or (
                     focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
             else:
-                raise Exception("should be unreachable!")
+                assert False, 'weird constraint kind: ' + str(c.kind)
+                return unreachable(c.kind)
 
-    # add axioms for width = right - left, width >= 0, height = bottom - top, height >= 0
-    # specialized to a particular conformance
+    def infer_child_confs(self, constrs: List[IConstraint], focus: IView[NT], min_c: Conformance, max_c: Conformance) -> \
+            Dict[str, Dict[str, Conformance]]:
 
-    # return a map from asserted layout axioms to explanatory strings
-    def addLayoutAxioms(self, solver: z3.Optimize, confIdx: int, **kwargs: IView):
-        focus = kwargs.pop('focus')
-        output = {}
+        all_boxes = [focus] + [child for child in focus.children]
 
-        for box in [focus, *focus.children]:
-            w, h = anchor_id_to_z3_var(box.width_anchor.id, confIdx), \
-                   anchor_id_to_z3_var(box.height_anchor.id, confIdx)
-            l, r = anchor_id_to_z3_var(box.left_anchor.id, confIdx), \
-                   anchor_id_to_z3_var(box.right_anchor.id, confIdx)
-            t, b = anchor_id_to_z3_var(box.top_anchor.id, confIdx), \
-                   anchor_id_to_z3_var(box.bottom_anchor.id, confIdx)
-            widthAx = w == (r - l)
-            heightAx = h == (b - t)
+        x_solver = z3.Optimize()
+        y_solver = z3.Optimize()
 
-            # print('adding axioms:', widthAx, heightAx, w>=0, h >= 0)
-            solver.assert_and_track(widthAx, "width_ax_%d" % confIdx)
-            output["width_ax_%d" % confIdx] = "%s = (%s - %s)" % (
-                box.width_anchor.name, box.left_anchor.name, box.right_anchor.name)
-            solver.assert_and_track(heightAx, "height_ax_%d" % confIdx)
-            output["height_ax_%d" % confIdx] = "%s = (%s - %s)" % (
-                box.height_anchor.name, box.bottom_anchor.name, box.top_anchor.name)
-            # , heightAx
-            solver.assert_and_track(w >= 0, "pos_w_%d" % confIdx)
-            solver.assert_and_track(h >= 0, "pos_w_%d" % confIdx)
-            output["pos_w_%d" % confIdx] = "%s >= 0" % box.width_anchor.name
-            output["pos_h_%d" % confIdx] = "%s >= 0" % box.height_anchor.name
+        z3_idx = 0 # just one z3 environment
 
-        return output
+        self.add_layout_axioms(x_solver, z3_idx, all_boxes, x_dim=True)
+        self.add_layout_axioms(y_solver, z3_idx, all_boxes, x_dim=False)
+        # self.add_containment_axioms(x_solver, z3_idx, focus, x_dim=True)
+        # self.add_containment_axioms(y_solver, z3_idx, focus, x_dim=False)
 
-    def is_whole(self, c: IConstraint) -> bool:
-        steps = [0.05 * x for x in range(20)]
-        bestDiff = min([abs(s - c.a) for s in steps])
-        return bestDiff <= 0.01
+        output: Dict[str, Dict[str, Conformance]] = {}
 
-    def make_pairs(self, constraints: List[IConstraint]):
-        return [(c, cp) for c in constraints for cp in constraints if anchor_equiv(c, cp) and c.op != cp.op]
+        # add parent dimensions
+        p_w, p_h = anchor_id_to_z3_var(focus.width_anchor.id, z3_idx), anchor_id_to_z3_var(focus.height_anchor.id, z3_idx)
+        p_x, p_y = anchor_id_to_z3_var(focus.left_anchor.id, z3_idx), anchor_id_to_z3_var(focus.top_anchor.id, z3_idx)
 
-    def build_biases(self, constraints: List[IConstraint]):
-        default = {c: 1 for c in constraints}
+        x_solver.add(p_w <= max_c.width)
+        y_solver.add(p_h <= max_c.height)
+        x_solver.add(p_x <= max_c.x)
+        y_solver.add(p_y <= max_c.y)
 
-        pairs = self.make_pairs(constraints)
-        # print([(x.shortStr(), y.shortStr()) for (x,y) in pairs][0])
+        x_solver.add(p_w >= min_c.width)
+        y_solver.add(p_h >= min_c.height)
+        x_solver.add(p_x >= min_c.x)
+        y_solver.add(p_y >= min_c.y)
 
-        # reward specific constraint
-        for c in constraints:
-            score = 10
-            # aspect ratios and size constraint are specific the more samples behind them
-            if c.kind is ConstraintKind.SIZE_ASPECT_RATIO:
-                # print(c, c.is_falsified)
-                score = 1 if c.is_falsified else 100 * c.sample_count
-            elif c.kind is ConstraintKind.SIZE_RATIO:
-                # and doubly specific when the constants are nice
-                if self.is_whole(c):
-                    score = 1000 * c.sample_count
-                else:
-                    score = 100 * c.sample_count
-            # positions are specific if they're paired and the pairs are close together
-            elif c.kind in ConstraintKind.position_kinds:
-                score = 1000
-                # for simplicity we update pairs after this loop
-
-            # if (isinstance(c, ))
-            if c.is_falsified:
-                score = 1  # discard!
-            default[c] = score
-
-        for (l, r) in pairs:
-            if l.kind in ConstraintKind.position_kinds:
-                assert r.kind in ConstraintKind.position_kinds
-
-                diff = l.b + r.b
-                # map > 500 => 10
-                # 0 => 10000
-                # everything else linearly
-                upper = 500
-                lower = 0
-                if diff > upper:
-                    score = 10
-                else:
-                    # a * upper + b = 10
-                    # a * 0 +  b = 10000
-                    # b = 10000, a  = -9990/upper
-                    score = (-9990) / upper * diff + 10000
-                    default[l] = score
-                    default[r] = score
-
-        return default
-
-    def addConfDims(self, solver: z3.Optimize, conf: Conformance, confIdx: int, **kwargs: IView):
-        focus = kwargs.pop('focus')
-        output = {}
-
-        top_x_v = anchor_id_to_z3_var(focus.left_anchor.id, confIdx)
-        top_y_v = anchor_id_to_z3_var(focus.top_anchor.id, confIdx)
-        top_w_v = anchor_id_to_z3_var(focus.width_anchor.id, confIdx)
-        top_h_v = anchor_id_to_z3_var(focus.height_anchor.id, confIdx)
-
-        solver.assert_and_track(top_w_v == conf.width, "top_w_%d" % conf.width)
-        solver.assert_and_track(top_h_v == conf.height, "top_h_%d" % conf.height)
-        solver.assert_and_track(top_x_v == conf.x, "top_x_%d" % conf.x)
-        solver.assert_and_track(top_y_v == conf.y, "top_y_%d" % conf.y)
-
-        output["top_w_%d" % conf.width] = str(top_w_v) + " = " + str(conf.width)
-        output["top_h_%d" % conf.height] = str(top_h_v) + " = " + str(conf.height)
-
-        return output
-
-    def inferChildConf(self, constrs: List[IConstraint], focus: IView, min_c: Conformance, max_c: Conformance) -> \
-            Tuple[Conformance, Conformance]:
-
-        linear_solver = kiwisolver.Solver()
         for constr in constrs:
-            linear_solver.addConstraint(constraint_to_kiwi(constr))
+            if is_x_constr(constr):
+                x_solver.add(constraint_to_z3_expr(constr, z3_idx))
+            else:
+                y_solver.add(constraint_to_z3_expr(constr, z3_idx))
 
-        # get the min by suggesting 0, and the max by suggesting max_c
+        if self.log_level == LogLevel.ALL:
+            with open("parent-dims-%s.smt2" % focus.name, 'w') as debugout:
+                print(solver.sexpr(), file=debugout)
+        
+        for child in focus.children:
+            c_w, c_h = anchor_id_to_z3_var(child.width_anchor.id, z3_idx), anchor_id_to_z3_var(child.height_anchor.id, z3_idx)
+            c_x, c_y = anchor_id_to_z3_var(child.left_anchor.id, z3_idx), anchor_id_to_z3_var(child.top_anchor.id, z3_idx)
 
-        widthvar = kiwisolver.Variable(str(focus.width_anchor))
-        heightvar = kiwisolver.Variable(str(focus.height_anchor))
-        xvar = kiwisolver.Variable(str(focus.left_anchor))
-        yvar = kiwisolver.Variable(str(focus.top_anchor))
+            max_vals: List[Fraction] = []
+            min_vals: List[Fraction] = [] # TODO: this requires we iterate over values in the order that they're given to Conformance's constructor. fix this hack...
+            # the order is width, height, x, y
+            contexts = [(c_w, x_solver), (c_h, y_solver), (c_x, x_solver), (c_y, y_solver)]
+            for var, solver in contexts:
+                solver.push()
+                solver.maximize(var)
+                chk = solver.check()
+                # with open("child-max-%s-%s.smt2" % (str(var), child.name), 'w') as debugout:
+                #     print(solver.sexpr(), file=debugout)
+                if chk == z3.sat:
+                    val: Fraction = solver.model().get_interp(var).as_fraction()
+                    max_vals.append(val)
+                else:
+                    print('check: ', str(chk))
+                    with open("unsat-child-%s.smt2" % child.name, 'w') as debugout:
+                        print(solver.sexpr(), file=debugout)
+                    raise Exception('unsat child conformance %s in maximize' % child.name)
+                
+                solver.pop()
+                solver.push()
+                solver.minimize(var)
+                # with open("child-min-%s-%s.smt2" % (str(var), child.name), 'w') as debugout:
+                #     print(solver.sexpr(), file=debugout)
+                chk = solver.check()
+                if chk == z3.sat:
+                    val = solver.model().get_interp(var).as_fraction()
+                    min_vals.append(val)
+                else:
+                    print('check: ', str(chk))
+                    with open("unsat-child-%s.smt2" % child.name, 'w') as debugout:
+                        print(solver.sexpr(), file=debugout)
+                    raise Exception('unsat child conformance %s in minimize' % child.name)
+                solver.pop()
+            
 
-        linear_solver.addEditVariable(widthvar, 'strong')
-        linear_solver.addEditVariable(heightvar, 'strong')
-        linear_solver.addEditVariable(xvar, 'strong')
-        linear_solver.addEditVariable(yvar, 'strong')
+            output[child.name] = {'max': Conformance(*max_vals), 'min': Conformance(*min_vals)}
 
-        linear_solver.suggestValue(widthvar, min_c.width)
-        linear_solver.suggestValue(heightvar, min_c.height)
-        linear_solver.suggestValue(xvar, min_c.x)
-        linear_solver.suggestValue(yvar, min_c.y)
+        return output
 
-        linear_solver.updateVariables()
+    def confs_to_constrs(self, child: IView[NT], min_c: Conformance, max_c: Conformance) -> Iterator[IConstraint]:
+        
+        kind = ConstraintKind.SIZE_CONSTANT
+        for var, bound in conf_zip(min_c, child):
+            yield ConstantConstraint(kind=kind, y_id=var.id, b=sym.Rational(bound), op=operator.ge)
+        for var, bound in conf_zip(max_c, child):
+            yield ConstantConstraint(kind=kind, y_id=var.id, b=sym.Rational(bound), op=operator.le)
 
-        focus_min = Conformance(widthvar.value(), heightvar.value(), xvar.value(), yvar.value())
+    def integrate_constraints(self, examples: List[IView[NT]], min_c: Conformance, max_c: Conformance, constraints: List[IConstraint]) -> List[IConstraint]:
+        result = BlackBoxPruner(examples, confs_to_bounds(min_c, max_c), self.solve_unambig)(constraints)[0]
+        diff = set(constraints) - set(result)
+        if len(diff) > 0:
+            print('pruning during integration: ', [short_str(c) for c in diff])
+            # raise Exception("foo")
+        return result + [replace(constr, priority = PRIORITY_STRONG) for constr in diff]
 
-        linear_solver.suggestValue(widthvar, max_c.width)
-        linear_solver.suggestValue(heightvar, max_c.height)
-        linear_solver.suggestValue(xvar, max_c.x)
-        linear_solver.suggestValue(yvar, max_c.y)
+    # sanity check: kiwi and z3 should both accept entire set of output constraints
+    def validate_output_constrs(self, constraints: Set[IConstraint]) -> None:
+        solver = z3.Optimize()
+        bb_solver = BlackBoxPruner([self.hierarchy], confs_to_bounds(self.min_conf, self.max_conf), self.solve_unambig)
+        baseline_set = set(bb_solver(list(constraints))[0])
+        # print('output vs accepted:', len(output), len(constraints))
+        
+        inconceivables = constraints - baseline_set
 
-        linear_solver.updateVariables()
+        if (len(inconceivables) > 0):
+            print('ERROR: black box found the following unsat core:')
+            print([short_str(c) for c in inconceivables])
 
-        focus_max = Conformance(widthvar.value(), heightvar.value(), xvar.value(), yvar.value())
+            evaluate_constraints(self.hierarchy, to_rect(self.min_conf), list(baseline_set))
+            raise Exception('inconceivable')
+        
+        evaluate_constraints(self.hierarchy, to_rect(self.min_conf), list(constraints))
 
-        return (focus_min, focus_max)
+        return
 
-    def __call__(self, constraints: List[IConstraint]):
+    def __call__(self, constraints: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
 
-        # idents = set()
+        infer_with_z3 = True
+        validate = False
+        debug = True
+        integrate = False
 
-        biases = self.build_biases(constraints)
-
-        linearize = False
-
-        axiomMap: Dict[str, str] = {}
+        constraints = self.combine_bounds(constraints)
 
         worklist = []
-        start = (self.hierarchy, self.min_conf, self.max_conf)
-        print('starting hierarchical pruning with ', start)
+        start = (self.hierarchy, self.examples, self.min_conf, self.max_conf)
+        if debug: print('starting hierarchical pruning with ', start)
         worklist.append(start)
-        outputConstrs = set()
+        output_constrs = set()
 
         while len(worklist) > 0:
-            focus, min_c, max_c = worklist.pop()
+            focus, focus_examples, min_c, max_c = worklist.pop()
+            if self.log_level != LogLevel.NONE: 
+                print('solving for ', focus, 'with bounds ', min_c, max_c)
 
-            solver = z3.Optimize()
-            confs = self.genExtraConformances(lower=self.min_conf, upper=self.max_conf)
+            relevant = [c for c in constraints if self.relevant_constraints(focus, c)]
 
-            for confIdx, conf in enumerate(confs):
-                axiomMap = {**axiomMap, **self.addConfDims(solver, conf, confIdx, focus=focus)}
-                axiomMap = {**axiomMap, **self.addLayoutAxioms(solver, confIdx, focus=focus)}
+            targets = [focus] + [child for child in focus.children]
 
-            relevant = [c for c in constraints if self.relevantConstraint(focus, c)]
-            usedConstrs = set()
-            namesMap = {}
+            bounds = confs_to_bounds(min_c, max_c)
 
-            for constrIdx, constr in enumerate(relevant):
-                cvname = "constr_var" + str(constrIdx)
-                usedConstrs.add(cvname)
-                namesMap[cvname] = constr
-                cvar = z3.Bool(cvname)
+            bb_solver = BlackBoxPruner(focus_examples, bounds, self.solve_unambig, targets=targets)
+            bb_solver.log_level = self.log_level
+            focus_output, mins, maxes = bb_solver(relevant)
 
-                solver.add_soft(cvar, biases[constr])
+            output_constrs |= set(focus_output)
 
-                for confIdx in range(len(confs)):
-                    solver.add(z3.Implies(cvar, constraint_to_z3_expr(constr, confIdx)))
+            
+            if integrate and len(focus_output) > 0: 
+                int_output_constrs = set(self.integrate_constraints(self.examples, self.min_conf, self.max_conf, list(output_constrs)))
+                output_constrs = int_output_constrs
+            
+            if validate: self.validate_output_constrs(output_constrs)
 
-            sanitys = []
-            for constrIdx, constr in enumerate(relevant):
-                cvname = "constr_var" + str(constrIdx)
-                cvar = z3.Bool(cvname)
+            if not infer_with_z3:
+                child_confs = self.infer_child_confs(list(output_constrs), focus, min_c, max_c)
 
-                # captures = ['box0.center_x', 'box0.width']
-                captures = ['box0.height']
+            for ci, child in enumerate(focus.children):
 
-                if str(constr.y_id) in captures and not constr.kind is ConstraintKind.SIZE_ASPECT_RATIO:
-                    sanitys.append(constr)
+                def get(anc: IAnchor[NT]) -> str:
+                    return str(anc.id)
+                
+                if infer_with_z3:
+                    clo = Conformance(mins[get(child.width_anchor)], mins[get(child.height_anchor)], mins[get(child.left_anchor)], mins[get(child.top_anchor)])
+                    chi = Conformance(maxes[get(child.width_anchor)], maxes[get(child.height_anchor)], maxes[get(child.left_anchor)], maxes[get(child.top_anchor)])
+                else:
+                    clo, chi = child_confs[child.name]['min'], child_confs[child.name]['max']
 
-            print("solving %s" % focus.name)
-            print("with conformances", min_c, max_c)
-            print('relevant constraint: ', [short_str(r) for r in relevant])
-            with open("debug-%s.smt2" % focus.name, 'w') as outfile:
-                print(solver.sexpr(), file=outfile)
+                worklist.append((child, [fe.children[ci] for fe in focus_examples], clo, chi))
+            if self.log_level == LogLevel.ALL:
+                with open('constraints.json', 'a') as debugout:
+                    print([short_str(c) for c in focus_output], file=debugout)
 
-            chk = solver.check()
-            if (str(chk) == 'sat'):
+        print('done with hierarchical pruning! finishing up...')
+        if integrate: 
+            output_constrs = set(self.integrate_constraints(self.examples, self.min_conf, self.max_conf, list(output_constrs)))
 
-                constrValues = [v for v in solver.model().decls() if v.name() in usedConstrs]
-                output = [namesMap[v.name()] for v in constrValues if solver.model().get_interp(v)]
-                pruned = [short_str(c) for c in relevant if c not in output]
-                print('output: ', [short_str(o) for o in output])
-                print('pruned: ', pruned)
+        if debug and validate: self.validate_output_constrs(output_constrs)
 
-                print('diff: relevant - output ',
-                      set([short_str(r) for r in relevant]) - set([short_str(o) for o in output]))
-                print('diff: relevant - (output + pruned) ',
-                      set([short_str(r) for r in relevant]) - (set([short_str(o) for o in output]) | set(pruned)))
-                print('diff: (output + pruned) - relevant ',
-                      (set([short_str(o) for o in output]) | set(pruned)) - set([short_str(r) for r in relevant]))
+        if self.log_level != LogLevel.NONE: self.dump_constraints("output.smt2", self.hierarchy, list(output_constrs))
 
-                outputConstrs |= set(output)
-            elif (str(chk) == 'unsat'):
-                # allConstraints = {**namesMap, **axiomMap}
-                incompat = [axiomMap[str(v)] for v in solver.unsat_core() if str(v) in axiomMap] + [
-                    short_str(namesMap[str(c)]) for c in solver.unsat_core() if str(c) in namesMap]
-                print('unsat!')
-                print('core: ', solver.unsat_core())
-                print('pretty: ', incompat)
-                assert False
-                # print('values: ', [solver.model().get_interp(c.y) for c in incompat])
-            else:
-                print('unknown: ', chk)
-                assert False
+        return (list(output_constrs), {}, {})
 
-            # calculate child conformances, enqueue children
 
-            for child in focus.children:
-                clo, chi = self.inferChildConf(output, child, min_c, max_c)
-
-                worklist.append((child, clo, chi))
-
-        return outputConstrs

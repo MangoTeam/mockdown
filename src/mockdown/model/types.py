@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Iterator, Optional, Protocol, Sequence, Tuple
+from typing import Iterator, Optional, Protocol, Sequence, Tuple, Any, List, Dict
 
 from mockdown.model.primitives import Attribute, IRect, ViewName
 from mockdown.types import NT
@@ -91,6 +91,10 @@ class IView(Protocol[NT]):
         return self.rect.center_y
 
     @property
+    def size(self) -> ISize[NT]:
+        return self.rect.size
+
+    @property
     @abstractmethod
     def left_edge(self) -> IEdge[NT]: ...
 
@@ -136,7 +140,24 @@ class IView(Protocol[NT]):
 
     @property
     @abstractmethod
+    def anchors(self) -> List[IAnchor[NT]]: ...
+
+    @property
+    @abstractmethod
+    def names(self) -> Iterator[str]: ...
+    
+
+    @property
+    @abstractmethod
     def center_y_anchor(self) -> IAnchor[NT]: ...
+
+    @property
+    @abstractmethod
+    def x_anchors(self) -> List[IAnchor[NT]]: ...
+
+    @property
+    @abstractmethod
+    def y_anchors(self) -> List[IAnchor[NT]]: ...
 
     def find_view(self, name: ViewName, include_self: bool = False, deep: bool = False) -> Optional[IView[NT]]:
         ...
@@ -162,3 +183,5 @@ class IView(Protocol[NT]):
     def __eq__(self, other: object) -> bool: ...
 
     def __iter__(self) -> Iterator[IView[NT]]: ...
+
+    def to_dict(self) -> Dict[str, Any]: ...

@@ -9,8 +9,12 @@ from starlette.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
 from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
-
 from mockdown.run import run as run_mockdown
+
+
+# def avg_children(v: Any) -> float:
+#     return sum([len(box.children) for box in v if len(box.children) > 0])/len([x for x in v if len(x.children) > 0])
+
 
 
 async def synthesize(request: Request) -> JSONResponse:

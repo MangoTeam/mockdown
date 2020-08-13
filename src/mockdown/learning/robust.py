@@ -100,12 +100,12 @@ class RobustLearningTask:
         else:
             err_scores = (candidates == mean).astype(np.float)
 
-        print("Scores:")
-        print(f"  Dim:     {d_score}")
-        print(f"  P:       {p_score}")
-        print(f"  Rats:    {stats.describe(rat_scores)}")
-        print(f"  Errs:    {stats.describe(err_scores)}")
-        print(f"  # Cands: {len(candidates)}")
+        # print("Scores:")
+        # print(f"  Dim:     {d_score}")
+        # print(f"  P:       {p_score}")
+        # print(f"  Rats:    {stats.describe(rat_scores)}")
+        # print(f"  Errs:    {stats.describe(err_scores)}")
+        # print(f"  # Cands: {len(candidates)}")
         scores = d_score * p_score * rat_scores * err_scores
 
         return list(zip(candidates, scores))

@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import TypeVar, Any, overload, Union, SupportsAbs, _T_co, SupportsFloat
 
+from fractions import Fraction
+
 """
 Some type stubs to make mypy happy when dealing with sympy.
 Warning: these may have subtle problems, after all, we wrote them...
@@ -12,7 +14,7 @@ N = TypeVar('N', bound='Number')
 _AnyNum = Union['Number', int, float]
 
 # Type of things convertible to a Number.
-_ToNum = Union['Number', str, int, float]
+_ToNum = Union['Number', str, int, float, Fraction]
 
 
 class Basic: ...

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from itertools import chain
-from typing import Iterator, Optional, Sequence, cast
+from typing import Iterator, Optional, Sequence, cast, List, Dict, Any
 
 from mockdown.model.anchor import Anchor
 from mockdown.model.edge import Edge
@@ -77,6 +77,23 @@ class View(IView[NT]):
     def height_anchor(self) -> IAnchor[NT]:
         return Anchor(self, Attribute.HEIGHT)
 
+    @property
+    def anchors(self) -> List[IAnchor[NT]]:
+        return [self.left_anchor, self.right_anchor, self.top_anchor, self.bottom_anchor, self.center_x_anchor, self.center_y_anchor, self.height_anchor, self.width_anchor]
+
+    @property
+    def x_anchors(self) -> List[IAnchor[NT]]:
+        return [self.left_anchor, self.right_anchor, self.width_anchor, self.center_x_anchor]
+    @property
+    def y_anchors(self) -> List[IAnchor[NT]]:
+        return [self.top_anchor, self.bottom_anchor, self.height_anchor, self.center_y_anchor]
+    @property
+    def names(self) -> Iterator[str]:
+        # print('boxes:', [bx for bx in self])
+        for box in [self, *self.children]:
+            for anchor in box.anchors:
+                yield str(anchor.id)
+
     def find_view(self,
                   name: ViewName,
                   include_self: bool = False,
@@ -86,7 +103,7 @@ class View(IView[NT]):
         :param name: the name of the view to get.
         :param default: the default to return if a view is not found.
         :param include_self: if true, then this element is itself included in the lookup.
-        :param deep: if true, then the search recursive.
+        :param deep: if true, then the search is recursive.
         """
         try:
             if include_self and self.name == name:
@@ -149,3 +166,19 @@ class View(IView[NT]):
 
     def __repr__(self) -> str:
         return f"View(name='{self.name}', rect={self.rect})"
+
+    def to_dict(self) -> Dict[str, Any]:
+        
+        def recur(it: IView[NT]) -> Dict[str, Any]:
+            output: Dict[str, Any] = {}
+            for anchor in it.anchors:
+                output[anchor.attribute.value] = str(anchor.value)
+            children = [c.to_dict() for c in it.children]
+            output['children'] = children
+            output['name'] = it.name
+            return output
+            
+        out = recur(self)
+        out['type'] = 'real'
+        return out
+        

@@ -8,7 +8,7 @@ from mockdown.instantiation import VisibilityConstraintInstantiator
 from mockdown.learning.robust import RobustLearning
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
-from mockdown.pruning import BlackBoxPruner, HierarchicalPruner
+from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
 from mockdown.types import Tuple4
 
 
@@ -17,16 +17,17 @@ class MockdownOptions(TypedDict, total=False):
 
     learning_method: Literal['simple', 'robust']
 
-    pruning_method: Literal['none', 'baseline', 'hierarchical']
+    pruning_method: Literal['none', 'baseline', 'hierarchical', 'dynamic', 'margins']
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
 
     include_axioms: bool
     debug: bool
+    unambig: bool
 
 
 class MockdownResults(TypedDict):
     constraints: List[Dict[str, str]]
-    axioms: Optional[List[str]]
+    axioms: List[str]
 
 
 def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
@@ -36,6 +37,9 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
 
     It is in its own file to prevent import cycles between cli and app!
     """
+
+    # print('options:')
+    # print(options)
     debug = options.get('debug', False)
 
     input_data = json.load(input_io)
@@ -63,10 +67,14 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
     }[options.get('learning_method', 'simple')]
 
     pruner_factory = {
-        'none': lambda x, y: (lambda cns: cns),
+        'none': lambda x, y, ua: (lambda cns: (cns, None, None)),
         'baseline': BlackBoxPruner,
         'hierarchical': HierarchicalPruner,
+        'margins': MarginPruner,
+        'dynamic': DynamicPruner
     }[options.get('pruning_method', 'none')]
+
+    unambig = options.get('unambig', False)
 
     loader = ViewLoader(number_type=number_type)
     instantiator = VisibilityConstraintInstantiator()
@@ -89,12 +97,12 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
                    for candidate in candidates]
 
     # 4. Pruning.
-    prune = pruner_factory(examples, bounds_dict)
-    pruned_constraints = prune(constraints)
+    prune = pruner_factory(examples, bounds_dict, unambig)
+    pruned_constraints, _, _ = prune(constraints)
 
     result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],
-        'axioms': None
+        'axioms': []
     }
 
     if options.get('include_axioms', False):
