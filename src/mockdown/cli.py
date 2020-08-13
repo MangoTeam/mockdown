@@ -98,7 +98,6 @@ def display(input_views: TextIO, input_constraints: TextIO) -> None:
 @click.option('--static-dir', default='static/', help="Path to static content directory.")
 @click.option('--static-path', default='/', help="URL prefix to serve static content from.")
 def serve(static_dir: str, static_path: str) -> None:
-    click.echo("Starting mockdown...")
     app = create_app(static_dir=static_dir,
                      static_path=static_path)
 

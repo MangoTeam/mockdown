@@ -21,22 +21,24 @@ async def synthesize(request: Request) -> JSONResponse:
     request_json = await request.json()
 
     options = request_json.pop('options', {})
-
+    timeout = int(request_json['timeout'])
     # Kind of a hack, we rewrite the JSON back as a string, as that's whast
     # the cli.run interface expected (it expects a TextIO it can call json.load on)
     req_io = io.StringIO()
     json.dump(request_json, req_io)
     req_io.seek(0)
 
-    result = run_mockdown(req_io, options)
-    return JSONResponse(result)
+    result = run_mockdown(req_io, options, timeout=timeout)
+    if result:
+        return JSONResponse(result)
+    else:
+        raise Exception('timeout')
 
 
 def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) -> Starlette:
     app = Starlette(debug=True)
     app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'],
                        allow_credentials=True)
-
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
     app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
 

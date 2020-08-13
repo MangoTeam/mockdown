@@ -11,6 +11,8 @@ from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
 from mockdown.typing import Tuple4
 
+import stopit
+
 
 class MockdownOptions(TypedDict, total=False):
     numeric_type: Literal["N", "Z", "Q", "R"]
@@ -29,7 +31,7 @@ class MockdownResults(TypedDict):
     constraints: List[Dict[str, str]]
     axioms: List[str]
 
-
+@stopit.threading_timeoutable(default=None, timeout_param="timeout")
 def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
     """
     This command's guts are pulled out here so they can be called from Python
@@ -37,9 +39,6 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
 
     It is in its own file to prevent import cycles between cli and app!
     """
-
-    # print('options:')
-    # print(options)
     debug = options.get('debug', False)
 
     input_data = json.load(input_io)
