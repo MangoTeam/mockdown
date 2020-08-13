@@ -23,26 +23,13 @@ def to_int(x: NT) -> int:
         return int(x)
 
 
-def to_frac(x: Union[NT, Fraction]) -> Fraction:
+def to_frac(x: Union[sym.Rational, Fraction]) -> Fraction:
     if isinstance(x, Fraction):
         return x
     elif isinstance(x, sym.Rational):
-        return Fraction(x.numerator(), x.denominator())
-    elif isinstance(x, sym.Expr):
-        # todo: this may be problematic, especially the second clause.
-        return Fraction(float(x.evalf()))
+        return Fraction(x.p, x.q)
     else:
-        print('error, unknown type:')
-        print(type(x))
-        print(x)
-        return Fraction(x)
-
-
-def to_rat(x: NT) -> sym.Rational:
-    if isinstance(x, sym.Rational):
-        return x  # todo: this case is unnecessary, sym.Rational's constructor already checks.
-    else:
-        return sym.Rational(x)
+        unreachable(x)
 
 
 def round_down(x: NT, places: int = 5) -> Fraction:

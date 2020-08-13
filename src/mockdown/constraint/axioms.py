@@ -7,7 +7,7 @@ from mockdown.types import NT
 
 
 def make_axioms(views: List[IView[NT]]) -> List[sym.Expr]:
-    axioms = []
+    axioms: List[sym.Expr] = []
     for view in views:
         pass
     return axioms

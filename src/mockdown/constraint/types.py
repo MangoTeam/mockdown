@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from enum import Enum
-from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar
+from enum import Enum, EnumMeta
+from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar, FrozenSet
 
 import sympy as sym
 
@@ -27,7 +27,21 @@ def priority_to_str(p: Priority) -> str:
     return str(list(p))
 
 
-class ConstraintKind(Enum):
+class ConstraintKindMeta(EnumMeta):
+    """
+    This metaclass just serves to inform mypy of the class attributes on
+    ConstraintKind we assign just below the class definition.
+    It doesn't do anything at runtime.
+    """
+    constant_forms: FrozenSet[ConstraintKind]
+    add_only_forms: FrozenSet[ConstraintKind]
+    mul_only_forms: FrozenSet[ConstraintKind]
+    general_forms: FrozenSet[ConstraintKind]
+    position_kinds: FrozenSet[ConstraintKind]
+    size_kinds: FrozenSet[ConstraintKind]
+
+
+class ConstraintKind(Enum, metaclass=ConstraintKindMeta):
     _ignore_ = ['constant_forms',
                 'add_only_forms',
                 'mul_only_forms',

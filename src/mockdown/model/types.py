@@ -91,10 +91,6 @@ class IView(Protocol[NT]):
         return self.rect.center_y
 
     @property
-    def size(self) -> ISize[NT]:
-        return self.rect.size
-
-    @property
     @abstractmethod
     def left_edge(self) -> IEdge[NT]: ...
 
