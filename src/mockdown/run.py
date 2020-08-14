@@ -9,7 +9,7 @@ from mockdown.learning.robust import RobustLearning
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
-from mockdown.typing import Tuple4
+from mockdown.types import Tuple4
 
 import stopit
 
@@ -66,7 +66,7 @@ def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
     }[options.get('learning_method', 'simple')]
 
     pruner_factory = {
-        'none': lambda x, y, ua: (lambda cns: cns),
+        'none': lambda x, y, ua: (lambda cns: (cns, None, None)),
         'baseline': BlackBoxPruner,
         'hierarchical': HierarchicalPruner,
         'margins': MarginPruner,

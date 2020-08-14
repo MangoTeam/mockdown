@@ -2,15 +2,15 @@ import math
 import operator
 from collections import defaultdict
 from dataclasses import replace
-from typing import Any, DefaultDict, Dict, List, Optional, Sequence
+from typing import DefaultDict, Dict, List, Optional, Sequence
 
 import sympy as sym
 
 from mockdown.constraint import ConstraintKind, IConstraint
 from mockdown.constraint.constraint import ConstantConstraint, LinearConstraint
-from mockdown.constraint.typing import IComparisonOp
 from mockdown.learning.errors import ConstraintFalsified
-from mockdown.learning.typing import IConstraintLearning, ConstraintCandidate
+from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
+from mockdown.learning.util import widen_bound
 from mockdown.model import IView
 
 Kind = ConstraintKind
@@ -32,7 +32,7 @@ class SimpleLearning(IConstraintLearning):
                  tolerance: float = DEFAULT_TOLERANCE,
                  max_denominator: int = MAX_DENOMINATOR):
         self._templates = templates
-        self._samples = samples
+        self._examples = samples
         self._tolerance = tolerance
         self._max_denominator = max_denominator
 
@@ -42,19 +42,7 @@ class SimpleLearning(IConstraintLearning):
         sample_counts: DefaultDict[IConstraint, int] = defaultdict(lambda: 0)
         falsified: DefaultDict[IConstraint, bool] = defaultdict(lambda: False)
 
-        def widen_bound(op: IComparisonOp[Any], old: sym.Number, new: sym.Number) -> sym.Number:
-            if op == operator.le:
-                mx = sym.Max(old, new)  # type: ignore
-                assert isinstance(mx, sym.Number)
-                return mx
-            elif op == operator.ge:
-                mn = sym.Min(old, new)  # type: ignore
-                assert isinstance(mn, sym.Number)
-                return mn
-            else:
-                raise Exception("unsupported operator")
-
-        for i, sample in enumerate(self._samples):
+        for i, sample in enumerate(self._examples):
             for template in self._templates:
                 if falsified[template]:
                     continue

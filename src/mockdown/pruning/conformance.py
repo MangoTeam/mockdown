@@ -1,23 +1,15 @@
-from typing import List, Tuple, cast, Any, Dict
-from z3 import z3 #type: ignore
+from dataclasses import dataclass
+from fractions import Fraction
+from typing import List, Tuple, Any
 
 import sympy as sym
-
-from fractions import Fraction
-
-from math import floor, ceil
-
-from dataclasses import dataclass
-from .typing import ISizeBounds
-from mockdown.model import IAnchor, IView
-from mockdown.typing import NT, to_int, to_frac, round_frac, round_up, round_down
-
-from collections import defaultdict
-
-from mockdown.model.primitives import Rect
+from z3 import z3  # type: ignore
 
 from mockdown.integration import anchor_id_to_z3_var
-
+from mockdown.model import IAnchor, IView
+from mockdown.model.primitives import Rect
+from mockdown.types import NT, to_frac, round_frac, round_up, round_down
+from .types import ISizeBounds
 
 
 @dataclass(frozen=True)

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from enum import Enum
-from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar
+from enum import Enum, EnumMeta
+from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar, FrozenSet
 
 import sympy as sym
 
@@ -22,11 +22,26 @@ PRIORITY_STRONG: Priority = (1, 0, 0)
 PRIORITY_MEDIUM: Priority = (0, 1, 0)
 PRIORITY_WEAK: Priority = (0, 0, 1)
 
-def prio_to_json(p: Priority) -> str:
+
+def priority_to_str(p: Priority) -> str:
     return str(list(p))
 
 
-class ConstraintKind(Enum):
+class ConstraintKindMeta(EnumMeta):
+    """
+    This metaclass just serves to inform mypy of the class attributes on
+    ConstraintKind we assign just below the class definition.
+    It doesn't do anything at runtime.
+    """
+    constant_forms: FrozenSet[ConstraintKind]
+    add_only_forms: FrozenSet[ConstraintKind]
+    mul_only_forms: FrozenSet[ConstraintKind]
+    general_forms: FrozenSet[ConstraintKind]
+    position_kinds: FrozenSet[ConstraintKind]
+    size_kinds: FrozenSet[ConstraintKind]
+
+
+class ConstraintKind(Enum, metaclass=ConstraintKindMeta):
     _ignore_ = ['constant_forms',
                 'add_only_forms',
                 'mul_only_forms',
@@ -147,6 +162,11 @@ class IConstraint:
     @property
     def resolves_ambiguity(self) -> bool:
         return (not self.is_required) and self.kind == ConstraintKind.SIZE_CONSTANT
+
+    @abstractmethod
+    def subst(self, a=None, b=None, sample_count=1) -> IConstraint:
+        """Fill a template by substituting in the provided values."""
+        ...
 
     def to_expr(self) -> sym.Expr: ...
 

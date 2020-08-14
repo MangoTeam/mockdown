@@ -3,7 +3,7 @@ from typing import Protocol, Collection, Sequence, Set
 
 from ..constraint import IConstraint
 from ..model import IView
-from ..typing import NT
+from ..types import NT
 
 
 class IConstraintInstantiator(Protocol[NT]):

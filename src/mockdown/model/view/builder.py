@@ -10,10 +10,10 @@ from typing import Optional, Protocol, Sequence, cast, Type, Tuple, List
 import sympy as sym
 
 from mockdown.model.primitives import IRect, ViewName, Rect
-from mockdown.model.typing import IView
-from mockdown.model.view.typing import NumberConvertible as NumConv
+from mockdown.model.types import IView
+from mockdown.model.view.types import NumberConvertible as NumConv
 from mockdown.model.view.view import View
-from mockdown.typing import NT
+from mockdown.types import NT
 
 
 # This is a set of types that sympy.Number's constructor will accept.

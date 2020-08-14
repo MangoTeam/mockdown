@@ -1,25 +1,20 @@
+import operator
+from dataclasses import replace
+from fractions import Fraction
 from typing import Callable, List, TypedDict, Optional, Protocol, Dict, Tuple, Iterable, Any, cast, Sequence, Set
 
-from fractions import Fraction
-
-from ..typing import NT
-from ..integration import anchor_id_to_z3_var, constraint_to_z3_expr
-
-from .util import anchor_equiv
-
-from z3 import z3  # type: ignore
-
-from dataclasses import fields, dataclass, replace
-
-import operator
-
 from more_itertools import first_true
+from z3 import z3  # type: ignore
 
 import sys
 
-from mockdown.model import IView
 from mockdown.constraint import IConstraint, ConstraintKind
-from mockdown.constraint.typing import PRIORITY_STRONG
+from mockdown.constraint.types import PRIORITY_STRONG
+from mockdown.integration import anchor_id_to_z3_var, constraint_to_z3_expr
+from mockdown.model import IView
+from mockdown.types import NT
+from .util import anchor_equiv
+
 
 class ISizeBounds(TypedDict, total=False):
     min_w: Optional[Fraction]
@@ -32,7 +27,6 @@ class ISizeBounds(TypedDict, total=False):
     max_y: Optional[Fraction]
 
 def validate_bounds(bounds: ISizeBounds, view: IView[NT]) -> bool:
-
 
     def get(fld: str, default: int) -> Fraction:
         return bounds.get(fld, Fraction(default)) or Fraction(default)
@@ -206,18 +200,18 @@ class IPruningMethod(Protocol):
                 solver.assert_and_track(c_y == (t + b)/2, f'{box.name}-cy-{str(confIdx)}')
 
                 for idx, anchor in enumerate(box.anchors):
-                    solver.assert_and_track(anchor_id_to_z3_var(anchor.id, confIdx) >= 0, f'{box.name}-pos-{str(confIdx)}-{str(idx)}') 
+                    solver.assert_and_track(anchor_id_to_z3_var(anchor.id, confIdx) >= 0, f'{box.name}-pos-{str(confIdx)}-{str(idx)}')
             else:
                 if x_dim:
                     solver.add(widthAx)
                     solver.add(c_x == (l + r)/2) 
                     for anchor in box.x_anchors:
-                        solver.add(anchor_id_to_z3_var(anchor.id, confIdx) >= 0) 
+                        solver.add(anchor_id_to_z3_var(anchor.id, confIdx) >= 0)
                 else:
                     solver.add(heightAx)
                     solver.add(c_y == (t + b)/2)
                     for anchor in box.y_anchors:
-                        solver.add(anchor_id_to_z3_var(anchor.id, confIdx) >= 0) 
+                        solver.add(anchor_id_to_z3_var(anchor.id, confIdx) >= 0)
 
     def filter_constraints(self, constraints: List[IConstraint], elim_uneq: bool = True) -> List[IConstraint]:
         constraints = [c for c in constraints if c.kind != ConstraintKind.SIZE_ASPECT_RATIO]

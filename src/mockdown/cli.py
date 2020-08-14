@@ -9,7 +9,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from mockdown.app import create_app
 from mockdown.run import run as run_mockdown, MockdownResults
-from mockdown.typing import Tuple4
+from mockdown.types import Tuple4
 
 
 @click.group()

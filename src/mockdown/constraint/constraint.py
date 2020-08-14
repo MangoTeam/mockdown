@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import operator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, Optional, final
 
-from mockdown.constraint.typing import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority, prio_to_json
 import sympy as sym
 
+from mockdown.constraint.types import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority, \
+    priority_to_str
 from mockdown.model import IAnchorID
 
 
@@ -38,6 +39,12 @@ class ConstantConstraint(IConstraint):
     sample_count: int = 0
     is_falsified: bool = False
 
+    def subst(self, a=None, b=None, sample_count=1) -> IConstraint:
+        assert self.is_template
+        assert sample_count != 0
+        assert a is None or a == 0
+        return replace(self, b=b, sample_count=sample_count)
+
     def __repr__(self) -> str:
         b = str(self.b) if self.sample_count > 0 else "_"
         return f"{self.y_id} {op_to_str(self.op)} {self.b}"
@@ -51,7 +58,7 @@ class ConstantConstraint(IConstraint):
                 operator.ge: '≥'
             }[self.op],
             'b': str(self.b),
-            'strength': prio_to_json(self.priority),
+            'strength': priority_to_str(self.priority),
             'kind': self.kind.value
         }
 
@@ -77,10 +84,21 @@ class LinearConstraint(IConstraint):
     sample_count: int = 0
     is_falsified: bool = False
 
+    def subst(self, a=None, b=None, sample_count=1) -> IConstraint:
+        assert self.is_template
+        assert sample_count != 0
+
+        if a is None:
+            a = self.a
+        if b is None:
+            b = self.b
+
+        return replace(self, a=a, b=b, sample_count=sample_count)
+
     def __repr__(self) -> str:
         a = str(self.a) if self.sample_count > 0 else "_"
         b = str(self.b) if self.sample_count > 0 else "_"
-        return f"{self.y_id} {op_to_str(self.op)} {a} * {self.x_id} + {b}"
+        return f"{self.y_id} {op_to_str(self.op)} {a} * {self.x_id}{'' if self.b == 0 else f'+ {b}'}"
 
     def to_dict(self) -> Dict[str, str]:
         return {
@@ -93,7 +111,7 @@ class LinearConstraint(IConstraint):
             'a': str(self.a),
             'x': str(self.x_id),
             'b': str(self.b),
-            'strength': prio_to_json(self.priority),
+            'strength': priority_to_str(self.priority),
             'kind': self.kind.value
         }
 

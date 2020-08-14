@@ -3,7 +3,7 @@ from typing import Any, Dict, Protocol, TextIO, Type
 
 from mockdown.model import IView
 from mockdown.model.view import ViewBuilder
-from mockdown.typing import NT
+from mockdown.types import NT
 
 
 class IViewLoader(Protocol[NT]):

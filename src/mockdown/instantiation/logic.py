@@ -8,7 +8,7 @@ from ..constraint import ConstraintKind
 from ..constraint.factory import ConstraintFactory
 from ..model import Attribute, IView, IAnchor, AnchorID
 from ..constraint import *
-from ..typing import NT
+from ..types import NT
 
 
 def valid_constraints(root: IView[NT], visibilities: List[Tuple[IAnchor[NT], IAnchor[NT]]], debug: bool = False) \

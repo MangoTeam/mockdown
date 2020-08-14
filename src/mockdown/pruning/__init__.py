@@ -1,5 +1,5 @@
 from .blackbox import HierarchicalPruner, BlackBoxPruner
-from .typing import ISizeBounds, IPruningMethod, PruningMethodFactory, bounds_from_json, MarginPruner, DynamicPruner
+from .types import ISizeBounds, IPruningMethod, PruningMethodFactory, bounds_from_json, MarginPruner, DynamicPruner
 
 __all__ = [
     'IPruningMethod',

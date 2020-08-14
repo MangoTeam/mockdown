@@ -9,6 +9,7 @@ mypy="*"
 pylint = "*"
 pytest = "*"
 hypothesis = "*"
+ipympl = "*"
 
 [packages]
 click = "*"
@@ -29,6 +30,9 @@ jinja2 = "*"
 sympy = "*"
 treelib = "*"
 stopit = "*"
+numpy = "*"
+pymc3 = "*"
+theano = "*"
 
 [requires]
 python_version = "3.8"

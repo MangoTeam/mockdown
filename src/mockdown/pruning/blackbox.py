@@ -1,36 +1,24 @@
-from typing import Dict, List, AbstractSet, Set, Tuple, Optional, Collection, Any, cast, Generic, Protocol, Sequence, Iterator, FrozenSet
-
-from enum import Enum
-
-from dataclasses import asdict, replace
-
-import sympy as sym 
-
 import operator
-
-from mockdown.constraint.typing import PRIORITY_STRONG
-from itertools import chain
-from more_itertools import first_true
-
-import kiwisolver  # type: ignore
-import z3  # type: ignore
-import json
-
-from math import floor, ceil
-
+from dataclasses import replace
+from enum import Enum
 from fractions import Fraction
+from typing import Dict, List, Set, Tuple, Optional, Any, Generic, Sequence, Iterator, FrozenSet
 
-from .conformance import Conformance, confs_to_bounds, conformance_range, add_conf_dims, from_rect, to_rect, conservative_round, conf_zip
-from .typing import IPruningMethod, ISizeBounds
-from .util import anchor_equiv, short_str
-from ..constraint import IConstraint, ConstraintKind, check_against_view
+import sympy as sym
+import z3  # type: ignore
+
+from mockdown.constraint import IConstraint, ConstraintKind
 from mockdown.constraint.constraint import ConstantConstraint
-from mockdown.model import IAnchorID
-from ..integration import constraint_to_z3_expr, anchor_id_to_z3_var, constraint_to_kiwi, add_linear_axioms, load_view_from_model, anchor_to_kv, kiwi_lookup, make_kiwi_env, evaluate_constraints, extract_model_valuations, add_linear_containment
-from ..model import IView, IAnchor
-from ..typing import unreachable, NT, to_int, to_frac, to_rat, round_down, round_up, round_frac
-
+from mockdown.constraint.types import PRIORITY_STRONG
+from mockdown.integration import constraint_to_z3_expr, anchor_id_to_z3_var, evaluate_constraints, \
+    extract_model_valuations
+from mockdown.model import IView, IAnchor
 from mockdown.model.primitives import h_attrs, v_attrs, Attribute
+from mockdown.pruning.conformance import Conformance, confs_to_bounds, conformance_range, add_conf_dims, to_rect, \
+    conf_zip
+from mockdown.pruning.types import IPruningMethod, ISizeBounds
+from mockdown.pruning.util import short_str
+from mockdown.types import unreachable, NT, to_frac
 
 
 def is_x_constr(c: IConstraint) -> bool:

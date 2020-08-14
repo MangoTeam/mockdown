@@ -1,19 +1,12 @@
-from z3 import z3  # type: ignore
-
-import operator
-
-from typing import Tuple, Dict, Iterable
-
-from ..constraint import IConstraint
-from ..model import IAnchorID
+from typing import Dict, Iterable
 
 import sympy as sym
+from z3 import z3  # type: ignore
 
+from mockdown.model.types import IAnchorID, IView
 from mockdown.model.view.builder import IViewBuilder, ViewBuilder as V
-from mockdown.model.primitives import Rect
-
-from mockdown.model.typing import IAnchor, IAnchorID, IEdge, IView
-from mockdown.typing import NT
+from mockdown.types import NT
+from ..constraint import IConstraint
 
 
 def anchor_id_to_z3_var(anchor_id: IAnchorID, suffix: int) -> z3.Var:
