@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from fractions import Fraction
-from math import floor, ceil
 from typing import NoReturn, Tuple, TypeVar, Union
 
 import sympy as sym
@@ -13,37 +12,6 @@ Tuple4 = Tuple[_ElT, _ElT, _ElT, _ElT]
 
 # (NT = Numeric Type)
 NT = TypeVar('NT', bound=sym.Number)
-
-
-def to_int(x: NT) -> int:
-    if isinstance(x, sym.Rational):
-        num, denom = x.as_numer_denom()
-        return round(num / denom)
-    else:
-        return int(x)
-
-
-def to_frac(x: Union[sym.Rational, Fraction]) -> Fraction:
-    if isinstance(x, Fraction):
-        return x
-    elif isinstance(x, sym.Rational):
-        return Fraction(x.p, x.q)
-    elif (isinstance(x, sym.Expr)):
-        return Fraction(float(x.evalf()))
-    else:
-        unreachable(x)
-
-
-def round_down(x: NT, places: int = 5) -> Fraction:
-    return Fraction(floor(x * (10 ** places)), 10 ** places)
-
-
-def round_up(x: NT, places: int = 5) -> Fraction:
-    return Fraction(ceil(x * (10 ** places)), 10 ** places)
-
-
-def round_frac(x: NT, places: int = 5) -> Fraction:
-    return Fraction(round(x * (10 ** places)), 10 ** places)
 
 
 def unreachable(x: NoReturn) -> NoReturn:

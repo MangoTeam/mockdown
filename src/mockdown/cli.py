@@ -46,19 +46,26 @@ def cli() -> None:
               show_default=True,
               metavar="MIN_W MIN_H MAX_W MAX_H",
               help="Bounds within which to do pruning. Use - for unspecified.")
+@click.option('-to',
+              '--timeout',
+              type=Optional[int],
+              default=None,
+              show_default=True,
+              help="Timeout after which synthesis will be aborted.")
 def run(input: TextIO,
         output: TextIO,
         numeric_type: Literal["N", "Z", "Q", "R"],
         learning_method: Literal['simple', 'robust'],
         pruning_method: Literal['none', 'baseline', 'hierarchical'],
-        pruning_bounds: Tuple4[str]) -> MockdownResults:
+        pruning_bounds: Tuple4[str],
+        timeout: Optional[int]) -> MockdownResults:
     # Note, this return value is intercepted by `process_result` above!
     results = run_mockdown(input, options=dict(
         numeric_type=numeric_type,
         learning_method=learning_method,
         pruning_method=pruning_method,
         pruning_bounds=tuple((int(s) if s.isnumeric() else None for s in pruning_bounds))
-    ))
+    ), timeout=timeout)
 
     click.echo(json.dumps(
         results,

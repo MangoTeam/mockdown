@@ -8,7 +8,8 @@ from z3 import z3  # type: ignore
 from mockdown.integration import anchor_id_to_z3_var
 from mockdown.model import IAnchor, IView
 from mockdown.model.primitives import Rect
-from mockdown.types import NT, to_frac, round_frac, round_up, round_down
+from mockdown.types import NT
+from .util import to_frac, round_down, round_up, round_frac
 from .types import ISizeBounds
 
 

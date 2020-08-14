@@ -12,23 +12,18 @@ from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 from mockdown.run import run as run_mockdown
 
 
-# def avg_children(v: Any) -> float:
-#     return sum([len(box.children) for box in v if len(box.children) > 0])/len([x for x in v if len(x.children) > 0])
-
-
-
 async def synthesize(request: Request) -> JSONResponse:
     request_json = await request.json()
 
     options = request_json.pop('options', {})
-    timeout = int(request_json['timeout'])
+    timeout = request_json.pop('timeout', None)
     # Kind of a hack, we rewrite the JSON back as a string, as that's whast
     # the cli.run interface expected (it expects a TextIO it can call json.load on)
     req_io = io.StringIO()
     json.dump(request_json, req_io)
     req_io.seek(0)
 
-    result = run_mockdown(req_io, options, timeout=timeout)
+    result = run_mockdown(req_io, options=options, timeout=timeout)
     if result:
         return JSONResponse(result)
     else:

@@ -39,7 +39,10 @@ class ConstantConstraint(IConstraint):
     sample_count: int = 0
     is_falsified: bool = False
 
-    def subst(self, a=None, b=None, sample_count=1) -> IConstraint:
+    def subst(self,
+              a: Optional[sym.Rational] = None,
+              b: Optional[sym.Rational] = None,
+              sample_count: int = 1) -> IConstraint:
         assert self.is_template
         assert sample_count != 0
         assert a is None or a == 0
@@ -84,7 +87,10 @@ class LinearConstraint(IConstraint):
     sample_count: int = 0
     is_falsified: bool = False
 
-    def subst(self, a=None, b=None, sample_count=1) -> IConstraint:
+    def subst(self,
+              a: Optional[sym.Rational] = None,
+              b: Optional[sym.Rational] = None,
+              sample_count:int = 1) -> IConstraint:
         assert self.is_template
         assert sample_count != 0
 

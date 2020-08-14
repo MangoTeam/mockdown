@@ -164,7 +164,10 @@ class IConstraint:
         return (not self.is_required) and self.kind == ConstraintKind.SIZE_CONSTANT
 
     @abstractmethod
-    def subst(self, a=None, b=None, sample_count=1) -> IConstraint:
+    def subst(self,
+              a: Optional[sym.Rational] = None,
+              b: Optional[sym.Rational] = None,
+              sample_count: int = 1) -> IConstraint:
         """Fill a template by substituting in the provided values."""
         ...
 

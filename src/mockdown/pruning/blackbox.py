@@ -17,8 +17,8 @@ from mockdown.model.primitives import h_attrs, v_attrs, Attribute
 from mockdown.pruning.conformance import Conformance, confs_to_bounds, conformance_range, add_conf_dims, to_rect, \
     conf_zip
 from mockdown.pruning.types import IPruningMethod, ISizeBounds
-from mockdown.pruning.util import short_str
-from mockdown.types import unreachable, NT, to_frac
+from mockdown.pruning.util import short_str, to_frac
+from mockdown.types import unreachable, NT
 
 
 def is_x_constr(c: IConstraint) -> bool:

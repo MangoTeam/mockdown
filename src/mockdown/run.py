@@ -31,8 +31,9 @@ class MockdownResults(TypedDict):
     constraints: List[Dict[str, str]]
     axioms: List[str]
 
+
 @stopit.threading_timeoutable(default=None, timeout_param="timeout")
-def run(input_io: TextIO, options: MockdownOptions) -> MockdownResults:
+def run(input_io: TextIO, options: MockdownOptions, *, timeout: Optional[int]) -> Optional[MockdownResults]:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
