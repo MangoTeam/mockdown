@@ -1,6 +1,6 @@
 from functools import lru_cache
 from math import ceil, floor, isclose
-from typing import List, SupportsFloat
+from typing import List, SupportsFloat, cast
 
 from sympy import Integer, Rational, Number
 
@@ -20,8 +20,10 @@ def ext_farey(n: int = 100) -> List[Rational]:
     Farey sequence with its reversed reciprocals appended.
     Extends the sequence from 0-1 to 0-n.
     """
+    # todo: fix the type error here by writing better stubs...
+
     f = farey(n)
-    return f + [1 / q for q in reversed(f[1:-1])]
+    return f + [Rational(a.q, a.p) for a in reversed(f[1:-1])]
 
 
 @lru_cache
