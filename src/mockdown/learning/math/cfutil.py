@@ -34,7 +34,9 @@ def cf_to_float(cf: ContinuedFraction) -> float:
 
 
 def cf_to_rational(cf: ContinuedFraction) -> sym.Rational:
-    return sym.continued_fraction_reduce(cf)
+    q = sym.continued_fraction_reduce(cf)
+    assert isinstance(q, sym.Rational)
+    return q
 
 
 def cf_abs_err(cf: ContinuedFraction, n: float) -> float:

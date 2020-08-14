@@ -1,7 +1,21 @@
 from __future__ import annotations
 
 from fractions import Fraction
-from typing import TypeVar, Union, SupportsAbs, SupportsFloat, Tuple, SupportsRound, SupportsInt, overload
+from typing import TypeVar, Union, SupportsAbs, SupportsFloat, Tuple, SupportsRound, SupportsInt, overload, List
+
+from .ntheory import continued_fraction
+
+# noinspection PyUnresolvedReferences
+__all__ = [
+    'Basic',
+    'Atom',
+    'Number',
+    'Float',
+    'Rational',
+    'Integer',
+    'continued_fraction',
+    'continued_fraction_reduce'
+]
 
 """
 Some type stubs to make mypy happy when dealing with sympy.
@@ -9,9 +23,12 @@ Warning: these may have subtle problems, after all, we wrote them...
 """
 
 N = TypeVar('N', bound='Number')
+# N_co = TypeVar('N_co', bound='Number', covariant=True)
+# N_contra = TypeVar('N_contra', bound='Number', contravariant=True)
 
 # Type of anything that is compatible with Number's operators.
 _AnyNum = Union['Number', int, float]
+_AnyNum_contra = TypeVar('_AnyNum_contra', bound=_AnyNum, contravariant=True)
 
 # Type of things convertible to a Number.
 _ToNum = Union['Number', str, int, float, Fraction]
@@ -36,7 +53,6 @@ class Number(AtomicExpr, SupportsAbs['Number'], SupportsInt, SupportsFloat, Supp
 
     def __sub__(self: N, other: _AnyNum) -> N: ...
 
-    # todo: this is incorrect for int/int -> rat
     def __truediv__(self: N, other: _AnyNum) -> N: ...
 
     def __abs__(self: N) -> N: ...
@@ -66,13 +82,25 @@ class Rational(Number):
     def __init__(self, x: int): ...
 
     @overload
-    def __init__(self, x: Integer): ...
+    def __init__(self, x: Number): ...
 
     @overload
     def __init__(self, p: int, q: int): ...
 
     @overload
     def __init__(self, p: Integer, q: Integer): ...
+
+    @overload
+    def __truediv__(self, other: int) -> Rational: ...
+
+    @overload
+    def __truediv__(self, other: Rational) -> Rational: ...
+
+    @overload
+    def __rtruediv__(self, other: int) -> Rational: ...
+
+    @overload
+    def __rtruediv__(self, other: Rational) -> Rational: ...
 
     @property
     def p(self) -> Integer: ...
@@ -88,3 +116,4 @@ class Rational(Number):
 
 class Integer(Rational): ...
 
+def continued_fraction_reduce(cf: List[N]) -> Union[Rational, Float]: ...
