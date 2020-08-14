@@ -1,14 +1,8 @@
-from math import sqrt, isclose
-from pprint import pprint
 from typing import List, TypeVar, Optional, Tuple
 
-import numpy as np
-from scipy import special
-from scipy import stats
-from sympy import Rational, Number, continued_fraction  # type: ignore
+from sympy import Rational, Number, continued_fraction
 
 from mockdown.constraint import ConstraintKind, IConstraint
-from mockdown.learning.math.sequences import q_ball, ext_farey
 from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
 
@@ -44,103 +38,104 @@ class RobustLearningTask:
         self._template = template
         self._examples = samples
 
-    def learn_multipliers(self, xs: np.ndarray, ys: np.ndarray) -> List[Tuple[Rational, float]]:
-        print(f"\nLearning {self._template}")
-
-        samples = (ys / xs).astype(np.float)
-        print(f"  samples: {ys} / {xs} = {samples}")
-        mean, median, std = np.mean(samples), np.median(samples), np.std(samples)
-        print(f"  mean:    {mean}")
-        print(f"  median:  {median}")
-        print(f"  std:     {std}")
-
-        cov_mat = np.cov(xs, ys, bias=False)
-        print(cov_mat)
-        eigvals = np.linalg.eigvals(cov_mat)
-        print(eigvals)
-        d_score = max(eigvals) / sum(eigvals)  # proportion of variance explained by 1 dimension.
-
-        if np.min(xs) == np.max(xs):
-            m, b, r, p = np.inf, np.nan, np.nan, np.nan
-        else:
-            m, b, r, p, _, = stats.linregress(xs, ys)
-        p_score = (1 - p) if (m > 0) and (r is not np.nan) else 0
-
-        # todo: how should candidates be picked? Intersection doesn't seem to cut it wiht a good bit of noise.
-        balls = [set(q_ball(s, rel_tol=REL_TOL)) for s in samples]
-        candidates = np.array(sorted(set.union(*balls)))
-        # min_s = np.min(samples)
-        # max_s = np.max(samples)
-        # candidates = np.array(
-        #     list(sorted(filter(lambda q: min_s < q < max_s, ext_farey(RESOLUTION)))),
-        #     dtype=np.object
-        # )
-
-        irrs = np.fromiter((irrationality(c) for c in candidates), dtype=np.int)
-        max_irr = np.max(irrs)
-        min_irr = np.min(irrs)
-        n = max_irr - min_irr
-        print(min_irr, n, max_irr)
-
-        if max_irr == min_irr:
-            # Handle the degenerate noiseless case.
-            print("degenerate")
-            rat_scores = stats.rv_discrete(values=([0], [1])).cdf(irrs - min_irr)
-        else:
-            alpha = 1 + EXPECTED_STEPS
-            beta = 1 + (RESOLUTION - EXPECTED_STEPS)
-            # todo: volatility probably comes from value of n changing depending on candidates.
-            # This distribution should depend on the _samples_, not the _candidates_!
-            # But it should be affected by the rationality of the samples... but via approximation? How?
-            rat_scores = stats.betabinom(RESOLUTION, alpha, beta).sf(irrs)  # previously: irrs - min_irrs
-
-        if std != 0:
-            # TODo: Main cause of volatility is error score seeming to depend on the number of candidates...
-            err_scores = 1 - np.abs(special.erf((candidates.astype(np.float) - mean) / (sqrt(2) * std)))
-        else:
-            err_scores = (candidates == mean).astype(np.float)
-
-        # print("Scores:")
-        # print(f"  Dim:     {d_score}")
-        # print(f"  P:       {p_score}")
-        # print(f"  Rats:    {stats.describe(rat_scores)}")
-        # print(f"  Errs:    {stats.describe(err_scores)}")
-        # print(f"  # Cands: {len(candidates)}")
-        scores = d_score * p_score * rat_scores * err_scores
-
-        return list(zip(candidates, scores))
-
+    # def learn_multipliers(self, xs: np.ndarray, ys: np.ndarray) -> List[Tuple[Rational, float]]:
+    #     print(f"\nLearning {self._template}")
+    #
+    #     samples = (ys / xs).astype(np.float)
+    #     print(f"  samples: {ys} / {xs} = {samples}")
+    #     mean, median, std = np.mean(samples), np.median(samples), np.std(samples)
+    #     print(f"  mean:    {mean}")
+    #     print(f"  median:  {median}")
+    #     print(f"  std:     {std}")
+    #
+    #     cov_mat = np.cov(xs, ys, bias=False)
+    #     print(cov_mat)
+    #     eigvals = np.linalg.eigvals(cov_mat)
+    #     print(eigvals)
+    #     d_score = max(eigvals) / sum(eigvals)  # proportion of variance explained by 1 dimension.
+    #
+    #     if np.min(xs) == np.max(xs):
+    #         m, b, r, p = np.inf, np.nan, np.nan, np.nan
+    #     else:
+    #         m, b, r, p, _, = stats.linregress(xs, ys)
+    #     p_score = (1 - p) if (m > 0) and (r is not np.nan) else 0
+    #
+    #     # todo: how should candidates be picked? Intersection doesn't seem to cut it wiht a good bit of noise.
+    #     balls = [set(q_ball(s, rel_tol=REL_TOL)) for s in samples]
+    #     candidates = np.array(sorted(set.union(*balls)))
+    #     # min_s = np.min(samples)
+    #     # max_s = np.max(samples)
+    #     # candidates = np.array(
+    #     #     list(sorted(filter(lambda q: min_s < q < max_s, ext_farey(RESOLUTION)))),
+    #     #     dtype=np.object
+    #     # )
+    #
+    #     irrs = np.fromiter((irrationality(c) for c in candidates), dtype=np.int)
+    #     max_irr = np.max(irrs)
+    #     min_irr = np.min(irrs)
+    #     n = max_irr - min_irr
+    #     print(min_irr, n, max_irr)
+    #
+    #     if max_irr == min_irr:
+    #         # Handle the degenerate noiseless case.
+    #         print("degenerate")
+    #         rat_scores = stats.rv_discrete(values=([0], [1])).cdf(irrs - min_irr)
+    #     else:
+    #         alpha = 1 + EXPECTED_STEPS
+    #         beta = 1 + (RESOLUTION - EXPECTED_STEPS)
+    #         # todo: volatility probably comes from value of n changing depending on candidates.
+    #         # This distribution should depend on the _samples_, not the _candidates_!
+    #         # But it should be affected by the rationality of the samples... but via approximation? How?
+    #         rat_scores = stats.betabinom(RESOLUTION, alpha, beta).sf(irrs)  # previously: irrs - min_irrs
+    #
+    #     if std != 0:
+    #         # TODo: Main cause of volatility is error score seeming to depend on the number of candidates...
+    #         err_scores = 1 - np.abs(special.erf((candidates.astype(np.float) - mean) / (sqrt(2) * std)))
+    #     else:
+    #         err_scores = (candidates == mean).astype(np.float)
+    #
+    #     # print("Scores:")
+    #     # print(f"  Dim:     {d_score}")
+    #     # print(f"  P:       {p_score}")
+    #     # print(f"  Rats:    {stats.describe(rat_scores)}")
+    #     # print(f"  Errs:    {stats.describe(err_scores)}")
+    #     # print(f"  # Cands: {len(candidates)}")
+    #     scores = d_score * p_score * rat_scores * err_scores
+    #
+    #     return list(zip(candidates, scores))
+    #
     def learn_constraints(self) -> List[Tuple[IConstraint, int]]:
-        template = self._template
-        kind = template.kind
-        examples = self._examples
-
-        if kind.is_mul_only_form:
-            xs = np.array([
-                unopt(s.find_anchor(unopt(template.x_id))).value
-                for s in examples]
-            ).astype(np.float)
-            ys = np.array([
-                unopt(s.find_anchor(template.y_id)).value
-                for s in examples]
-            ).astype(np.float)
-
-            xs = xs + np.random.normal(0, 1 / 3, len(xs))
-            ys = ys + np.random.normal(0, 1 / 3, len(ys))
-
-            # Case where intersection does not contain 1/2!
-            # ys = np.array([51.83606911, 99.94197667, 148.70577392, 49.857942 ])
-            # xs = np.array([97.76571442, 200.41336267, 300.1858343, 99.62446605])
-
-            # Compute observed sample a-values.
-            # These might be rationals, or reals. The rest of the process is agnostic.
-            a_candidates = self.learn_multipliers(xs, ys)
-            candidates = [ConstraintCandidate(template.subst(a=a), score) for (a, score) in a_candidates if not isclose(score, 0, abs_tol=0.05)]
-            print("Candidates:")
-            pprint(candidates, indent=2)
-            return candidates
-        else:
-            return []
+        return []
+    #     template = self._template
+    #     kind = template.kind
+    #     examples = self._examples
+    #
+    #     if kind.is_mul_only_form:
+    #         xs = np.array([
+    #             unopt(s.find_anchor(unopt(template.x_id))).value
+    #             for s in examples]
+    #         ).astype(np.float)
+    #         ys = np.array([
+    #             unopt(s.find_anchor(template.y_id)).value
+    #             for s in examples]
+    #         ).astype(np.float)
+    #
+    #         xs = xs + np.random.normal(0, 1 / 3, len(xs))
+    #         ys = ys + np.random.normal(0, 1 / 3, len(ys))
+    #
+    #         # Case where intersection does not contain 1/2!
+    #         # ys = np.array([51.83606911, 99.94197667, 148.70577392, 49.857942 ])
+    #         # xs = np.array([97.76571442, 200.41336267, 300.1858343, 99.62446605])
+    #
+    #         # Compute observed sample a-values.
+    #         # These might be rationals, or reals. The rest of the process is agnostic.
+    #         a_candidates = self.learn_multipliers(xs, ys)
+    #         candidates = [ConstraintCandidate(template.subst(a=a), score) for (a, score) in a_candidates if not isclose(score, 0, abs_tol=0.05)]
+    #         print("Candidates:")
+    #         pprint(candidates, indent=2)
+    #         return candidates
+    #     else:
+    #         return []
 
     # def to_constraints(self) -> List[IConstraint]:
     #     raise NotImplementedError
@@ -174,8 +169,8 @@ class RobustLearning(IConstraintLearning):
 
         for task in tasks:
             scored_constraints = task.learn_constraints()
-            constraint_set = list(filter(lambda sc: sc.score > 0, sorted(scored_constraints, key=lambda sc: sc.score, reverse=True)))
-            constraint_sets.append(constraint_set)
+            # constraint_set = list(filter(lambda sc: sc.score > 0, sorted(scored_constraints, key=lambda sc: sc.score, reverse=True)))
+            constraint_sets.append(scored_constraints)
 
         # with Pool(1) as pool:
         #     def run_task(task: RobustLearningTask) -> List[Tuple[IConstraint, int]]:
@@ -186,38 +181,3 @@ class RobustLearning(IConstraintLearning):
         #     print(result)
 
         return constraint_sets
-
-
-if __name__ == '__main__':
-    print("hello")
-#     golden = 4.0 / 7.0
-#     perturbs = []
-#
-#     num_perturbs = 50
-#     max_depth = 20
-#     pct_noise = 0.1
-#
-#     for i in range(num_perturbs):
-#         # precision = random.randint(1, 10)
-#         noise = random.uniform(-pct_noise * golden, pct_noise * golden)
-#
-#         # perturb = float(f"{golden:.{precision}f}") + noise
-#         perturb = golden + noise
-#         perturbs.append(perturb)
-#
-#     print(*(['depth'] + perturbs), sep='\t')
-#
-#     cand_sets = [candidate_rationals(p) for p in perturbs]
-#
-#     data = [[None] * num_perturbs for _ in range(max_depth)]
-#
-#     for d in range(1, max_depth):
-#         for i, cands in enumerate(cand_sets):
-#             try:
-#                 cand = next(cand for cand in cands if cand.depth == d)
-#                 data[d][i] = cand.value
-#             except StopIteration:
-#                 continue
-#
-#     for d in range(max_depth):
-#         print(*([d] + data[d]), sep='\t')

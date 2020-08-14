@@ -2,7 +2,8 @@ import operator
 from dataclasses import replace
 from enum import Enum
 from fractions import Fraction
-from typing import Dict, List, Set, Tuple, Optional, Any, Generic, Sequence, Iterator, FrozenSet
+from typing import Dict, List, Set, Tuple, Optional, Any, Generic, Sequence, Iterator, FrozenSet, cast, Iterable, \
+    ItemsView
 
 import sympy as sym
 import z3  # type: ignore
@@ -16,7 +17,7 @@ from mockdown.model import IView, IAnchor
 from mockdown.model.primitives import h_attrs, v_attrs, Attribute
 from mockdown.pruning.conformance import Conformance, confs_to_bounds, conformance_range, add_conf_dims, to_rect, \
     conf_zip
-from mockdown.pruning.types import IPruningMethod, ISizeBounds
+from mockdown.pruning.types import ISizeBounds, BasePruningMethod
 from mockdown.pruning.util import short_str, to_frac
 from mockdown.types import unreachable, NT
 
@@ -39,7 +40,7 @@ def is_x_constr(c: IConstraint) -> bool:
 
 LogLevel = Enum('LogLevel', 'NONE ALL')
 
-class BlackBoxPruner(IPruningMethod, Generic[NT]):
+class BlackBoxPruner(BasePruningMethod, Generic[NT]):
 
     example: IView[NT]
     top_width: IAnchor[NT]
@@ -51,7 +52,8 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
 
     def __init__(self, examples: Sequence[IView[NT]], bounds: ISizeBounds, solve_unambig: bool, targets: Optional[Sequence[IView[NT]]] = None):
 
-        bounds_frac = {k: to_frac(v) if v else None for k,v in bounds.items()}
+        bounds_frac = {k: to_frac(v) if v else None
+                       for k, v in cast(ItemsView[str, Optional[Fraction]], bounds.items())}
 
         heights = [to_frac(v.height) for v in examples]
         widths = [to_frac(v.width) for v in examples]
@@ -502,11 +504,11 @@ class BlackBoxPruner(IPruningMethod, Generic[NT]):
 #     ** add child, (u', l') 
 
 
-class HierarchicalPruner(IPruningMethod):
+class HierarchicalPruner(BasePruningMethod):
 
     def __init__(self, examples: List[IView[NT]], bounds: ISizeBounds, solve_unambig: bool):
 
-        bounds_frac = {k: to_frac(v) if v else None for k,v in bounds.items()}
+        bounds_frac = {k: to_frac(v) if v else None for k, v in bounds.items()}
 
         heights = [to_frac(v.height) for v in examples]
         widths = [to_frac(v.width) for v in examples]

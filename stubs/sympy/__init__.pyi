@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numbers
 from fractions import Fraction
 from typing import TypeVar, Union, SupportsAbs, SupportsFloat, Tuple, SupportsRound, SupportsInt, overload, List
 
@@ -27,7 +28,7 @@ N = TypeVar('N', bound='Number')
 # N_contra = TypeVar('N_contra', bound='Number', contravariant=True)
 
 # Type of anything that is compatible with Number's operators.
-_AnyNum = Union['Number', int, float]
+_AnyNum = Union['Number', int, float, Fraction]
 _AnyNum_contra = TypeVar('_AnyNum_contra', bound=_AnyNum, contravariant=True)
 
 # Type of things convertible to a Number.
@@ -52,6 +53,8 @@ class Number(AtomicExpr, SupportsAbs['Number'], SupportsInt, SupportsFloat, Supp
     def __add__(self: N, other: _AnyNum) -> N: ...
 
     def __sub__(self: N, other: _AnyNum) -> N: ...
+
+    def __mul__(self: N, other: _AnyNum) -> N: ...
 
     def __truediv__(self: N, other: _AnyNum) -> N: ...
 
@@ -80,6 +83,9 @@ class Float(Number): ...
 class Rational(Number):
     @overload
     def __init__(self, x: int): ...
+
+    @overload
+    def __init__(self, x: Fraction): ...
 
     @overload
     def __init__(self, x: Number): ...

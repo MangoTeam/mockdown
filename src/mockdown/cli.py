@@ -58,7 +58,7 @@ def run(input: TextIO,
         learning_method: Literal['simple', 'robust'],
         pruning_method: Literal['none', 'baseline', 'hierarchical'],
         pruning_bounds: Tuple4[str],
-        timeout: Optional[int]) -> MockdownResults:
+        timeout: Optional[int]) -> None:
     # Note, this return value is intercepted by `process_result` above!
     results = run_mockdown(input, options=dict(
         numeric_type=numeric_type,

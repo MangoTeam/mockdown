@@ -42,12 +42,12 @@ def to_int(x: SupportsFloat, rounding: Literal['up', 'down', 'nearest'] = 'down'
         unreachable(x)
 
 
-def to_frac(x: Union[sym.Rational, Fraction]) -> Fraction:
+def to_frac(x: Union[NT, Fraction]) -> Fraction:
     if isinstance(x, Fraction):
         return x
     elif isinstance(x, sym.Rational):
-        return Fraction(x.p, x.q)
-    elif (isinstance(x, sym.Expr)):
+        return Fraction(int(x.p), int(x.q))
+    elif isinstance(x, sym.Expr):
         return Fraction(float(x.evalf()))
     else:
         unreachable(x)

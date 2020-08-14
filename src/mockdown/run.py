@@ -1,5 +1,5 @@
 import json
-from typing import TextIO, List, Dict, TypedDict, Union, Literal, Optional
+from typing import TextIO, List, Dict, TypedDict, Union, Literal, Optional, Type
 
 import sympy as sym
 
@@ -8,7 +8,7 @@ from mockdown.instantiation import VisibilityConstraintInstantiator
 from mockdown.learning.robust import RobustLearning
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
-from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
+from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner, IPruningMethod
 from mockdown.types import Tuple4
 
 import stopit
@@ -33,7 +33,7 @@ class MockdownResults(TypedDict):
 
 
 @stopit.threading_timeoutable(default=None, timeout_param="timeout")
-def run(input_io: TextIO, options: MockdownOptions, *, timeout: Optional[int]) -> Optional[MockdownResults]:
+def run(input_io: TextIO, options: MockdownOptions, timeout: Optional[int]) -> Optional[MockdownResults]:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.

@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Protocol, TextIO, Type
+from typing import Any, Dict, Protocol, TextIO, Type, Literal
 
 from mockdown.model import IView
 from mockdown.model.view import ViewBuilder
