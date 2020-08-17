@@ -10,11 +10,12 @@ import uvicorn  # type: ignore
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from mockdown.app import create_app
-from mockdown.run import run as run_mockdown, MockdownResults
+from mockdown.run import run_timeout as run_mockdown_timeout, MockdownResults
 from mockdown.types import Tuple4
 
-LOGLEVEL = os.environ.get("LOGLEVEL", logging.WARN).upper()
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARN').upper()
 logging.basicConfig(level=LOGLEVEL)
+
 
 @click.group()
 def cli() -> None:
@@ -64,7 +65,9 @@ def run(input: TextIO,
         pruning_bounds: Tuple4[str],
         timeout: Optional[int]) -> None:
     # Note, this return value is intercepted by `process_result` above!
-    results = run_mockdown(input, options=dict(
+    input_data = json.load(input)
+    input.close()
+    results = run_mockdown_timeout(input_data, options=dict(
         numeric_type=numeric_type,
         learning_method=learning_method,
         pruning_method=pruning_method,
