@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Protocol, List, Sequence, Any, Dict
+from typing import Protocol, List, Sequence, Any, Dict, Optional
 
 import sympy as sym
 
@@ -17,10 +17,9 @@ class ConstraintCandidate:
 class IConstraintLearning(Protocol):
     @abstractmethod
     def __init__(self,
-                 templates: Sequence[IConstraint],
-                 samples: Sequence[IView[sym.Number]],
-                 *args: List[Any],
-                 **kwargs: Dict[str, Any]) -> None: ...
+                 templates: List[IConstraint],
+                 samples: List[IView[sym.Number]],
+                 config: Optional[Any] = None) -> None: ...
 
     @abstractmethod
     def learn(self) -> List[List[ConstraintCandidate]]: ...

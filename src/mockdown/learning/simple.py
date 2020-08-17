@@ -1,7 +1,7 @@
 import math
 import operator
 from collections import defaultdict
-from dataclasses import replace
+from dataclasses import replace, dataclass
 from typing import DefaultDict, Dict, List, Optional, Sequence
 
 import sympy as sym
@@ -19,6 +19,12 @@ DEFAULT_TOLERANCE = 0.01  # maximum difference of 1%
 MAX_DENOMINATOR = 1000
 
 
+@dataclass(frozen=True)
+class SimpleLearningConfig():
+    tolerance: float = DEFAULT_TOLERANCE
+    max_denominator: int = MAX_DENOMINATOR
+
+
 class SimpleLearning(IConstraintLearning):
     """
     This class emulates the old learning method.
@@ -27,14 +33,17 @@ class SimpleLearning(IConstraintLearning):
     """
 
     def __init__(self,
-                 templates: Sequence[IConstraint],
-                 samples: Sequence[IView[sym.Number]],
-                 tolerance: float = DEFAULT_TOLERANCE,
-                 max_denominator: int = MAX_DENOMINATOR):
+                 templates: List[IConstraint],
+                 samples: List[IView[sym.Number]],
+                 config: Optional[SimpleLearningConfig] = None):
         self._templates = templates
         self._examples = samples
-        self._tolerance = tolerance
-        self._max_denominator = max_denominator
+
+        if not config:
+            config = SimpleLearningConfig()
+
+        self._tolerance = config.tolerance
+        self._max_denominator = config.max_denominator
 
     def learn(self) -> List[List[ConstraintCandidate]]:
         # Constants are learned as floats and then rationalized.

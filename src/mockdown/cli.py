@@ -1,4 +1,6 @@
 import json
+import logging
+import os
 import tempfile
 import webbrowser
 from typing import TextIO, Literal, Optional
@@ -11,6 +13,8 @@ from mockdown.app import create_app
 from mockdown.run import run as run_mockdown, MockdownResults
 from mockdown.types import Tuple4
 
+LOGLEVEL = os.environ.get("LOGLEVEL", logging.WARN).upper()
+logging.basicConfig(level=LOGLEVEL)
 
 @click.group()
 def cli() -> None:
@@ -28,10 +32,10 @@ def cli() -> None:
               help="Numeric type of input: number, real, rational, or integer.")
 @click.option('-lm',
               '--learning-method',
-              type=click.Choice(['simple', 'robust'], case_sensitive=False),
+              type=click.Choice(['simple', 'fancy'], case_sensitive=False),
               default='simple',
               show_default=True,
-              help="Learning method to use: simple or robust.")
+              help="Learning method to use: simple or fancy.")
 @click.option('-pm',
               '--pruning-method',
               type=click.Choice(['none', 'baseline', 'hierarchical'], case_sensitive=False),
@@ -48,14 +52,14 @@ def cli() -> None:
               help="Bounds within which to do pruning. Use - for unspecified.")
 @click.option('-to',
               '--timeout',
-              type=Optional[int],
+              type=int,
               default=None,
               show_default=True,
               help="Timeout after which synthesis will be aborted.")
 def run(input: TextIO,
         output: TextIO,
         numeric_type: Literal["N", "Z", "Q", "R"],
-        learning_method: Literal['simple', 'robust'],
+        learning_method: Literal['simple', 'fancy'],
         pruning_method: Literal['none', 'baseline', 'hierarchical'],
         pruning_bounds: Tuple4[str],
         timeout: Optional[int]) -> None:

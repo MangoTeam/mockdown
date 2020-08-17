@@ -5,6 +5,7 @@ import sympy as sym
 
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import VisibilityConstraintInstantiator
+from mockdown.learning.fancy import FancyLearning
 from mockdown.learning.robust import RobustLearning
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
@@ -17,7 +18,7 @@ import stopit
 class MockdownOptions(TypedDict, total=False):
     numeric_type: Literal["N", "Z", "Q", "R"]
 
-    learning_method: Literal['simple', 'robust']
+    learning_method: Literal['simple', 'fancy']
 
     pruning_method: Literal['none', 'baseline', 'hierarchical', 'dynamic', 'margins']
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
@@ -33,7 +34,7 @@ class MockdownResults(TypedDict):
 
 
 @stopit.threading_timeoutable(default=None, timeout_param="timeout")
-def run(input_io: TextIO, options: MockdownOptions, timeout: Optional[int]) -> Optional[MockdownResults]:
+def run(input_io: TextIO, options: MockdownOptions) -> Optional[MockdownResults]:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
@@ -63,7 +64,7 @@ def run(input_io: TextIO, options: MockdownOptions, timeout: Optional[int]) -> O
 
     learning_factory = {
         'simple': SimpleLearning,
-        'robust': RobustLearning
+        'fancy': FancyLearning
     }[options.get('learning_method', 'simple')]
 
     pruner_factory = {

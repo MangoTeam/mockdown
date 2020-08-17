@@ -50,7 +50,7 @@ class ConstantConstraint(IConstraint):
 
     def __repr__(self) -> str:
         b = str(self.b) if self.sample_count > 0 else "_"
-        return f"{self.y_id} {op_to_str(self.op)} {self.b}"
+        return f"{self.y_id} {op_to_str(self.op)} {b}"
 
     def to_dict(self) -> Dict[str, str]:
         return {

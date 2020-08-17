@@ -1,16 +1,17 @@
-from typing import Dict
-
 import numpy as np  # type: ignore
 import pymc3 as pm  # type: ignore
 import theano as th  # type: ignore
 
-from mockdown.learning.bayesian.types import BayesianLearningConfig, TINY
+from mockdown.learning.fancy.types import FancyLearningConfig, TINY
 
 # noinspection PyTypeChecker
 from mockdown.learning.math.sequences import ext_farey
 
 
-def mk_relaxed_model(config: BayesianLearningConfig) -> pm.Model:
+
+
+
+def mk_relaxed_model_linear(config: FancyLearningConfig) -> pm.Model:
     model = pm.Model()
 
     with model:
@@ -27,7 +28,22 @@ def mk_relaxed_model(config: BayesianLearningConfig) -> pm.Model:
     return model
 
 
-def mk_full_model(config: BayesianLearningConfig) -> pm.Model:
+def mk_relaxed_model_constant(config: FancyLearningConfig) -> pm.Model:
+    model = pm.Model()
+
+    with model:
+        y_data = pm.Data('y_data', np.zeros(config.sample_count))
+
+        sigma = pm.HalfCauchy('sigma', beta=(config.eps_px + TINY) / 3)
+
+        b = pm.Uniform('b', lower=config.b_min, upper=config.b_max)
+
+        y = pm.Normal('y', mu=b, sigma=sigma, observed=y_data)
+
+    return model
+
+
+def mk_full_model(config: FancyLearningConfig) -> pm.Model:
     f_r = ext_farey(config.max_denominator)
 
     a_space_np = np.array(f_r, dtype=np.object)
