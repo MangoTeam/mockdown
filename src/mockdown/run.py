@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import json
-from typing import TextIO, List, Dict, TypedDict, Union, Literal, Optional, Type
+import logging
+from typing import TextIO, List, Dict, TypedDict, Union, Literal, Optional, Type, Any
+from multiprocessing import Process, Queue
 
 import sympy as sym
 
@@ -11,7 +15,12 @@ from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner, IPruningMethod
 from mockdown.types import Tuple4
 
-import stopit
+logger = logging.getLogger(__name__)
+
+
+class MockdownInput(TypedDict):
+    examples: List[Dict[str, Any]]
+    options: MockdownOptions
 
 
 class MockdownOptions(TypedDict, total=False):
@@ -32,8 +41,24 @@ class MockdownResults(TypedDict):
     axioms: List[str]
 
 
-@stopit.threading_timeoutable(default=None, timeout_param="timeout")
-def run(input_io: TextIO, options: MockdownOptions, timeout: Optional[int]) -> Optional[MockdownResults]:
+def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
+    timeout = kwargs.pop('timeout', None)
+
+    queue = Queue()
+    kwargs.update({'result_queue': queue})
+
+    p = Process(target=run, args=args, kwargs=kwargs)
+    p.start()
+    p.join(timeout)
+    if p.is_alive():
+        p.kill()
+        logger.warn(f"Synthesis timed out after {timeout}s.")
+        return None
+
+    return queue.get()
+
+
+def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[MockdownResults]:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
@@ -41,8 +66,6 @@ def run(input_io: TextIO, options: MockdownOptions, timeout: Optional[int]) -> O
     It is in its own file to prevent import cycles between cli and app!
     """
     debug = options.get('debug', False)
-
-    input_data = json.load(input_io)
 
     examples_data = input_data["examples"]
     bounds = options.get('pruning_bounds', (None, None, None, None))
@@ -108,4 +131,8 @@ def run(input_io: TextIO, options: MockdownOptions, timeout: Optional[int]) -> O
     if options.get('include_axioms', False):
         result['axioms'] = list(map(str, make_axioms(list(examples[0]))))
 
-    return result
+    if result_queue:
+        result_queue.put(result)
+        return None
+    else:
+        return result

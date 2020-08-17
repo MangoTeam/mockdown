@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
 from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
-from mockdown.run import run as run_mockdown
+from mockdown.run import run_timeout as run_mockdown_timeout
 
 
 async def synthesize(request: Request) -> JSONResponse:
@@ -17,13 +17,9 @@ async def synthesize(request: Request) -> JSONResponse:
 
     options = request_json.pop('options', {})
     timeout = request_json.pop('timeout', None)
-    # Kind of a hack, we rewrite the JSON back as a string, as that's whast
-    # the cli.run interface expected (it expects a TextIO it can call json.load on)
-    req_io = io.StringIO()
-    json.dump(request_json, req_io)
-    req_io.seek(0)
+    input_data = request_json
 
-    result = run_mockdown(req_io, options=options, timeout=timeout)
+    result = run_mockdown_timeout(input_data, options=options, timeout=timeout)
     if result:
         return JSONResponse(result)
     else:
