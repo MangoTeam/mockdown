@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import json
 import logging
-from typing import TextIO, List, Dict, TypedDict, Union, Literal, Optional, Type, Any
 from multiprocessing import Process, Queue
+from typing import List, Dict, TypedDict, Literal, Optional, Any, Tuple
 
 import sympy as sym
 
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import VisibilityConstraintInstantiator
 from mockdown.learning.fancy import FancyLearning
-from mockdown.learning.robust import RobustLearning
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
-from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner, IPruningMethod
+from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
 from mockdown.types import Tuple4
 
 logger = logging.getLogger(__name__)
@@ -32,9 +30,11 @@ class MockdownOptions(TypedDict, total=False):
     pruning_method: Literal['none', 'baseline', 'hierarchical', 'dynamic', 'margins']
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
 
+    synthetic_noise: Optional[Tuple[float, float]]
+
     include_axioms: bool
     debug: bool
-    unambig: bool
+    unambig: bool  # what does this mean?...
 
 
 class MockdownResults(TypedDict):

@@ -95,55 +95,60 @@ class FancyConstantTemplateLearning(FancyTemplateLearning):
     def reject(self) -> bool:
         y_data = self.y_data
 
-        # Is the sample variance small enough?
-        rsd = (np.std(y_data) / np.mean(y_data)).item()
-        if rsd > self.config.cutoff_rsd:
-            logger.info(f"Rejecting template {self.template}, RSD too high: {rsd} > {self.config.cutoff_rsd}")
+        # Is the variance of residuals small enough?
+        rstd = np.std(y_data - np.mean(y_data)).item()
+        if rstd > self.config.cutoff_spread:
+            logger.info(
+                f"REJECTED `{self.template}`, stdev of residuals too high: {rstd} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
-        # Note: Shapiro-Wilk doesn't work when stdev (or rsd) = 0.
-        if rsd == 0:
-            return False
-
-        # Do the residuals appear to be normal?
-        _, p = st.shapiro(y_data - np.mean(y_data))
-        if p < self.config.cutoff_fit:
-            logger.info(f"Rejecting template {self.template}, failed normality test.")
-            logger.debug(f"Data:\n{self.data}")
-            return True
-
+        logger.debug(f"ACCEPTED `{self.template}`")
         return False
 
 
 class FancyLinearTemplateLearning(FancyTemplateLearning):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # THIS IS A HORRIBLE HACK:
-        # Basically, linregress gets mad when there are covariance terms that are identically 0.
-        # So we actually _add_ noise to the data (but the teeeeeeeeeeeeeeeeensiest possible bit)
-        hack_noise = st.norm.rvs(scale=20 * np.finfo(np.float).eps, size=self.data.size).reshape(self.data.shape)
-        hack_data = self.data + hack_noise
-
-        self.mle_a, self.mle_b, self.mle_r, self.mle_p, _ = st.linregress(hack_data[self.x_name],
-                                                                          hack_data[self.y_name])
-
     def learn(self) -> List[ConstraintCandidate]:
         return []
 
     def reject(self) -> bool:
-        # Do we fail to reject the null-hypothesis that the slope is 0?
-        if not self.mle_p < self.config.cutoff_fit:
-            logger.info(f"Rejecting template {self.template}, failed linear-regression Wald test "
-                        f"(p = {self.mle_p} ≥ {self.config.cutoff_fit})")
+        x, y = self.x_data, self.y_data
+
+        if np.var(x) == 0:
+            if np.std(y) < self.config.cutoff_spread:
+                logger.debug(f"ACCEPTED `{self.template}`")
+                return False
+            logger.info(
+                f"REJECTED `{self.template}`, no x variance and stdev of y is too high: "
+                f"{np.std(y)} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
+            return True
+
+        a, b, r, p, std = st.linregress(self.x_data, self.y_data)
+
+        # Do we fail to reject the null-hypothesis that the slope is 0?
+        if not p < self.config.cutoff_fit:
+            logger.info(f"REJECTED `{self.template}`, failed linear-regression Wald test: "
+                        f"(p = {p} ≥ {self.config.cutoff_fit})")
+            logger.debug(f"Data:\n{self.data}")
+            return True
 
         # Are the residuals small?
-
+        res = np.std(y - a * x + b)
+        rstd = np.std(res)
+        if rstd > self.config.cutoff_spread:
+            logger.info(
+                f"REJECTED `{self.template}`, stdev of residuals too high: {rstd} > {self.config.cutoff_spread}")
+            logger.debug(f"Data:\n{self.data}")
+            return True
 
         # Does the data's slope appear negative?
-        if self.mle_r < 0:
-            logger.info(f"Rejecting template {self.template}, slope is negative.")
+        # todo: is this necessary?
+        if r < 0:
+            logger.info(f"REJECTED `{self.template}`, slope is negative.")
+            logger.debug(f"LinReg summary: a={a}, b={b}, p={p}, r={r}, std={std}")
             logger.debug(f"Data:\n{self.data}")
+            return True
+
+        logger.debug(f"ACCEPTED `{self.template}`")
         return False

@@ -51,6 +51,14 @@ def cli() -> None:
               show_default=True,
               metavar="MIN_W MIN_H MAX_W MAX_H",
               help="Bounds within which to do pruning. Use - for unspecified.")
+# @click.option('-sn',
+#               '--synthetic-noise',
+#               nargs=2,
+#               type=float,
+#               default=['-', '-'],
+#               show_default=True,
+#               metavar="MIN_W MIN_H MAX_W MAX_H",
+#               help="...")
 @click.option('-to',
               '--timeout',
               type=int,
