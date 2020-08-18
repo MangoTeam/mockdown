@@ -33,7 +33,6 @@ class FancyLearning(IConstraintLearning):
         def gen_cands():
             for template in self.templates:
                 data = self.find_template_data(template)
-                print(template)
                 if template.kind.is_constant_form:
                     task = FancyConstantTemplateLearning(template, data, self.config)
                 else:
