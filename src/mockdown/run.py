@@ -8,7 +8,7 @@ import sympy as sym
 
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import VisibilityConstraintInstantiator
-from mockdown.learning.fancy import FancyLearning
+from mockdown.learning.noisetolerant import NoiseTolerantLearning
 from mockdown.learning.simple import SimpleLearning
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
@@ -25,7 +25,7 @@ class MockdownInput(TypedDict):
 class MockdownOptions(TypedDict, total=False):
     numeric_type: Literal["N", "Z", "Q", "R"]
 
-    learning_method: Literal['simple', 'fancy']
+    learning_method: Literal['simple', 'noisetolerant']
 
     pruning_method: Literal['none', 'baseline', 'hierarchical', 'dynamic', 'margins']
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
@@ -44,6 +44,11 @@ class MockdownResults(TypedDict):
 
 def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     timeout = kwargs.pop('timeout', None)
+
+    # PyCharm's debugger doesn't like subprocesses.
+    # When debugging use a timeout of None or 0.
+    if not timeout:
+        return run(*args, **kwargs)
 
     queue = Queue()
     kwargs.update({'result_queue': queue})
@@ -88,7 +93,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     learning_factory = {
         'simple': SimpleLearning,
-        'fancy': FancyLearning
+        'noisetolerant': NoiseTolerantLearning
     }[options.get('learning_method', 'simple')]
 
     pruner_factory = {

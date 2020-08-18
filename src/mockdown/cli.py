@@ -33,10 +33,10 @@ def cli() -> None:
               help="Numeric type of input: number, real, rational, or integer.")
 @click.option('-lm',
               '--learning-method',
-              type=click.Choice(['simple', 'fancy'], case_sensitive=False),
+              type=click.Choice(['simple', 'noisetolerant'], case_sensitive=False),
               default='simple',
               show_default=True,
-              help="Learning method to use: simple or fancy.")
+              help="Learning method to use: simple or noisetolerant.")
 @click.option('-pm',
               '--pruning-method',
               type=click.Choice(['none', 'baseline', 'hierarchical'], case_sensitive=False),
@@ -68,7 +68,7 @@ def cli() -> None:
 def run(input: TextIO,
         output: TextIO,
         numeric_type: Literal["N", "Z", "Q", "R"],
-        learning_method: Literal['simple', 'fancy'],
+        learning_method: Literal['simple', 'noisetolerant'],
         pruning_method: Literal['none', 'baseline', 'hierarchical'],
         pruning_bounds: Tuple4[str],
         timeout: Optional[int]) -> None:

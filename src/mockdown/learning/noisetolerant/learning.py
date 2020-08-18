@@ -1,7 +1,8 @@
 import logging
 import operator
 from abc import abstractmethod
-from typing import List, Sequence, Any, Dict, Optional, Iterable
+from fractions import Fraction
+from typing import List, Sequence, Any, Dict, Optional, Iterable, Tuple
 
 import sympy as sym
 import statsmodels.api as sm  # type: ignore
@@ -10,7 +11,7 @@ import numpy as np  # type: ignore
 import scipy.stats as st  # type: ignore
 
 from mockdown.constraint import IConstraint
-from mockdown.learning.fancy.types import FancyLearningConfig
+from mockdown.learning.noisetolerant.types import NoiseTolerantLearningConfig
 from mockdown.types import unopt
 from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
@@ -18,16 +19,16 @@ from mockdown.model import IView
 logger = logging.getLogger(__name__)
 
 
-class FancyLearning(IConstraintLearning):
+class NoiseTolerantLearning(IConstraintLearning):
     def __init__(self,
                  templates: Sequence[IConstraint],
                  samples: List[IView[sym.Number]],
-                 config: Optional[FancyLearningConfig] = None) -> None:
+                 config: Optional[NoiseTolerantLearningConfig] = None) -> None:
         self.templates = [tpl for tpl in templates if tpl.op is operator.eq]
         self.samples = samples
 
         if not config:
-            config = FancyLearningConfig(sample_count=len(samples))
+            config = NoiseTolerantLearningConfig(sample_count=len(samples))
         self.config = config
 
     def learn(self) -> List[List[ConstraintCandidate]]:
@@ -35,11 +36,11 @@ class FancyLearning(IConstraintLearning):
             for template in self.templates:
                 data = self.find_template_data(template)
 
-                task: FancyTemplateLearning
+                task: NoiseTolerantTemplateLearning
                 if template.kind.is_constant_form:
-                    task = FancyConstantTemplateLearning(template, data, self.config)
+                    task = NoiseTolerantConstantTemplateLearning(template, data, self.config)
                 else:
-                    task = FancyLinearTemplateLearning(template, data, self.config)
+                    task = NoiseTolerantLinearTemplateLearning(template, data, self.config)
 
                 if task.reject():
                     yield []
@@ -62,8 +63,8 @@ class FancyLearning(IConstraintLearning):
         return pd.DataFrame(rows, columns=list(map(str, columns)), dtype=np.float)
 
 
-class FancyTemplateLearning:
-    def __init__(self, template: IConstraint, data: pd.DataFrame, config: FancyLearningConfig):
+class NoiseTolerantTemplateLearning:
+    def __init__(self, template: IConstraint, data: pd.DataFrame, config: NoiseTolerantLearningConfig):
         self.template = template
         self.data = data
         self.config = config
@@ -90,8 +91,14 @@ class FancyTemplateLearning:
     @abstractmethod
     def reject(self) -> bool: ...
 
+    @abstractmethod
+    def a_bounds(self) -> Tuple[Fraction, Fraction]: ...
 
-class FancyConstantTemplateLearning(FancyTemplateLearning):
+    @abstractmethod
+    def b_bounds(self) -> Tuple[int, int]: ...
+
+
+class NoiseTolerantConstantTemplateLearning(NoiseTolerantTemplateLearning):
     def learn(self) -> List[ConstraintCandidate]:
         return []
 
@@ -107,11 +114,25 @@ class FancyConstantTemplateLearning(FancyTemplateLearning):
             return True
 
         logger.debug(f"ACCEPTED `{self.template}`")
+        logger.debug(f"Bounds: "
+                     f"a ∈ [{self.a_bounds()[0]}, {self.a_bounds()[1]}], "
+                     f"b ∈ [{self.b_bounds()[0]}, {self.b_bounds()[1]}]")
         logger.debug(f"Data:\n{self.data}")
         return False
 
+    def a_bounds(self) -> Tuple[Fraction, Fraction]:
+        return Fraction(1), Fraction(1)
 
-class FancyLinearTemplateLearning(FancyTemplateLearning):
+    def b_bounds(self) -> Tuple[int, int]:
+        y, alpha, n = self.y_data, self.config.b_alpha, self.config.sample_count
+        y_mu = np.mean(y)
+
+        t = np.abs(st.t.ppf(alpha / 2, n - 2))
+        sem = st.sem(y)
+        return y_mu - t * sem, y_mu + t * sem
+
+
+class NoiseTolerantLinearTemplateLearning(NoiseTolerantTemplateLearning):
     def learn(self) -> List[ConstraintCandidate]:
         return []
 
