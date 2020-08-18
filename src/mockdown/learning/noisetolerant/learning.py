@@ -2,6 +2,7 @@ import logging
 import operator
 from abc import abstractmethod
 from fractions import Fraction
+from math import floor, ceil
 from typing import List, Sequence, Any, Dict, Optional, Iterable, Tuple
 
 import sympy as sym
@@ -36,11 +37,11 @@ class NoiseTolerantLearning(IConstraintLearning):
             for template in self.templates:
                 data = self.find_template_data(template)
 
-                task: NoiseTolerantTemplateLearning
+                task: NoiseTolerantTemplateModel
                 if template.kind.is_constant_form:
-                    task = NoiseTolerantConstantTemplateLearning(template, data, self.config)
+                    task = NoiseTolerantConstantTemplateModel(template, data, self.config)
                 else:
-                    task = NoiseTolerantLinearTemplateLearning(template, data, self.config)
+                    task = NoiseTolerantLinearTemplateModel(template, data, self.config)
 
                 if task.reject():
                     yield []
@@ -63,7 +64,7 @@ class NoiseTolerantLearning(IConstraintLearning):
         return pd.DataFrame(rows, columns=list(map(str, columns)), dtype=np.float)
 
 
-class NoiseTolerantTemplateLearning:
+class NoiseTolerantTemplateModel:
     def __init__(self, template: IConstraint, data: pd.DataFrame, config: NoiseTolerantLearningConfig):
         self.template = template
         self.data = data
@@ -98,7 +99,7 @@ class NoiseTolerantTemplateLearning:
     def b_bounds(self) -> Tuple[int, int]: ...
 
 
-class NoiseTolerantConstantTemplateLearning(NoiseTolerantTemplateLearning):
+class NoiseTolerantConstantTemplateModel(NoiseTolerantTemplateModel):
     def learn(self) -> List[ConstraintCandidate]:
         return []
 
@@ -132,7 +133,12 @@ class NoiseTolerantConstantTemplateLearning(NoiseTolerantTemplateLearning):
         return y_mu - t * sem, y_mu + t * sem
 
 
-class NoiseTolerantLinearTemplateLearning(NoiseTolerantTemplateLearning):
+class NoiseTolerantLinearTemplateModel(NoiseTolerantTemplateModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model = sm.OLS(self.y_data, sm.add_constant(self.x_data))
+        self.fit = self.model.fit()
+
     def learn(self) -> List[ConstraintCandidate]:
         return []
 
@@ -142,6 +148,9 @@ class NoiseTolerantLinearTemplateLearning(NoiseTolerantTemplateLearning):
         if np.var(x) == 0:
             if np.std(y) < self.config.cutoff_spread:
                 logger.debug(f"ACCEPTED `{self.template}`")
+                logger.debug(f"Bounds: "
+                             f"a ∈ [{self.a_bounds()[0]}, {self.a_bounds()[1]}], "
+                             f"b ∈ [{self.b_bounds()[0]}, {self.b_bounds()[1]}]")
                 logger.debug(f"Data:\n{self.data}")
                 return False
             logger.info(
@@ -150,32 +159,62 @@ class NoiseTolerantLinearTemplateLearning(NoiseTolerantTemplateLearning):
             logger.debug(f"Data:\n{self.data}")
             return True
 
-        a, b, r, p, std = st.linregress(self.x_data, self.y_data)
+        if np.var(y) == 0:
+            if np.std(x) < self.config.cutoff_spread:
+                logger.debug(f"ACCEPTED `{self.template}`")
+                logger.debug(f"Bounds: "
+                             f"a ∈ [{self.a_bounds()[0]}, {self.a_bounds()[1]}], "
+                             f"b ∈ [{self.b_bounds()[0]}, {self.b_bounds()[1]}]")
+                logger.debug(f"Data:\n{self.data}")
+                return False
+            logger.info(
+                f"REJECTED `{self.template}`, no y variance and stdev of x is too high: "
+                f"{np.std(x)} > {self.config.cutoff_spread}")
+            logger.debug(f"Data:\n{self.data}")
+            return True
 
         # Do we fail to reject the null-hypothesis that the slope is 0?
-        if not p < self.config.cutoff_fit:
-            logger.info(f"REJECTED `{self.template}`, failed linear-regression Wald test: "
-                        f"(p = {p} ≥ {self.config.cutoff_fit})")
+        wald_res = self.fit.wald_test(np.eye(2))
+        if not wald_res.pvalue < self.config.cutoff_fit:
+            logger.info(f"REJECTED `{self.template}`, Wald test failed to reject H0 (a=b=0): "
+                        f"(p = {wald_res.pvalue} ≥ {self.config.cutoff_fit})")
             logger.debug(f"Data:\n{self.data}")
             return True
 
         # Are the residuals small?
-        res = np.std(y - a * x + b)
-        rstd = np.std(res)
-        if rstd > self.config.cutoff_spread:
+        resid_std = np.std(self.fit.resid)
+        if resid_std > self.config.cutoff_spread:
             logger.info(
-                f"REJECTED `{self.template}`, stdev of residuals too high: {rstd} > {self.config.cutoff_spread}")
+                f"REJECTED `{self.template}`, stdev of residuals too high: {resid_std} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
         # Does the data's slope appear negative?
         # todo: is this necessary?
-        if r < 0:
+        if self.fit.rsquared < 0:
             logger.info(f"REJECTED `{self.template}`, slope is negative.")
-            logger.debug(f"LinReg summary: a={a}, b={b}, p={p}, r={r}, std={std}")
+            logger.debug(f"LinReg summary: {self.fit}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
         logger.debug(f"ACCEPTED `{self.template}`")
+        logger.debug(f"Bounds: "
+                     f"a ∈ [{self.a_bounds()[0]}, {self.a_bounds()[1]}], "
+                     f"b ∈ [{self.b_bounds()[0]}, {self.b_bounds()[1]}]")
         logger.debug(f"Data:\n{self.data}")
         return False
+
+    def a_bounds(self) -> Tuple[Fraction, Fraction]:
+        if self.template.kind.is_add_only_form:
+            return Fraction(1), Fraction(1)
+        else:
+            max_d = self.config.max_denominator
+            al, au = self.fit.conf_int().iloc[1]
+            return Fraction(al).limit_denominator(max_d), Fraction(au).limit_denominator(max_d)
+
+    def b_bounds(self) -> Tuple[int, int]:
+        if self.template.kind.is_mul_only_form:
+            return 0, 0
+        else:
+            bl, bu = self.fit.conf_int().iloc[0]
+            return floor(bl), ceil(bu)
