@@ -1,16 +1,17 @@
 import logging
 import operator
 from abc import abstractmethod
-from typing import List, Sequence, Any, Dict, Optional
+from typing import List, Sequence, Any, Dict, Optional, Iterable
 
 import sympy as sym
-import statsmodels.api as sm
-import pandas as pd
-import numpy as np
-import scipy.stats as st
+import statsmodels.api as sm  # type: ignore
+import pandas as pd  # type: ignore
+import numpy as np  # type: ignore
+import scipy.stats as st  # type: ignore
 
 from mockdown.constraint import IConstraint
 from mockdown.learning.fancy.types import FancyLearningConfig
+from mockdown.types import unopt
 from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
 
@@ -30,9 +31,11 @@ class FancyLearning(IConstraintLearning):
         self.config = config
 
     def learn(self) -> List[List[ConstraintCandidate]]:
-        def gen_cands():
+        def gen_candidates() -> Iterable[List[ConstraintCandidate]]:
             for template in self.templates:
                 data = self.find_template_data(template)
+
+                task: FancyTemplateLearning
                 if template.kind.is_constant_form:
                     task = FancyConstantTemplateLearning(template, data, self.config)
                 else:
@@ -43,18 +46,18 @@ class FancyLearning(IConstraintLearning):
                 else:
                     yield task.learn()
 
-        return list(gen_cands())
+        return list(gen_candidates())
 
-    def find_template_data(self, template: IConstraint):
+    def find_template_data(self, template: IConstraint) -> pd.DataFrame:
         """Extract the data for a given template from the samples."""
         if template.kind.is_constant_form:
             columns = [template.y_id]
         else:
-            columns = [template.y_id, template.x_id]
+            columns = [template.y_id, unopt(template.x_id)]
 
         rows = []
         for sample in self.samples:
-            rows.append([sample.find_anchor(col).value for col in columns])
+            rows.append([unopt(sample.find_anchor(col)).value for col in columns])
 
         return pd.DataFrame(rows, columns=list(map(str, columns)), dtype=np.float)
 
@@ -66,11 +69,11 @@ class FancyTemplateLearning:
         self.config = config
 
     @property
-    def x_name(self):
+    def x_name(self) -> str:
         return str(self.template.x_id)
 
     @property
-    def y_name(self):
+    def y_name(self) -> str:
         return str(self.template.y_id)
 
     @property

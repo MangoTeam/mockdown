@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from fractions import Fraction
-from typing import NoReturn, Tuple, TypeVar, Union
+from typing import NoReturn, Tuple, TypeVar, Union, Optional
 
 import sympy as sym
+
+T = TypeVar('T')
 
 AnyNum = Union[int, float, Fraction]
 
@@ -12,6 +14,11 @@ Tuple4 = Tuple[_ElT, _ElT, _ElT, _ElT]
 
 # (NT = Numeric Type)
 NT = TypeVar('NT', bound=sym.Number)
+
+
+def unopt(arg: Optional[T]) -> T:
+    assert arg is not None
+    return arg
 
 
 def unreachable(x: NoReturn) -> NoReturn:
