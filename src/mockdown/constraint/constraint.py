@@ -49,7 +49,7 @@ class ConstantConstraint(IConstraint):
         return replace(self, b=b, sample_count=sample_count)
 
     def __repr__(self) -> str:
-        b = str(self.b) if self.sample_count > 0 else "_"
+        b = str(self.b) if not self.is_template else "_"
         return f"{self.y_id} {op_to_str(self.op)} {b}"
 
     def to_dict(self) -> Dict[str, str]:
@@ -102,9 +102,16 @@ class LinearConstraint(IConstraint):
         return replace(self, a=a, b=b, sample_count=sample_count)
 
     def __repr__(self) -> str:
-        a = str(self.a) if self.sample_count > 0 else "_"
-        b = str(self.b) if self.sample_count > 0 else "_"
-        return f"{self.y_id} {op_to_str(self.op)} {a} * {self.x_id}{'' if self.b == 0 else f'+ {b}'}"
+        a = str(self.a) if not self.is_template else "_"
+        b = str(self.b) if not self.is_template else "_"
+        op = op_to_str(self.op)
+
+        if self.kind.is_mul_only_form:
+            return f"{self.y_id} {op} {a} * {self.x_id}"
+        elif self.kind.is_add_only_form:
+            return f"{self.y_id} {op} {self.x_id} + {b}"
+        else:
+            return f"{self.y_id} {op} {a} * {self.x_id} + {b}"
 
     def to_dict(self) -> Dict[str, str]:
         return {

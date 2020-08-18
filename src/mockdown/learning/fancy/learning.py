@@ -33,6 +33,7 @@ class FancyLearning(IConstraintLearning):
         def gen_cands():
             for template in self.templates:
                 data = self.find_template_data(template)
+                print(template)
                 if template.kind.is_constant_form:
                     task = FancyConstantTemplateLearning(template, data, self.config)
                 else:
@@ -104,6 +105,7 @@ class FancyConstantTemplateLearning(FancyTemplateLearning):
             return True
 
         logger.debug(f"ACCEPTED `{self.template}`")
+        logger.debug(f"Data:\n{self.data}")
         return False
 
 
@@ -117,6 +119,7 @@ class FancyLinearTemplateLearning(FancyTemplateLearning):
         if np.var(x) == 0:
             if np.std(y) < self.config.cutoff_spread:
                 logger.debug(f"ACCEPTED `{self.template}`")
+                logger.debug(f"Data:\n{self.data}")
                 return False
             logger.info(
                 f"REJECTED `{self.template}`, no x variance and stdev of y is too high: "
@@ -151,4 +154,5 @@ class FancyLinearTemplateLearning(FancyTemplateLearning):
             return True
 
         logger.debug(f"ACCEPTED `{self.template}`")
+        logger.debug(f"Data:\n{self.data}")
         return False
