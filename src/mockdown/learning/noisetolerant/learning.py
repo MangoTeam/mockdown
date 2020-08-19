@@ -1,22 +1,20 @@
 import abc
 import logging
 import operator
-from abc import abstractmethod
 from fractions import Fraction
 from math import floor, ceil
 from typing import List, Sequence, Optional, Iterable, Tuple
 
-import sympy as sym
-import statsmodels.api as sm  # type: ignore
-import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
-import scipy.stats as st  # type: ignore
+import pandas as pd  # type: ignore
+import statsmodels.api as sm  # type: ignore
+import sympy as sym
 
 from mockdown.constraint import IConstraint
 from mockdown.learning.noisetolerant.types import NoiseTolerantLearningConfig
-from mockdown.types import unopt
 from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
+from mockdown.types import unopt
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +35,8 @@ class NoiseTolerantLearning(IConstraintLearning):
         def gen_candidates() -> Iterable[List[ConstraintCandidate]]:
             for template in self.templates:
                 data = self.find_template_data(template)
-
                 model = NoiseTolerantTemplateModel(template, data, self.config)
-
-                if model.reject():
-                    yield []
-                else:
-                    yield model.learn()
+                yield model.learn() if not model.reject() else []
 
         return list(gen_candidates())
 
@@ -105,7 +98,31 @@ class NoiseTolerantTemplateModel(abc.ABC):
     def y_data(self) -> pd.Series:
         return self.data[self.y_name]
 
+    def score(self, a: int, b: Fraction, scale=1) -> float:
+        return self.model.loglike((b, a), scale=scale)
+
+    def candidates(self) -> pd.DataFrame:
+        a_space, b_space = self.config.a_space, self.config.b_space
+        aconf_l, aconf_u = self.a_confint()
+        bconf_l, bconf_u = self.b_confint()
+
+        a_l_idx = np.searchsorted(a_space, aconf_l, 'left')
+        a_u_idx = np.searchsorted(a_space, aconf_u, 'right')
+        b_l_idx = np.searchsorted(b_space, bconf_l, 'left')
+        b_u_idx = np.searchsorted(b_space, bconf_u, 'right')
+
+        a_cands = a_space[a_l_idx:a_u_idx]
+        b_cands = b_space[b_l_idx:b_u_idx]
+
+        return pd.DataFrame([(a, b) for a in a_cands for b in b_cands], columns=['a', 'b'])
+
     def learn(self) -> List[ConstraintCandidate]:
+        candidates = self.candidates()
+        scale = 1/len(candidates)
+
+        candidates['loglike'] = candidates.apply(lambda c: self.score(*c, scale=scale), axis=1)
+        candidates['score'] = np.exp(candidates['loglike'])
+        logger.info(f"CANDIDATES:\n{candidates}")
         return []
 
     def reject(self) -> bool:
@@ -113,14 +130,14 @@ class NoiseTolerantTemplateModel(abc.ABC):
 
         if np.var(x) == 0 and not np.std(y) < self.config.cutoff_spread:
             logger.info(
-                f"REJECTED `{self.template}`, no x variance and stdev of y is too high: "
+                f"REJECTED: `{self.template}`, no x variance and stdev of y is too high: "
                 f"{np.std(y)} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
         if np.var(y) == 0 and not np.std(x) < self.config.cutoff_spread:
             logger.info(
-                f"REJECTED `{self.template}`, no y variance and stdev of x is too high: "
+                f"REJECTED: `{self.template}`, no y variance and stdev of x is too high: "
                 f"{np.std(x)} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
@@ -129,30 +146,30 @@ class NoiseTolerantTemplateModel(abc.ABC):
         resid_std = np.std(self.fit.resid_response)
         if resid_std > self.config.cutoff_spread:
             logger.info(
-                f"REJECTED `{self.template}`, stdev of residuals too high: {resid_std} > {self.config.cutoff_spread}")
+                f"REJECTED: `{self.template}`, stdev of residuals too high: {resid_std} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
         self._log_accepted()
         return False
 
-    def a_bounds(self) -> Tuple[Fraction, Fraction]:
+    def a_confint(self) -> Tuple[Fraction, Fraction]:
         max_d = self.config.max_denominator
         al, au = self.fit.conf_int(alpha=self.config.a_alpha).iloc[1]
         return Fraction(al).limit_denominator(max_d), Fraction(au).limit_denominator(max_d)
 
-    def b_bounds(self) -> Tuple[int, int]:
+    def b_confint(self) -> Tuple[int, int]:
         bl, bu = self.fit.conf_int(alpha=self.config.b_alpha).iloc[0]
         return floor(bl), ceil(bu)
 
     def _log_accepted(self) -> None:
         a_bounds_str: str
-        al, au = self.a_bounds()
+        al, au = self.a_confint()
         a_bounds_str = f"= {al}" if al == au else f"∈ [{al}, {au}]"
 
-        bl, bu = self.b_bounds()
+        bl, bu = self.b_confint()
         b_bounds_str = f"= {bl}" if bl == bu else f"∈ [{bl}, {bu}]"
 
-        logger.debug(f"ACCEPTED `{self.template}`")
-        logger.debug(f"Bounds: a {a_bounds_str}, b {b_bounds_str}")
-        logger.debug(f"Data:\n{self.data}")
+        logger.debug(f"ACCEPTED: `{self.template}`")
+        logger.debug(f"DATA:\n{self.data}")
+        logger.debug(f"BOUNDS: a {a_bounds_str}, b {b_bounds_str}")

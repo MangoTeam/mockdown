@@ -25,11 +25,11 @@ class NoiseTolerantLearningConfig:
     b_alpha: float = 0.05
 
     @property  # type: ignore
-    @lru_cache
+    @lru_cache  # type: ignore
     def a_space(self) -> np.ndarray:
         return ext_farey(self.max_denominator)
 
     @property  # type: ignore
-    @lru_cache
+    @lru_cache  # type: ignore
     def b_space(self) -> np.ndarray:
         return z_ball(0, self.max_offset)

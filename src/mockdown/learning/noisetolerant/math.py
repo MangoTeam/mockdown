@@ -22,7 +22,7 @@ def ext_farey(n: int = 100) -> np.ndarray:
     Extends the sequence from 0-1 to 0-n.
     """
     f = farey(n)
-    return np.array(f + [Fraction(a.q, a.p) for a in reversed(f[1:-1])], dtype=np.object)
+    return np.append(f, [1/a for a in reversed(f[1:-1])])
 
 
 @lru_cache
