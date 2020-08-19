@@ -98,7 +98,7 @@ class NoiseTolerantTemplateModel(abc.ABC):
     def y_data(self) -> pd.Series:
         return self.data[self.y_name]
 
-    def score(self, a: int, b: Fraction, scale=1) -> float:
+    def likelihood_score(self, a: int, b: Fraction, scale=1) -> float:
         return self.model.loglike((b, a), scale=scale)
 
     def candidates(self) -> pd.DataFrame:
@@ -120,12 +120,21 @@ class NoiseTolerantTemplateModel(abc.ABC):
         candidates = self.candidates()
         # scale = 1
 
-        candidates['loglike'] = candidates.apply(lambda c: self.score(*c), axis=1)
-        candidates['err_score'] = np.exp(candidates['loglike'])
+        candidates['GLM loglike'] = candidates.apply(lambda c: self.likelihood_score(*c), axis=1)
+        candidates['err_score'] = np.exp(candidates['GLM loglike'])
         candidates['err_score'] /= candidates['err_score'].sum()
 
+        candidates['pri_score'] = self.a_prior(candidates['a'])
+        candidates['pri_score'] /= candidates['pri_score'].sum()
+
+        candidates['score'] = candidates['err_score'] * candidates['pri_score']
+        candidates['log_score'] = np.log(candidates['score'])
+
         logger.info(f"CANDIDATES:\n{candidates}")
-        return []
+
+        return list(candidates.apply(lambda row: ConstraintCandidate(
+            self.template.subst(a=sym.Rational(row['a']), b=sym.Rational(row['b'])),
+            row['score']), axis=1))
 
     def reject(self) -> bool:
         x, y = self.x_data, self.y_data
@@ -163,6 +172,9 @@ class NoiseTolerantTemplateModel(abc.ABC):
     def b_confint(self) -> Tuple[int, int]:
         bl, bu = self.fit.conf_int(alpha=self.config.b_alpha).iloc[0]
         return floor(bl), ceil(bu)
+
+    def a_prior(self, a: np.ndarray) -> float:
+        return self.config.depth_prior[np.searchsorted(self.config.a_space, a)]
 
     def _log_accepted(self) -> None:
         a_bounds_str: str
