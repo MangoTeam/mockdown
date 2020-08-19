@@ -79,14 +79,17 @@ class View(IView[NT]):
 
     @property
     def anchors(self) -> List[IAnchor[NT]]:
-        return [self.left_anchor, self.right_anchor, self.top_anchor, self.bottom_anchor, self.center_x_anchor, self.center_y_anchor, self.height_anchor, self.width_anchor]
+        return [self.left_anchor, self.right_anchor, self.top_anchor, self.bottom_anchor, self.center_x_anchor,
+                self.center_y_anchor, self.height_anchor, self.width_anchor]
 
     @property
     def x_anchors(self) -> List[IAnchor[NT]]:
         return [self.left_anchor, self.right_anchor, self.width_anchor, self.center_x_anchor]
+
     @property
     def y_anchors(self) -> List[IAnchor[NT]]:
         return [self.top_anchor, self.bottom_anchor, self.height_anchor, self.center_y_anchor]
+
     @property
     def names(self) -> Iterator[str]:
         # print('boxes:', [bx for bx in self])
@@ -168,7 +171,7 @@ class View(IView[NT]):
         return f"View(name='{self.name}', rect={self.rect})"
 
     def to_dict(self) -> Dict[str, Any]:
-        
+
         def recur(it: IView[NT]) -> Dict[str, Any]:
             output: Dict[str, Any] = {}
             for anchor in it.anchors:
@@ -177,8 +180,7 @@ class View(IView[NT]):
             output['children'] = children
             output['name'] = it.name
             return output
-            
+
         out = recur(self)
         out['type'] = 'real'
         return out
-        

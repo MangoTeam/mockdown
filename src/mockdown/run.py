@@ -30,7 +30,7 @@ class MockdownOptions(TypedDict, total=False):
     pruning_method: Literal['none', 'baseline', 'hierarchical', 'dynamic', 'margins']
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
 
-    synthetic_noise: Optional[Tuple[float, float]]
+    debug_noise: float
 
     include_axioms: bool
     debug: bool
@@ -64,8 +64,7 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     return queue.get()
 
 
-def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
-    MockdownResults]:
+def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[MockdownResults]:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
@@ -104,9 +103,11 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'dynamic': DynamicPruner
     }[options.get('pruning_method', 'none')]
 
+    debug_noise = options.get('debug_noise', 0)
+
     unambig = options.get('unambig', False)
 
-    loader = ViewLoader(number_type=number_type)
+    loader = ViewLoader(number_type=number_type, debug_noise=debug_noise)
     instantiator = VisibilityConstraintInstantiator()
 
     # 1. Load Examples

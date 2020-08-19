@@ -118,10 +118,12 @@ class NoiseTolerantTemplateModel(abc.ABC):
 
     def learn(self) -> List[ConstraintCandidate]:
         candidates = self.candidates()
-        scale = 1/len(candidates)
+        # scale = 1
 
-        candidates['loglike'] = candidates.apply(lambda c: self.score(*c, scale=scale), axis=1)
-        candidates['score'] = np.exp(candidates['loglike'])
+        candidates['loglike'] = candidates.apply(lambda c: self.score(*c), axis=1)
+        candidates['err_score'] = np.exp(candidates['loglike'])
+        candidates['err_score'] /= candidates['err_score'].sum()
+
         logger.info(f"CANDIDATES:\n{candidates}")
         return []
 
@@ -170,6 +172,6 @@ class NoiseTolerantTemplateModel(abc.ABC):
         bl, bu = self.b_confint()
         b_bounds_str = f"= {bl}" if bl == bu else f"∈ [{bl}, {bu}]"
 
-        logger.debug(f"ACCEPTED: `{self.template}`")
+        logger.info(f"ACCEPTED: `{self.template}`")
         logger.debug(f"DATA:\n{self.data}")
-        logger.debug(f"BOUNDS: a {a_bounds_str}, b {b_bounds_str}")
+        logger.info(f"BOUNDS: a {a_bounds_str}, b {b_bounds_str}")

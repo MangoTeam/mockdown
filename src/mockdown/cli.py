@@ -51,14 +51,13 @@ def cli() -> None:
               show_default=True,
               metavar="MIN_W MIN_H MAX_W MAX_H",
               help="Bounds within which to do pruning. Use - for unspecified.")
-# @click.option('-sn',
-#               '--synthetic-noise',
-#               nargs=2,
-#               type=float,
-#               default=['-', '-'],
-#               show_default=True,
-#               metavar="MIN_W MIN_H MAX_W MAX_H",
-#               help="...")
+@click.option('-dn',
+              '--debug-noise',
+              type=float,
+              default=0,
+              show_default=True,
+              metavar="STDEV",
+              help="Scale of (Gaussian) noise to apply to input. (For testing/debugging purposes)")
 @click.option('-to',
               '--timeout',
               type=int,
@@ -71,6 +70,7 @@ def run(input: TextIO,
         learning_method: Literal['simple', 'noisetolerant'],
         pruning_method: Literal['none', 'baseline', 'hierarchical'],
         pruning_bounds: Tuple4[str],
+        debug_noise: float,
         timeout: Optional[int]) -> None:
     # Note, this return value is intercepted by `process_result` above!
     input_data = json.load(input)
@@ -79,7 +79,8 @@ def run(input: TextIO,
         numeric_type=numeric_type,
         learning_method=learning_method,
         pruning_method=pruning_method,
-        pruning_bounds=tuple((int(s) if s.isnumeric() else None for s in pruning_bounds))
+        pruning_bounds=tuple((int(s) if s.isnumeric() else None for s in pruning_bounds)),
+        debug_noise=debug_noise
     ), timeout=timeout)
 
     click.echo(json.dumps(
