@@ -102,6 +102,15 @@ class ConstraintKind(Enum, metaclass=ConstraintKindMeta):
     def is_size_kind(self) -> bool:
         return self in ConstraintKind.size_kinds
 
+    @property
+    def num_free_vars(self) -> int:
+        if self.is_constant_form:
+            return 0
+        elif self.is_mul_only_form or self.is_add_only_form:
+            return 1
+        else:
+            return 2
+
 
 ConstraintKind.constant_forms = frozenset({
     ConstraintKind.SIZE_CONSTANT,

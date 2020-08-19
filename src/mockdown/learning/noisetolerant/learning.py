@@ -3,7 +3,7 @@ import operator
 from abc import abstractmethod
 from fractions import Fraction
 from math import floor, ceil
-from typing import List, Sequence, Any, Dict, Optional, Iterable, Tuple
+from typing import List, Sequence, Optional, Iterable, Tuple
 
 import sympy as sym
 import statsmodels.api as sm  # type: ignore
@@ -72,18 +72,20 @@ class NoiseTolerantTemplateModel:
 
     @property
     def x_name(self) -> str:
-        return str(self.template.x_id)
+        return str(self.template.x_id) if self.template.x_id else '__dummy__'
 
     @property
     def y_name(self) -> str:
         return str(self.template.y_id)
 
     @property
-    def x_data(self) -> pd.DataFrame:
+    def x_data(self) -> pd.Series:
+        if self.template.kind.is_constant_form:
+            return pd.Series(np.zeros(self.config.sample_count), name=self.x_name)
         return self.data[self.x_name]
 
     @property
-    def y_data(self) -> pd.DataFrame:
+    def y_data(self) -> pd.Series:
         return self.data[self.y_name]
 
     @abstractmethod
@@ -97,6 +99,18 @@ class NoiseTolerantTemplateModel:
 
     @abstractmethod
     def b_bounds(self) -> Tuple[int, int]: ...
+
+    def _log_accepted(self) -> None:
+        a_bounds_str: str
+        al, au = self.a_bounds()
+        a_bounds_str = f"= {al}" if al == au else f"∈ [{al}, {au}]"
+
+        bl, bu = self.b_bounds()
+        b_bounds_str = f"= {bl}" if bl == bu else f"∈ [{bl}, {bu}]"
+
+        logger.debug(f"ACCEPTED `{self.template}`")
+        logger.debug(f"Bounds: a {a_bounds_str}, b {b_bounds_str}")
+        logger.debug(f"Data:\n{self.data}")
 
 
 class NoiseTolerantConstantTemplateModel(NoiseTolerantTemplateModel):
@@ -114,11 +128,7 @@ class NoiseTolerantConstantTemplateModel(NoiseTolerantTemplateModel):
             logger.debug(f"Data:\n{self.data}")
             return True
 
-        logger.debug(f"ACCEPTED `{self.template}`")
-        logger.debug(f"Bounds: "
-                     f"a ∈ [{self.a_bounds()[0]}, {self.a_bounds()[1]}], "
-                     f"b ∈ [{self.b_bounds()[0]}, {self.b_bounds()[1]}]")
-        logger.debug(f"Data:\n{self.data}")
+        self._log_accepted()
         return False
 
     def a_bounds(self) -> Tuple[Fraction, Fraction]:
@@ -136,8 +146,24 @@ class NoiseTolerantConstantTemplateModel(NoiseTolerantTemplateModel):
 class NoiseTolerantLinearTemplateModel(NoiseTolerantTemplateModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.model = sm.OLS(self.y_data, sm.add_constant(self.x_data))
-        self.fit = self.model.fit()
+        x = sm.add_constant(self.x_data, has_constant='add')
+        y = self.y_data
+
+        x_noise = np.random.randn(self.config.sample_count, 2) * 1e-5
+        x = x.add(x_noise, axis=0)
+
+        y_noise = np.random.randn(self.config.sample_count) * 1e-5
+        y = y.add(y_noise, axis=0)
+
+        if self.template.kind.is_mul_only_form:
+            self.model = sm.GLM(y, x)
+            self.fit = self.model.fit_constrained(((1, 0), 0))
+        elif self.template.kind.is_add_only_form:
+            self.model = sm.GLM(y, x)
+            self.fit = self.model.fit_constrained(((0, 1), 1))
+        else:
+            self.model = sm.OLS(y, x)
+            self.fit = self.model.fit()
 
     def learn(self) -> List[ConstraintCandidate]:
         return []
@@ -145,76 +171,36 @@ class NoiseTolerantLinearTemplateModel(NoiseTolerantTemplateModel):
     def reject(self) -> bool:
         x, y = self.x_data, self.y_data
 
-        if np.var(x) == 0:
-            if np.std(y) < self.config.cutoff_spread:
-                logger.debug(f"ACCEPTED `{self.template}`")
-                logger.debug(f"Bounds: "
-                             f"a ∈ [{self.a_bounds()[0]}, {self.a_bounds()[1]}], "
-                             f"b ∈ [{self.b_bounds()[0]}, {self.b_bounds()[1]}]")
-                logger.debug(f"Data:\n{self.data}")
-                return False
+        if np.var(x) == 0 and not np.std(y) < self.config.cutoff_spread:
             logger.info(
                 f"REJECTED `{self.template}`, no x variance and stdev of y is too high: "
                 f"{np.std(y)} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
-        if np.var(y) == 0:
-            if np.std(x) < self.config.cutoff_spread:
-                logger.debug(f"ACCEPTED `{self.template}`")
-                logger.debug(f"Bounds: "
-                             f"a ∈ [{self.a_bounds()[0]}, {self.a_bounds()[1]}], "
-                             f"b ∈ [{self.b_bounds()[0]}, {self.b_bounds()[1]}]")
-                logger.debug(f"Data:\n{self.data}")
-                return False
+        if np.var(y) == 0 and not np.std(x) < self.config.cutoff_spread:
             logger.info(
                 f"REJECTED `{self.template}`, no y variance and stdev of x is too high: "
                 f"{np.std(x)} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
-        # Do we fail to reject the null-hypothesis that the slope is 0?
-        wald_res = self.fit.wald_test(np.eye(2))
-        if not wald_res.pvalue < self.config.cutoff_fit:
-            logger.info(f"REJECTED `{self.template}`, Wald test failed to reject H0 (a=b=0): "
-                        f"(p = {wald_res.pvalue} ≥ {self.config.cutoff_fit})")
-            logger.debug(f"Data:\n{self.data}")
-            return True
-
         # Are the residuals small?
-        resid_std = np.std(self.fit.resid)
+        resid_std = np.std(self.fit.resid_response)
         if resid_std > self.config.cutoff_spread:
             logger.info(
                 f"REJECTED `{self.template}`, stdev of residuals too high: {resid_std} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
-        # Does the data's slope appear negative?
-        # todo: is this necessary?
-        if self.fit.rsquared < 0:
-            logger.info(f"REJECTED `{self.template}`, slope is negative.")
-            logger.debug(f"LinReg summary: {self.fit}")
-            logger.debug(f"Data:\n{self.data}")
-            return True
-
-        logger.debug(f"ACCEPTED `{self.template}`")
-        logger.debug(f"Bounds: "
-                     f"a ∈ [{self.a_bounds()[0]}, {self.a_bounds()[1]}], "
-                     f"b ∈ [{self.b_bounds()[0]}, {self.b_bounds()[1]}]")
-        logger.debug(f"Data:\n{self.data}")
+        self._log_accepted()
         return False
 
     def a_bounds(self) -> Tuple[Fraction, Fraction]:
-        if self.template.kind.is_add_only_form:
-            return Fraction(1), Fraction(1)
-        else:
-            max_d = self.config.max_denominator
-            al, au = self.fit.conf_int().iloc[1]
-            return Fraction(al).limit_denominator(max_d), Fraction(au).limit_denominator(max_d)
+        max_d = self.config.max_denominator
+        al, au = self.fit.conf_int().iloc[1]
+        return Fraction(al).limit_denominator(max_d), Fraction(au).limit_denominator(max_d)
 
     def b_bounds(self) -> Tuple[int, int]:
-        if self.template.kind.is_mul_only_form:
-            return 0, 0
-        else:
-            bl, bu = self.fit.conf_int().iloc[0]
-            return floor(bl), ceil(bu)
+        bl, bu = self.fit.conf_int().iloc[0]
+        return floor(bl), ceil(bu)
