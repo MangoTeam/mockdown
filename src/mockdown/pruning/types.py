@@ -11,6 +11,7 @@ import sys
 from mockdown.constraint import IConstraint, ConstraintKind
 from mockdown.constraint.types import PRIORITY_STRONG
 from mockdown.integration import anchor_id_to_z3_var, constraint_to_z3_expr
+from mockdown.learning import ConstraintCandidate
 from mockdown.model import IView
 from mockdown.types import NT
 from .util import anchor_equiv
@@ -54,7 +55,7 @@ def bounds_from_json(it: Dict[Any, Any]) -> ISizeBounds:
 
 
 class IPruningMethod(Protocol):
-    def __call__(self, cns: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
+    def __call__(self, cns: List[ConstraintCandidate]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
         ...
 
     # def is_whole(self, c: IConstraint) -> bool:
@@ -116,44 +117,9 @@ class BasePruningMethod(IPruningMethod):
                 output.append(b)
         return output
 
-    def build_biases(self, constraints: List[IConstraint]) -> Dict[IConstraint, float]:
-        scores = {c: 1.0 for c in constraints}
-
-        # reward specific constraints
-        for c in constraints:
-            score = 1.0
-            # aspect ratios and size constraint are specific the more samples behind them
-            if c.kind is ConstraintKind.SIZE_ASPECT_RATIO:
-                score = 1 if c.is_falsified else 100
-            elif c.kind is ConstraintKind.SIZE_RATIO:
-                score = 100
-            elif c.kind.is_position_kind or c.kind is ConstraintKind.SIZE_OFFSET:
-
-                if c.op == operator.eq:
-
-                    diff = abs(c.b)
-                    # map > 100 => 10
-                    # 0 => 1000
-                    # everything else linearly
-                    upper = 25
-                    lower = 0
-                    if diff > upper:
-                        score = 10
-                    else:
-                        score = (-990) / upper * diff + 1000
-                else:
-                    score = 10  # penalize leq/geq
-
-            elif c.kind is ConstraintKind.SIZE_CONSTANT:
-
-                if c.op == operator.eq:
-                    score = 1000
-                else:
-                    score = 10  # penalize leq/geq
-
-            scores[c] = int(score * self.whole_score(c))  # * c.sample_count
-
-        return scores
+    def build_biases(self, cands: List[ConstraintCandidate]) -> Dict[IConstraint, float]:
+        scores = {x.constraint : int(100 * x.score) for x in cands}
+        return {constr : 10 if score <= 1 else score for constr, score in scores.items()}
 
     def add_containment_axioms(self, solver: z3.Optimize, confIdx: int, parent: IView[NT], x_dim: bool) -> None:
         pl, pr = anchor_id_to_z3_var(parent.left_anchor.id, confIdx), anchor_id_to_z3_var(parent.right_anchor.id,

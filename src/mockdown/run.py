@@ -95,6 +95,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'noisetolerant': NoiseTolerantLearning
     }[options.get('learning_method', 'simple')]
 
+    print('using learning method:', options.get('learning_method', 'simple'))
+
     pruner_factory = {
         'none': lambda x, y, ua: (lambda cns: (cns, None, None)),
         'baseline': BlackBoxPruner,
@@ -123,7 +125,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     # 3. Learn Constants.
     learning = learning_factory(samples=examples, templates=templates)
-    constraints = [candidate.constraint
+    constraints = [candidate
                    for candidates in learning.learn()
                    for candidate in candidates]
 

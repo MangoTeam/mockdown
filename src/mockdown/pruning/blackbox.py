@@ -13,6 +13,7 @@ from mockdown.constraint.constraint import ConstantConstraint
 from mockdown.constraint.types import PRIORITY_STRONG
 from mockdown.integration import constraint_to_z3_expr, anchor_id_to_z3_var, evaluate_constraints, \
     extract_model_valuations
+from mockdown.learning import ConstraintCandidate
 from mockdown.model import IView, IAnchor
 from mockdown.model.primitives import h_attrs, v_attrs, Attribute
 from mockdown.pruning.conformance import Conformance, confs_to_bounds, conformance_range, add_conf_dims, to_rect, \
@@ -404,9 +405,9 @@ class BlackBoxPruner(BasePruningMethod, Generic[NT]):
                     biases[constr] = score * 10
         return biases
 
-    def __call__(self, constraints: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
+    def __call__(self, cands: List[ConstraintCandidate]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
 
-        constraints = self.filter_constraints(constraints)
+        constraints = self.filter_constraints([c.constraint for c in cands])
         # print('after combining:')
         # print([short_str(c) for c in constraints])
 
@@ -430,7 +431,7 @@ class BlackBoxPruner(BasePruningMethod, Generic[NT]):
         y_names: Dict[str, IConstraint] = {}
         x_solver = z3.Optimize()
         y_solver = z3.Optimize()
-        biases = self.build_biases(constraints)
+        biases = self.build_biases(cands)
         if self.solve_unambig:
             biases = self.reward_parent_relative(biases)
         # biases = add_box16w_hack(biases)
@@ -449,7 +450,13 @@ class BlackBoxPruner(BasePruningMethod, Generic[NT]):
                 solver = y_solver
                 names_map = y_names
 
-            solver.add_soft(cvar, biases[constr])
+            try:
+                solver.add_soft(cvar, biases[constr])
+            except Exception as e:
+                print('missing constraint', short_str(constr))
+                print('biases:')
+                print(biases)
+                raise e
             names_map[cvname] = constr
             
 
@@ -546,7 +553,9 @@ class HierarchicalPruner(BasePruningMethod):
         self.solve_unambig = solve_unambig
         self.log_level = LogLevel.NONE
 
-    def relevant_constraints(self, focus: IView[NT], c: IConstraint) -> bool:
+    def relevant_constraint(self, focus: IView[NT], c: IConstraint) -> bool:
+
+        if c.op != operator.eq: return False
 
         def variables(cn: IConstraint) -> Set[str]:
             return set({cn.y_id.view_name}) or set({cn.x_id.view_name} if cn.x_id is not None else {})
@@ -672,7 +681,7 @@ class HierarchicalPruner(BasePruningMethod):
         return result + [replace(constr, priority = PRIORITY_STRONG) for constr in diff]
 
     # sanity check: kiwi and z3 should both accept entire set of output constraints
-    def validate_output_constrs(self, constraints: Set[IConstraint]) -> None:
+    def validate_output_constrs(self, constraints: Set[ConstraintCandidate]) -> None:
         solver = z3.Optimize()
         bb_solver = BlackBoxPruner([self.hierarchy], confs_to_bounds(self.min_conf, self.max_conf), self.solve_unambig)
         baseline_set = set(bb_solver(list(constraints))[0])
@@ -682,7 +691,7 @@ class HierarchicalPruner(BasePruningMethod):
 
         if (len(inconceivables) > 0):
             print('ERROR: black box found the following unsat core:')
-            print([short_str(c) for c in inconceivables])
+            print([short_str(c.constraint) for c in inconceivables])
 
             evaluate_constraints(self.hierarchy, to_rect(self.min_conf), list(baseline_set))
             raise Exception('inconceivable')
@@ -691,14 +700,14 @@ class HierarchicalPruner(BasePruningMethod):
 
         return
 
-    def __call__(self, constraints: List[IConstraint]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
+    def __call__(self, cands: List[ConstraintCandidate]) -> Tuple[List[IConstraint], Dict[str, Fraction], Dict[str, Fraction]]:
 
         infer_with_z3 = True
         validate = False
         debug = True
         integrate = False
 
-        constraints = self.combine_bounds(constraints)
+        # constraints = self.combine_bounds([c.constraint for c in cands])
 
         worklist = []
         start = (self.hierarchy, self.examples, self.min_conf, self.max_conf)
@@ -711,7 +720,7 @@ class HierarchicalPruner(BasePruningMethod):
             if self.log_level != LogLevel.NONE: 
                 print('solving for ', focus, 'with bounds ', min_c, max_c)
 
-            relevant = [c for c in constraints if self.relevant_constraints(focus, c)]
+            relevant = [c for c in cands if self.relevant_constraint(focus, c.constraint)]
 
             targets = [focus] + [child for child in focus.children]
 
