@@ -1,3 +1,4 @@
+import abc
 import logging
 import operator
 from abc import abstractmethod
@@ -37,16 +38,12 @@ class NoiseTolerantLearning(IConstraintLearning):
             for template in self.templates:
                 data = self.find_template_data(template)
 
-                task: NoiseTolerantTemplateModel
-                if template.kind.is_constant_form:
-                    task = NoiseTolerantConstantTemplateModel(template, data, self.config)
-                else:
-                    task = NoiseTolerantLinearTemplateModel(template, data, self.config)
+                model = NoiseTolerantTemplateModel(template, data, self.config)
 
-                if task.reject():
+                if model.reject():
                     yield []
                 else:
-                    yield task.learn()
+                    yield model.learn()
 
         return list(gen_candidates())
 
@@ -64,11 +61,31 @@ class NoiseTolerantLearning(IConstraintLearning):
         return pd.DataFrame(rows, columns=list(map(str, columns)), dtype=np.float)
 
 
-class NoiseTolerantTemplateModel:
+class NoiseTolerantTemplateModel(abc.ABC):
     def __init__(self, template: IConstraint, data: pd.DataFrame, config: NoiseTolerantLearningConfig):
         self.template = template
         self.data = data
         self.config = config
+
+        x = sm.add_constant(self.x_data, has_constant='add')
+        y = self.y_data
+        kind = self.template.kind
+
+        x_noise = np.random.randn(self.config.sample_count, 2) * 1e-5
+        x = x.add(x_noise, axis=0)
+
+        y_noise = np.random.randn(self.config.sample_count) * 1e-5
+        y = y.add(y_noise, axis=0)
+
+        self.model = sm.GLM(y, x)
+        if kind.is_constant_form:
+            self.fit = self.model.fit_constrained(((0, 1), 0))
+        elif kind.is_mul_only_form:
+            self.fit = self.model.fit_constrained(((1, 0), 0))
+        elif kind.is_add_only_form:
+            self.fit = self.model.fit_constrained(((0, 1), 1))
+        else:
+            self.fit = self.model.fit()
 
     @property
     def x_name(self) -> str:
@@ -87,83 +104,6 @@ class NoiseTolerantTemplateModel:
     @property
     def y_data(self) -> pd.Series:
         return self.data[self.y_name]
-
-    @abstractmethod
-    def learn(self) -> List[ConstraintCandidate]: ...
-
-    @abstractmethod
-    def reject(self) -> bool: ...
-
-    @abstractmethod
-    def a_bounds(self) -> Tuple[Fraction, Fraction]: ...
-
-    @abstractmethod
-    def b_bounds(self) -> Tuple[int, int]: ...
-
-    def _log_accepted(self) -> None:
-        a_bounds_str: str
-        al, au = self.a_bounds()
-        a_bounds_str = f"= {al}" if al == au else f"∈ [{al}, {au}]"
-
-        bl, bu = self.b_bounds()
-        b_bounds_str = f"= {bl}" if bl == bu else f"∈ [{bl}, {bu}]"
-
-        logger.debug(f"ACCEPTED `{self.template}`")
-        logger.debug(f"Bounds: a {a_bounds_str}, b {b_bounds_str}")
-        logger.debug(f"Data:\n{self.data}")
-
-
-class NoiseTolerantConstantTemplateModel(NoiseTolerantTemplateModel):
-    def learn(self) -> List[ConstraintCandidate]:
-        return []
-
-    def reject(self) -> bool:
-        y_data = self.y_data
-
-        # Is the variance of residuals small enough?
-        rstd = np.std(y_data - np.mean(y_data)).item()
-        if rstd > self.config.cutoff_spread:
-            logger.info(
-                f"REJECTED `{self.template}`, stdev of residuals too high: {rstd} > {self.config.cutoff_spread}")
-            logger.debug(f"Data:\n{self.data}")
-            return True
-
-        self._log_accepted()
-        return False
-
-    def a_bounds(self) -> Tuple[Fraction, Fraction]:
-        return Fraction(1), Fraction(1)
-
-    def b_bounds(self) -> Tuple[int, int]:
-        y, alpha, n = self.y_data, self.config.b_alpha, self.config.sample_count
-        y_mu = np.mean(y)
-
-        t = st.t.ppf(1 - alpha / 2, n - 2)
-        sem = st.sem(y)
-        return y_mu - t * sem, y_mu + t * sem
-
-
-class NoiseTolerantLinearTemplateModel(NoiseTolerantTemplateModel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        x = sm.add_constant(self.x_data, has_constant='add')
-        y = self.y_data
-
-        x_noise = np.random.randn(self.config.sample_count, 2) * 1e-5
-        x = x.add(x_noise, axis=0)
-
-        y_noise = np.random.randn(self.config.sample_count) * 1e-5
-        y = y.add(y_noise, axis=0)
-
-        if self.template.kind.is_mul_only_form:
-            self.model = sm.GLM(y, x)
-            self.fit = self.model.fit_constrained(((1, 0), 0))
-        elif self.template.kind.is_add_only_form:
-            self.model = sm.GLM(y, x)
-            self.fit = self.model.fit_constrained(((0, 1), 1))
-        else:
-            self.model = sm.OLS(y, x)
-            self.fit = self.model.fit()
 
     def learn(self) -> List[ConstraintCandidate]:
         return []
@@ -204,3 +144,15 @@ class NoiseTolerantLinearTemplateModel(NoiseTolerantTemplateModel):
     def b_bounds(self) -> Tuple[int, int]:
         bl, bu = self.fit.conf_int(alpha=self.config.b_alpha).iloc[0]
         return floor(bl), ceil(bu)
+
+    def _log_accepted(self) -> None:
+        a_bounds_str: str
+        al, au = self.a_bounds()
+        a_bounds_str = f"= {al}" if al == au else f"∈ [{al}, {au}]"
+
+        bl, bu = self.b_bounds()
+        b_bounds_str = f"= {bl}" if bl == bu else f"∈ [{bl}, {bu}]"
+
+        logger.debug(f"ACCEPTED `{self.template}`")
+        logger.debug(f"Bounds: a {a_bounds_str}, b {b_bounds_str}")
+        logger.debug(f"Data:\n{self.data}")
