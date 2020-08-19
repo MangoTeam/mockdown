@@ -138,7 +138,7 @@ class NoiseTolerantConstantTemplateModel(NoiseTolerantTemplateModel):
         y, alpha, n = self.y_data, self.config.b_alpha, self.config.sample_count
         y_mu = np.mean(y)
 
-        t = np.abs(st.t.ppf(alpha / 2, n - 2))
+        t = st.t.ppf(1 - alpha / 2, n - 2)
         sem = st.sem(y)
         return y_mu - t * sem, y_mu + t * sem
 
@@ -198,9 +198,9 @@ class NoiseTolerantLinearTemplateModel(NoiseTolerantTemplateModel):
 
     def a_bounds(self) -> Tuple[Fraction, Fraction]:
         max_d = self.config.max_denominator
-        al, au = self.fit.conf_int().iloc[1]
+        al, au = self.fit.conf_int(alpha=self.config.a_alpha).iloc[1]
         return Fraction(al).limit_denominator(max_d), Fraction(au).limit_denominator(max_d)
 
     def b_bounds(self) -> Tuple[int, int]:
-        bl, bu = self.fit.conf_int().iloc[0]
+        bl, bu = self.fit.conf_int(alpha=self.config.b_alpha).iloc[0]
         return floor(bl), ceil(bu)
