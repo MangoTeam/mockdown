@@ -106,13 +106,19 @@ class NoiseTolerantTemplateModel(abc.ABC):
         aconf_l, aconf_u = self.a_confint()
         bconf_l, bconf_u = self.b_confint()
 
+        # side    returned index i satisfies
+        # left    a[i - 1] < v <= a[i]
+        # right   a[i - 1] <= v < a[i]
+
         a_l_idx = np.searchsorted(a_space, aconf_l, 'left')
         a_u_idx = np.searchsorted(a_space, aconf_u, 'right')
         b_l_idx = np.searchsorted(b_space, bconf_l, 'left')
         b_u_idx = np.searchsorted(b_space, bconf_u, 'right')
 
-        a_cands = a_space[a_l_idx:a_u_idx]
-        b_cands = b_space[b_l_idx:b_u_idx]
+        # TODO: Handle case of finding only a single value
+
+        a_cands = a_space[max(0, a_l_idx - 1):min(a_u_idx + 1, len(a_space))]
+        b_cands = b_space[max(0, b_l_idx - 1):min(b_u_idx + 1, len(b_space))]
 
         return pd.DataFrame([(a, b) for a in a_cands for b in b_cands], columns=['a', 'b'])
 
@@ -120,14 +126,14 @@ class NoiseTolerantTemplateModel(abc.ABC):
         candidates = self.candidates()
         # scale = 1
 
-        candidates['GLM loglike'] = candidates.apply(lambda c: self.likelihood_score(*c), axis=1)
-        candidates['err_score'] = np.exp(candidates['GLM loglike'])
-        candidates['err_score'] /= candidates['err_score'].sum()
+        candidates['glm_loglike'] = candidates.apply(lambda c: self.likelihood_score(*c), axis=1)
+        candidates['glm_score'] = np.exp(candidates['glm_loglike'])
+        candidates['glm_score'] /= candidates['glm_score'].sum()
 
         candidates['pri_score'] = self.a_prior(candidates['a'])
         candidates['pri_score'] /= candidates['pri_score'].sum()
 
-        candidates['score'] = candidates['err_score'] * candidates['pri_score']
+        candidates['score'] = candidates['glm_score'] * candidates['pri_score']
         candidates['log_score'] = np.log(candidates['score'])
 
         logger.info(f"CANDIDATES:\n{candidates}")

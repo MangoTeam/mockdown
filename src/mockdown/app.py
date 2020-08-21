@@ -1,5 +1,4 @@
-import io
-import json
+import logging
 from typing import Any, Dict
 
 from starlette.applications import Starlette
@@ -9,7 +8,10 @@ from starlette.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
 from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
 from timing_asgi.integrations import StarletteScopeToName  # type: ignore
+
 from mockdown.run import run_timeout as run_mockdown_timeout
+
+logger = logging.getLogger(__name__)
 
 
 async def synthesize(request: Request) -> JSONResponse:
@@ -19,7 +21,9 @@ async def synthesize(request: Request) -> JSONResponse:
     timeout = request_json.pop('timeout', None)
     input_data = request_json
 
+    logger.info("===== SYNTH START =====")
     result = run_mockdown_timeout(input_data, options=options, timeout=timeout)
+    logger.info("===== SYNTH END =======")
     if result:
         return JSONResponse(result)
     else:

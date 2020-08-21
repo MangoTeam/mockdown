@@ -11,7 +11,7 @@ from ..constraint import *
 from ..types import NT
 
 
-def valid_constraints(root: IView[NT], visibilities: List[Tuple[IAnchor[NT], IAnchor[NT]]], debug: bool = False) \
+def valid_constraints(root: IView[NT], visibilities: List[Tuple[IAnchor[NT], IAnchor[NT]]], debug: bool = True) \
         -> Generator[IConstraint, None, None]:
     """
     Computes the valid constraint pairs (or singletons) for various

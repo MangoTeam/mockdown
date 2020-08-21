@@ -8,8 +8,8 @@ import sympy as sym
 
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import VisibilityConstraintInstantiator
-from mockdown.learning.noisetolerant import NoiseTolerantLearning
-from mockdown.learning.simple import SimpleLearning
+from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerantLearningConfig
+from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
 from mockdown.types import Tuple4
@@ -122,7 +122,15 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     templates = instantiator.instantiate(examples)
 
     # 3. Learn Constants.
-    learning = learning_factory(samples=examples, templates=templates)
+    learning_config: Any = {
+        'simple': SimpleLearningConfig(),
+        'noisetolerant': NoiseTolerantLearningConfig(
+            sample_count=len(examples),
+            max_offset=max((max(ex.width, ex.height) for ex in examples))
+        )
+    }[options.get('learning_method', 'simple')]
+
+    learning = learning_factory(samples=examples, templates=templates, config=learning_config)
     constraints = [candidate.constraint
                    for candidates in learning.learn()
                    for candidate in candidates]
