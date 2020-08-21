@@ -118,7 +118,6 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     unambig = options.get('unambig', False)
 
     loader = ViewLoader(number_type=number_type, debug_noise=debug_noise)
-    instantiator = VisibilityConstraintInstantiator()
 
     # 1. Load Examples
     examples = [loader.load_dict(ex_data) for ex_data in examples_data]
