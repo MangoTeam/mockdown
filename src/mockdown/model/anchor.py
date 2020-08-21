@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import Optional, cast, Any
 
 from mockdown.model.primitives import Attribute, ViewName
 from mockdown.model.types import IAnchor, IAnchorID, IEdge, IView
@@ -31,6 +31,10 @@ class AnchorID(IAnchorID):
 
 @dataclass(frozen=True, order=True)
 class Anchor(IAnchor[NT]):
+    """
+    Note: Anchors being sorted by their AnchorIDs is an important implementation detail! Do not change!
+    """
+
     view: IView[NT]
     attribute: Attribute
 

@@ -86,7 +86,7 @@ alignable(X, Y) :-
     X = anchor(V, A),
     Y = anchor(W, B),
     anchor(V, A), 
-    anchor(W, B), 
+    anchor(W, B),
     V \= W,
     visible_vertical(V, W),
     position(A), horizontal(A),

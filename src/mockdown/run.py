@@ -103,7 +103,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'noisetolerant': NoiseTolerantLearning
     }[options.get('learning_method', 'simple')]
 
-    print('using learning method:', options.get('learning_method', 'simple'))
+    # print('using learning method:', options.get('learning_method', 'simple'))
 
     pruner_factory = {
         'none': lambda x, y, ua: (lambda cns: (cns, None, None)),
@@ -135,6 +135,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         nl = '\n'
         tb = '\t'
         logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', templates))}")
+        print(len(templates))
         return {
             'constraints': [tpl.to_dict() for tpl in templates],
             'axioms': []

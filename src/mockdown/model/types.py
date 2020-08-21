@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Iterator, Optional, Protocol, Sequence, Tuple, Any, List, Dict
+from typing import Iterator, Optional, Protocol, Sequence, Tuple, Any, List, Dict, Iterable
 
 from mockdown.model.primitives import Attribute, IRect, ViewName
 from mockdown.types import NT
@@ -140,8 +140,15 @@ class IView(Protocol[NT]):
 
     @property
     @abstractmethod
-    def names(self) -> Iterator[str]: ...
-    
+    def all_anchors(self) -> Iterable[IAnchorID]: ...
+
+    @property
+    @abstractmethod
+    def all_anchor_ids(self) -> Iterable[IAnchor[NT]]: ...
+
+    @property
+    @abstractmethod
+    def all_anchor_names(self) -> Iterable[str]: ...
 
     @property
     @abstractmethod

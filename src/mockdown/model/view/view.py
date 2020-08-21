@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from itertools import chain
-from typing import Iterator, Optional, Sequence, cast, List, Dict, Any
+from typing import Iterator, Optional, Sequence, cast, List, Dict, Any, Iterable
 
 from mockdown.model.anchor import Anchor
 from mockdown.model.edge import Edge
@@ -91,11 +91,18 @@ class View(IView[NT]):
         return [self.top_anchor, self.bottom_anchor, self.height_anchor, self.center_y_anchor]
 
     @property
-    def names(self) -> Iterator[str]:
-        # print('boxes:', [bx for bx in self])
+    def all_anchors(self) -> Iterable[IAnchorID]:
         for box in [self, *self.children]:
             for anchor in box.anchors:
-                yield str(anchor.id)
+                yield anchor
+
+    @property
+    def all_anchor_ids(self) -> Iterable[IAnchor[NT]]:
+        yield from map(lambda a: a.id, self.all_anchors)
+
+    @property
+    def all_anchor_names(self) -> Iterable[str]:
+        yield from map(str, self.all_anchor_ids)
 
     def find_view(self,
                   name: ViewName,
