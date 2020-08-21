@@ -87,6 +87,7 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
         self.sibling_mat = anchor_mat.applymap(lambda p: p[0].view.is_sibling_of(p[1].view)).astype(np.int8)
 
     def instantiate(self) -> Sequence[IConstraint]:
+        print("HI!")
         pd.set_option('display.width', None)
         pd.set_option('display.max_colwidth', None)
         pd.set_option('display.max_rows', None)

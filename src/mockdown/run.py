@@ -96,7 +96,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     instantiator_factory = {
         'prolog': PrologConstraintInstantiator,
         'numpy': NumpyConstraintInstantiator
-    }[options.get('instantiation_method', 'prolog')]
+    }[options.get('instantiation_method', 'numpy')]
 
     learning_factory = {
         'simple': SimpleLearning,

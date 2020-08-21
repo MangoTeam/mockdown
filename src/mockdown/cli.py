@@ -34,7 +34,7 @@ def cli() -> None:
 @click.option('-im',
               '--instantiation-method',
               type=click.Choice(['prolog', 'numpy'], case_sensitive=False),
-              default='prolog',
+              default='numpy',
               show_default=True,
               help="Instantiation method to use: prolog or numpy.")
 @click.option('-lm',
