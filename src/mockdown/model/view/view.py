@@ -92,9 +92,9 @@ class View(IView[NT]):
 
     @property
     def all_anchors(self) -> Iterable[IAnchorID]:
-        for box in [self, *self.children]:
-            for anchor in box.anchors:
-                yield anchor
+        yield from (anchor
+                    for anchors in map(lambda v: v.anchors, iter(self))
+                    for anchor in anchors)
 
     @property
     def all_anchor_ids(self) -> Iterable[IAnchor[NT]]:

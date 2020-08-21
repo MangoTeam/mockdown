@@ -20,6 +20,7 @@ async def synthesize(request: Request) -> JSONResponse:
     options = request_json.pop('options', {})
     timeout = request_json.pop('timeout', None)
     input_data = request_json
+    # print(input_data)
 
     logger.info("===== SYNTH START =====")
     result = run_mockdown_timeout(input_data, options=options, timeout=timeout)

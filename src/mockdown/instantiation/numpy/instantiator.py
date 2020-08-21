@@ -33,12 +33,12 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
         )).sort_values()
 
         # 1. Construct base matrix of all anchor pairs.
-
         anchor_vec = pd.Series(anchors, index=index)
-        anchor_mat = pd.DataFrame(np.zeros((N, N), dtype=object), columns=index, index=index)
+        anchor_mat_np = np.zeros((N, N), dtype=object)
         for (r, c) in it.product(np.arange(0, N), np.arange(0, N)):
-            anchor_mat.iloc[r, c] = (anchors[r], anchors[c])
-        self.anchor_mat = anchor_mat
+            # print(r,c)
+            anchor_mat_np[r, c] = (anchors[r], anchors[c])
+        self.anchor_mat = anchor_mat = pd.DataFrame(anchor_mat_np, columns=index, index=index)
 
         # 2. Encode size/position/horizontal/vertical etc as matrices.
         self.is_size_vec = anchor_vec.map(lambda a: a.id.attribute.is_size()).astype(np.int8)
@@ -87,7 +87,6 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
         self.sibling_mat = anchor_mat.applymap(lambda p: p[0].view.is_sibling_of(p[1].view)).astype(np.int8)
 
     def instantiate(self) -> Sequence[IConstraint]:
-        print("HI!")
         pd.set_option('display.width', None)
         pd.set_option('display.max_colwidth', None)
         pd.set_option('display.max_rows', None)

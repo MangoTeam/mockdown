@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import time
+import timeit
+from datetime import datetime
 from multiprocessing import Process, Queue
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type, TypeVar
 
@@ -122,6 +124,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     # 1. Load Examples
     examples = [loader.load_dict(ex_data) for ex_data in examples_data]
+    print(examples[0])
 
     # Check that examples are isomorphic.
     if debug and len(examples) > 0:
@@ -131,15 +134,16 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     # 2. Instantiate Templates
     instantiator = instantiator_factory(examples)
 
-    instantiation_start = time.time()
+    instantiation_start = datetime.now()
     templates = instantiator.instantiate()
-    instantiation_end = time.time()
-    logger.info(f"Instantiation finished in {instantiation_end - instantiation_start:.5f}s.")
+    instantiation_end = datetime.now()
+    logger.info(f"Instantiation finished in {instantiation_end - instantiation_start}s.")
+
+    nl = '\n'
+    tb = '\t'
+    logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', templates))}")
 
     if options.get('debug_instantiation'):
-        nl = '\n'
-        tb = '\t'
-        logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', templates))}")
         print(len(templates))
         return {
             'constraints': [tpl.to_dict() for tpl in templates],
