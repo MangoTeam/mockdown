@@ -103,6 +103,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'noisetolerant': NoiseTolerantLearning
     }[options.get('learning_method', 'simple')]
 
+    print('using learning method:', options.get('learning_method', 'simple'))
+
     pruner_factory = {
         'none': lambda x, y, ua: (lambda cns: (cns, None, None)),
         'baseline': BlackBoxPruner,
