@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from multiprocessing import Process, Queue
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type, TypeVar
 
@@ -129,7 +130,11 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     # 2. Instantiate Templates
     instantiator = instantiator_factory(examples)
+
+    instantiation_start = time.time()
     templates = instantiator.instantiate()
+    instantiation_end = time.time()
+    logger.info(f"Instantiation finished in {instantiation_end - instantiation_start:.5f}s.")
 
     if options.get('debug_instantiation'):
         nl = '\n'
