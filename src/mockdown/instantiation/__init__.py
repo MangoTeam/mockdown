@@ -1,10 +1,10 @@
-from .logic import valid_constraints
+from .numpy import NumpyConstraintInstantiator
 from .types import IConstraintInstantiator
-from .visibility import VisibilityConstraintInstantiator, visible_pairs
+from .prolog import PrologConstraintInstantiator
 
 __all__ = [
-    'valid_constraints',
-    'visible_pairs',
     'IConstraintInstantiator',
-    'VisibilityConstraintInstantiator'
+    'PrologConstraintInstantiator',
+    'NumpyConstraintInstantiator'
 ]
+

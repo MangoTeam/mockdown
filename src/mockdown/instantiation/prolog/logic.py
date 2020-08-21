@@ -4,11 +4,11 @@ from typing import List, Tuple, Generator
 
 from pyswip import Prolog  # type: ignore
 
-from ..constraint import ConstraintKind
-from ..constraint.factory import ConstraintFactory
-from ..model import Attribute, IView, IAnchor, AnchorID
-from ..constraint import *
-from ..types import NT
+from mockdown.constraint import ConstraintKind
+from mockdown.constraint.factory import ConstraintFactory
+from mockdown.model import Attribute, IView, IAnchor, AnchorID
+from mockdown.constraint import *
+from mockdown.types import NT
 
 
 def valid_constraints(root: IView[NT], visibilities: List[Tuple[IAnchor[NT], IAnchor[NT]]], debug: bool = True) \

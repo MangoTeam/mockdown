@@ -7,13 +7,13 @@ from intervaltree import IntervalTree  # type: ignore
 
 from mockdown.constraint import IConstraint
 from mockdown.instantiation.types import IConstraintInstantiator
-from mockdown.instantiation.logic import valid_constraints
+from mockdown.instantiation.prolog.logic import valid_constraints
 
 from mockdown.model import IEdge, IView
 from mockdown.types import NT
 
 
-class VisibilityConstraintInstantiator(IConstraintInstantiator[NT]):
+class PrologConstraintInstantiator(IConstraintInstantiator[NT]):
     def instantiate(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
         edge_pair_sets = [
             visible_pairs(example, deep=True)

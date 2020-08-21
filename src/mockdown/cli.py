@@ -31,6 +31,12 @@ def cli() -> None:
               default='N',
               show_default=True,
               help="Numeric type of input: number, real, rational, or integer.")
+@click.option('-im',
+              '--instantiation-method',
+              type=click.Choice(['prolog', 'numpy'], case_sensitive=False),
+              default='simple',
+              show_default=True,
+              help="Instantiation method to use: prolog or numpy.")
 @click.option('-lm',
               '--learning-method',
               type=click.Choice(['simple', 'noisetolerant'], case_sensitive=False),
@@ -58,6 +64,12 @@ def cli() -> None:
               show_default=True,
               metavar="STDEV",
               help="Scale of (Gaussian) noise to apply to input. (For testing/debugging purposes)")
+@click.option('-di',
+              '--debug-instantiation',
+              is_flag=True,
+              type=bool,
+              default=False,
+              help="If true, instantiated templates are returned, and no learning or pruning is performed.")
 @click.option('-to',
               '--timeout',
               type=int,
@@ -67,20 +79,24 @@ def cli() -> None:
 def run(input: TextIO,
         output: TextIO,
         numeric_type: Literal["N", "Z", "Q", "R"],
+        instantiation_method: Literal['prolog', 'numpy'],
         learning_method: Literal['simple', 'noisetolerant'],
         pruning_method: Literal['none', 'baseline', 'hierarchical'],
         pruning_bounds: Tuple4[str],
         debug_noise: float,
+        debug_instantiation: bool,
         timeout: Optional[int]) -> None:
     # Note, this return value is intercepted by `process_result` above!
     input_data = json.load(input)
     input.close()
     results = run_mockdown_timeout(input_data, options=dict(
         numeric_type=numeric_type,
+        instantiation_method=instantiation_method,
         learning_method=learning_method,
         pruning_method=pruning_method,
         pruning_bounds=tuple((int(s) if s.isnumeric() else None for s in pruning_bounds)),
-        debug_noise=debug_noise
+        debug_noise=debug_noise,
+        debug_instantiation=debug_instantiation
     ), timeout=timeout)
 
     click.echo(json.dumps(

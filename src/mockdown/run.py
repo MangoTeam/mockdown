@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 from multiprocessing import Process, Queue
-from typing import List, Dict, TypedDict, Literal, Optional, Any, Tuple
+from typing import List, Dict, TypedDict, Literal, Optional, Any
 
 import sympy as sym
 
 from mockdown.constraint.axioms import make_axioms
-from mockdown.instantiation import VisibilityConstraintInstantiator
+from mockdown.instantiation import PrologConstraintInstantiator, NumpyConstraintInstantiator
 from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerantLearningConfig
 from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
@@ -25,12 +25,15 @@ class MockdownInput(TypedDict):
 class MockdownOptions(TypedDict, total=False):
     numeric_type: Literal["N", "Z", "Q", "R"]
 
+    instantiation_method: Literal['prolog', 'numpy']
+
     learning_method: Literal['simple', 'noisetolerant']
 
     pruning_method: Literal['none', 'baseline', 'hierarchical', 'dynamic', 'margins']
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
 
     debug_noise: float
+    debug_instantiation: bool
 
     include_axioms: bool
     debug: bool
@@ -90,6 +93,11 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'Z': sym.Integer
     }[options.get('numeric_type', 'N')]
 
+    instantiator = {
+        'prolog': PrologConstraintInstantiator,
+        'numpy': NumpyConstraintInstantiator
+    }[options.get('instantiation_method', 'prolog')]()
+
     learning_factory = {
         'simple': SimpleLearning,
         'noisetolerant': NoiseTolerantLearning
@@ -120,6 +128,12 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     # 2. Instantiate Templates
     templates = instantiator.instantiate(examples)
+
+    if options.get('debug_instantiation'):
+        return {
+            'constraints': [tpl.to_dict() for tpl in templates],
+            'axioms': []
+        }
 
     # 3. Learn Constants.
     learning_config: Any = {

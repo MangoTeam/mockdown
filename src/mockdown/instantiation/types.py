@@ -1,9 +1,9 @@
 from abc import abstractmethod
 from typing import Protocol, Collection, Sequence, Set
 
-from ..constraint import IConstraint
-from ..model import IView
-from ..types import NT
+from mockdown.constraint import IConstraint
+from mockdown.model import IView
+from mockdown.types import NT
 
 
 class IConstraintInstantiator(Protocol[NT]):
