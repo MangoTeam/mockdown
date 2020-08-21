@@ -13,7 +13,11 @@ class IConstraintInstantiator(Protocol[NT]):
     """
 
     @abstractmethod
-    def instantiate(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
+    def __init__(self, examples: Sequence[IView[NT]]):
+        ...
+
+    @abstractmethod
+    def instantiate(self) -> Sequence[IConstraint]:
         """
         Given a set of examples, instantiate a set of constraints to train.
         """

@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import logging
 from multiprocessing import Process, Queue
-from typing import List, Dict, TypedDict, Literal, Optional, Any
+from typing import List, Dict, TypedDict, Literal, Optional, Any, Type, TypeVar
 
 import sympy as sym
 
 from mockdown.constraint.axioms import make_axioms
-from mockdown.instantiation import PrologConstraintInstantiator, NumpyConstraintInstantiator
+from mockdown.instantiation import PrologConstraintInstantiator, NumpyConstraintInstantiator, IConstraintInstantiator
 from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerantLearningConfig
 from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
-from mockdown.types import Tuple4
+from mockdown.types import Tuple4, NT
 
 logger = logging.getLogger(__name__)
 
@@ -86,17 +86,17 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     }
 
     # Note: sym.Number _should_ generally "do the right thing"...
-    number_type = {
+    number_type: Type = {
         'N': sym.Number,
         'R': sym.Float,
         'Q': sym.Rational,
         'Z': sym.Integer
     }[options.get('numeric_type', 'N')]
 
-    instantiator = {
+    instantiator_factory = {
         'prolog': PrologConstraintInstantiator,
         'numpy': NumpyConstraintInstantiator
-    }[options.get('instantiation_method', 'prolog')]()
+    }[options.get('instantiation_method', 'prolog')]
 
     learning_factory = {
         'simple': SimpleLearning,
@@ -128,9 +128,13 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
             example.is_isomorphic(examples[0], include_names=True)
 
     # 2. Instantiate Templates
-    templates = instantiator.instantiate(examples)
+    instantiator = instantiator_factory(examples)
+    templates = instantiator.instantiate()
 
     if options.get('debug_instantiation'):
+        nl = '\n'
+        tb = '\t'
+        logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', templates))}")
         return {
             'constraints': [tpl.to_dict() for tpl in templates],
             'axioms': []

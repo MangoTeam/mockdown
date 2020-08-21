@@ -9,7 +9,7 @@ from mockdown.model.types import IAnchor, IAnchorID, IEdge, IView
 from mockdown.types import NT
 
 
-@dataclass(frozen=True, eq=True)
+@dataclass(frozen=True, eq=True, order=True)
 class AnchorID(IAnchorID):
     view_name: ViewName
     attribute: Attribute
@@ -29,7 +29,7 @@ class AnchorID(IAnchorID):
         return f"{self.view_name}.{self.attribute.value}"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class Anchor(IAnchor[NT]):
     view: IView[NT]
     attribute: Attribute

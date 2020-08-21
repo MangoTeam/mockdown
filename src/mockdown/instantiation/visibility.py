@@ -1,43 +1,12 @@
 from collections import deque
-from itertools import chain, tee
+from itertools import tee, chain
 from operator import attrgetter
-from typing import Any, Iterable, List, Sequence, Set, Tuple
+from typing import Iterable, Any, Tuple, List
 
-from intervaltree import IntervalTree  # type: ignore
+from intervaltree import IntervalTree
 
-from mockdown.constraint import IConstraint
-from mockdown.instantiation.types import IConstraintInstantiator
-from mockdown.instantiation.prolog.logic import valid_constraints
-
-from mockdown.model import IEdge, IView
+from mockdown.model import IView, IEdge
 from mockdown.types import NT
-
-
-class PrologConstraintInstantiator(IConstraintInstantiator[NT]):
-    def instantiate(self, examples: Sequence[IView[NT]]) -> Sequence[IConstraint]:
-        edge_pair_sets = [
-            visible_pairs(example, deep=True)
-            for example
-            in examples
-        ]
-
-        anchor_pair_sets = [
-            [(e1.anchor, e2.anchor) for (e1, e2) in edge_pair_set]
-            for edge_pair_set
-            in edge_pair_sets
-        ]
-
-        constraint_sets = {
-            valid_constraints(examples[i], anchor_pair_sets[i])
-            for i
-            in range(len(examples))
-        }
-
-        all_constraints: Set[IConstraint] = set()
-        for constraint_set in constraint_sets:
-            all_constraints = all_constraints.union(constraint_set)
-
-        return list(all_constraints)
 
 
 def pairwise(iterable: Iterable[Any]) -> Iterable[Tuple[Any, Any]]:
@@ -50,8 +19,8 @@ def interval_tree(root: IView[NT], primary_axis: str, include_root: bool = True)
     """
     Compute an interval tree for the given root view
     and it's immediate children. The primary axis is
-    the axis along which the lines vary. 
-    
+    the axis along which the lines vary.
+
     The query axis is the other axis.
     """
     assert primary_axis in ['x', 'y']
@@ -82,14 +51,14 @@ def interval_tree(root: IView[NT], primary_axis: str, include_root: bool = True)
 
 def visible_pairs(view: IView[NT], deep: bool = True) -> List[Tuple[IEdge[NT], IEdge[NT]]]:
     """
-    Compute visible (view, attr) pairs for the given view. 
+    Compute visible (view, attr) pairs for the given view.
     :param view: the root view from which to compute pairs.
     :param deep controls whether visible_pairs calls recursively or not.
     """
     root = view
     children = root.children
 
-    # We build an interval tree for the horizontal and 
+    # We build an interval tree for the horizontal and
     # vertical line segments making up our view rects.
 
     # We do _not_ include the root view, as it interferes with

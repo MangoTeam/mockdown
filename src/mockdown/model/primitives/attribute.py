@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import FrozenSet
+from typing import FrozenSet, Any
 
 from enum import Enum
+
 
 class Attribute(Enum):
     LEFT = 'left'
@@ -19,6 +20,27 @@ class Attribute(Enum):
         return self in h_attrs and other in h_attrs \
                or self in v_attrs and other in v_attrs \
                or self in s_attrs and other in s_attrs
+
+    def __ge__(self, other: Any) -> bool:
+        if self.__class__ is other.__class__:
+            return self.value >= other.value
+        return NotImplemented
+
+    def __gt__(self, other: Any) -> bool:
+        if self.__class__ is other.__class__:
+            return self.value > other.value
+        return NotImplemented
+
+    def __le__(self, other: Any) -> bool:
+        if self.__class__ is other.__class__:
+            return self.value <= other.value
+        return NotImplemented
+
+    def __lt__(self, other: Any) -> bool:
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        return NotImplemented
+
 
 h_attrs: FrozenSet[Attribute] = frozenset({Attribute.LEFT, Attribute.RIGHT, Attribute.CENTER_X})
 v_attrs: FrozenSet[Attribute] = frozenset({Attribute.TOP, Attribute.BOTTOM, Attribute.CENTER_Y})

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import operator
 from abc import abstractmethod
+from dataclasses import dataclass
 from enum import Enum, EnumMeta
-from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar, FrozenSet
+from typing import Any, Dict, Optional, Protocol, Set, Tuple, TypeVar, FrozenSet, runtime_checkable
 
 import sympy as sym
 
@@ -21,6 +23,14 @@ PRIORITY_REQUIRED: Priority = (1000, 1000, 1000)
 PRIORITY_STRONG: Priority = (1, 0, 0)
 PRIORITY_MEDIUM: Priority = (0, 1, 0)
 PRIORITY_WEAK: Priority = (0, 0, 1)
+
+
+def op_to_str(op: IComparisonOp[Any]) -> str:
+    return {
+        operator.eq: '=',
+        operator.le: '≤',
+        operator.ge: '≥'
+    }[op]
 
 
 def priority_to_str(p: Priority) -> str:
@@ -111,6 +121,26 @@ class ConstraintKind(Enum, metaclass=ConstraintKindMeta):
         else:
             return 2
 
+    def __ge__(self, other: Any) -> bool:
+        if self.__class__ is other.__class__:
+            return self.value >= other.value
+        return NotImplemented
+
+    def __gt__(self, other: Any) -> bool:
+        if self.__class__ is other.__class__:
+            return self.value > other.value
+        return NotImplemented
+
+    def __le__(self, other: Any) -> bool:
+        if self.__class__ is other.__class__:
+            return self.value <= other.value
+        return NotImplemented
+
+    def __lt__(self, other: Any) -> bool:
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        return NotImplemented
+
 
 ConstraintKind.constant_forms = frozenset({
     ConstraintKind.SIZE_CONSTANT,
@@ -145,7 +175,8 @@ ConstraintKind.size_kinds = frozenset({
 })
 
 
-class IConstraint:
+@runtime_checkable
+class IConstraint(Protocol):
     kind: ConstraintKind
 
     y_id: IAnchorID
@@ -178,14 +209,52 @@ class IConstraint:
               b: Optional[sym.Rational] = None,
               sample_count: int = 1) -> IConstraint:
         """Fill a template by substituting in the provided values."""
+
+    def to_expr(self) -> sym.Expr:
         ...
 
-    def to_expr(self) -> sym.Expr: ...
+    def to_dict(self) -> Dict[str, str]:
+        ...
 
-    def to_dict(self) -> Dict[str, str]: ...
+    def _to_tuple(self) -> Tuple[ConstraintKind, IAnchorID,
+                                 Optional[IAnchorID],
+                                 str, Priority, int, bool]:
+        """Converts to a tuple. Used for comparisons. """
+        return (
+            self.kind,
+            self.y_id,
+            self.x_id,
+            op_to_str(self.op),
+            self.priority,
+            self.sample_count,
+            self.is_falsified
+        )
 
-    def __repr__(self) -> str: ...
+    def __repr__(self) -> str:
+        ...
 
-    def __eq__(self, other: object) -> bool: ...
+    def __eq__(self, other: object) -> bool:
+        ...
 
-    def __hash__(self) -> int: ...
+    def __hash__(self) -> int:
+        ...
+
+    def __ge__(self, other: Any) -> bool:
+        if isinstance(other, IConstraint):
+            return self._to_tuple() >= other._to_tuple()
+        return NotImplemented
+
+    def __gt__(self, other: Any) -> bool:
+        if isinstance(other, IConstraint):
+            return self._to_tuple() > other._to_tuple()
+        return NotImplemented
+
+    def __le__(self, other: Any) -> bool:
+        if isinstance(other, IConstraint):
+            return self._to_tuple() <= other._to_tuple()
+        return NotImplemented
+
+    def __lt__(self, other: Any) -> bool:
+        if isinstance(other, IConstraint):
+            return self._to_tuple() < other._to_tuple()
+        return NotImplemented

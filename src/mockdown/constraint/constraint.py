@@ -7,16 +7,8 @@ from typing import Any, Dict, Optional, final
 import sympy as sym
 
 from mockdown.constraint.types import ConstraintKind, IComparisonOp, IConstraint, PRIORITY_REQUIRED, Priority, \
-    priority_to_str
+    priority_to_str, op_to_str
 from mockdown.model import IAnchorID
-
-
-def op_to_str(op: IComparisonOp[Any]) -> str:
-    return {
-        operator.eq: '=',
-        operator.le: '≤',
-        operator.ge: '≥'
-    }[op]
 
 
 @final
