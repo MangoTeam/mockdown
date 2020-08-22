@@ -83,7 +83,9 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
             .groupby(axis=1, level=0).any()
 
         # 5. Encode parent/child, sibling, and same-view relationships as matrices.
-        self.parent_mat = anchor_mat.applymap(lambda p: p[0].view.is_parent_of(p[1].view)).astype(np.int8)
+
+        # column should be parent of row
+        self.parent_mat = anchor_mat.applymap(lambda p: p[1].view.is_parent_of(p[0].view)).astype(np.int8)
         self.sibling_mat = anchor_mat.applymap(lambda p: p[0].view.is_sibling_of(p[1].view)).astype(np.int8)
 
     def instantiate(self) -> Sequence[IConstraint]:
