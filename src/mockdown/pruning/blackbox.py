@@ -552,27 +552,24 @@ class HierarchicalPruner(BasePruningMethod):
 
     def relevant_constraint(self, focus: IView[NT], c: IConstraint) -> bool:
 
-        def variables(cn: IConstraint) -> Set[str]:
-            return set({cn.y_id.view_name}) | set({cn.x_id.view_name} if cn.x_id is not None else {})
-
-        cvs = variables(c)
-
-        if len(cvs) == 1:
-            name = cvs.pop()
+        if c.x_id:
+            # either y is focus and x a child, or x the focus and y a child 
+            y_name = c.y_id.view_name
+            x_name = c.x_id.view_name
+            
             for child in focus.children:
-                if child.name == name:
-                    return True
+                if child.name == x_name:
+                    return focus.name == y_name or focus.is_parent_of_name(y_name)
+                elif child.name == y_name:
+                    return focus.name == x_name or focus.is_parent_of_name(x_name)
             return False
         else:
-            if c.kind.is_position_kind:
-                return focus.is_parent_of_name(c.y_id.view_name) or (
-                    focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
-            elif c.kind.is_size_kind:
-                return focus.is_parent_of_name(c.y_id.view_name) or (
-                    focus.is_parent_of_name(c.x_id.view_name) if c.x_id else False)
-            else:
-                assert False, 'weird constraint kind: ' + str(c.kind)
-                return unreachable(c.kind)
+            # otherwise, there is only one variable, take just children constraints
+            for child in focus.children:
+                if child.name == c.y_id.view_name:
+                    return True
+            return False
+
 
     def infer_child_confs(self, constrs: List[IConstraint], focus: IView[NT], min_c: Conformance, max_c: Conformance) -> \
             Dict[str, Dict[str, Conformance]]:
