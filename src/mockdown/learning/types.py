@@ -8,7 +8,7 @@ from mockdown.constraint import IConstraint
 from mockdown.model import IView
 
 
-@dataclass
+@dataclass(order=True)
 class ConstraintCandidate:
     constraint: IConstraint
     score: float

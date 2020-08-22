@@ -19,7 +19,8 @@ from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, D
 from mockdown.types import Tuple4, NT
 
 logger = logging.getLogger(__name__)
-
+nl = '\n'
+tb = '\t'
 
 class MockdownInput(TypedDict):
     examples: List[Dict[str, Any]]
@@ -71,7 +72,8 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     return queue.get()
 
 
-def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[MockdownResults]:
+def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
+    MockdownResults]:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
@@ -139,9 +141,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     instantiation_end = datetime.now()
     logger.info(f"Instantiation finished in {instantiation_end - instantiation_start}s.")
 
-    nl = '\n'
-    tb = '\t'
-    logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', templates))}")
+    logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', sorted(templates)))}")
 
     if options.get('debug_instantiation'):
         print(len(templates))
@@ -162,9 +162,13 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     learning = learning_factory(samples=examples, templates=templates, config=learning_config)
     candidates = list(flatten(learning.learn()))
 
+    logger.debug(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}({c.score})', sorted(candidates)))}")
+
     # 4. Pruning.
     prune = pruner_factory(examples, bounds_dict, unambig)
     pruned_constraints, _, _ = prune(candidates)
+
+    logger.debug(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
 
     result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],
