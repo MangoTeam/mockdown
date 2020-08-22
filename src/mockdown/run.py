@@ -147,7 +147,9 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     instantiation_end = datetime.now()
     logger.info(f"Instantiation finished in {instantiation_end - instantiation_start}s.")
 
-    logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', sorted(templates)))}")
+    logger.debug(len(templates))
+    # logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', sorted(templates)))}")
+    logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{t.y_id}{tb}{t.x_id}{tb}{t.kind}', sorted(templates)))}")
 
     if options.get('debug_instantiation'):
         print(len(templates))
