@@ -47,3 +47,6 @@ def unreachable(x: NoReturn) -> NoReturn:
     >     expected "NoReturn"
     """
     assert False, "Unhandled type: {}".format(type(x).__name__)
+
+
+PROFILE = False

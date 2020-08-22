@@ -15,13 +15,12 @@ from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerant
 from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
-from mockdown.types import Tuple4
-
-PROFILE = True
+from mockdown.types import Tuple4, PROFILE
 
 logger = logging.getLogger(__name__)
 nl = '\n'
 tb = '\t'
+
 
 class MockdownInput(TypedDict):
     examples: List[Dict[str, Any]]
@@ -174,7 +173,6 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     if PROFILE:
         pr.disable()
         pr.dump_stats('profile-learning.pstat')
-
 
     logger.debug(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}({c.score})', sorted(candidates)))}")
 
