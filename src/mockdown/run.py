@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 import logging
-import time
-import timeit
 from cProfile import Profile
 from datetime import datetime
 from multiprocessing import Process, Queue
-from typing import List, Dict, TypedDict, Literal, Optional, Any, Type, TypeVar
+from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import sympy as sym
 from more_itertools import flatten
 
 from mockdown.constraint.axioms import make_axioms
-from mockdown.instantiation import PrologConstraintInstantiator, NumpyConstraintInstantiator, IConstraintInstantiator
+from mockdown.instantiation import PrologConstraintInstantiator, NumpyConstraintInstantiator
 from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerantLearningConfig
 from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
-from mockdown.types import Tuple4, NT
+from mockdown.types import Tuple4
+
+PROFILE = True
 
 logger = logging.getLogger(__name__)
 nl = '\n'
@@ -138,7 +138,13 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     instantiator = instantiator_factory(examples)
 
     instantiation_start = datetime.now()
+    if PROFILE:
+        pr = Profile()
+        pr.enable()
     templates = instantiator.instantiate()
+    if PROFILE:
+        pr.disable()
+        pr.dump_stats('profile-instantiation.pstat')
     instantiation_end = datetime.now()
     logger.info(f"Instantiation finished in {instantiation_end - instantiation_start}s.")
 
@@ -160,18 +166,27 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         )
     }[options.get('learning_method', 'simple')]
 
+    if PROFILE:
+        pr = Profile()
+        pr.enable()
     learning = learning_factory(samples=examples, templates=templates, config=learning_config)
     candidates = list(flatten(learning.learn()))
+    if PROFILE:
+        pr.disable()
+        pr.dump_stats('profile-learning.pstat')
+
 
     logger.debug(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}({c.score})', sorted(candidates)))}")
 
     # 4. Pruning.
-    pr = Profile()
-    pr.enable()
+    if PROFILE:
+        pr = Profile()
+        pr.enable()
     prune = pruner_factory(examples, bounds_dict, unambig)
     pruned_constraints, _, _ = prune(candidates)
-    pr.disable()
-    pr.dump_stats('pruning-profile.pstat')
+    if PROFILE:
+        pr.disable()
+        pr.dump_stats('profile-pruning.pstat')
 
     logger.debug(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
 

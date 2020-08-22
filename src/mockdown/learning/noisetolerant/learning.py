@@ -8,6 +8,7 @@ from typing import List, Sequence, Optional, Tuple
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 import statsmodels.api as sm  # type: ignore
+import statsmodels.tools.sm_exceptions as sm_exc
 import sympy as sym
 from pathos.pools import ProcessPool
 
@@ -68,24 +69,41 @@ class NoiseTolerantTemplateModel(abc.ABC):
         y = self.y_data
         kind = self.template.kind
 
-        x_noise = np.random.randn(self.config.sample_count, 2) * 1e-5
-        x = x.add(x_noise, axis=0)
+        """
+        This is an absolutely horrendous hack. Basically, due to numerical error, sometimes
+        the noise here isn't quite enough, and statsmodels will throw a PerfectSeparationError.
+        
+        (Context: statsmodels doesn't handle the perfect fit case, so we add very tiny noise to 
+         get around that limitation.)
+        
+        If so... we just try again.
+        """
+        while True:
+            try:
+                x_noise = np.random.randn(self.config.sample_count, 2) * 1e-5
+                x = x.add(x_noise, axis=0)
 
-        y_noise = np.random.randn(self.config.sample_count) * 1e-5
-        y = y.add(y_noise, axis=0)
+                y_noise = np.random.randn(self.config.sample_count) * 1e-5
+                y = y.add(y_noise, axis=0)
 
-        self.model = sm.GLM(y, x)
-        with warnings.catch_warnings():
-            # To ignore a harmless warning from statsmodels. – Dylan
-            warnings.simplefilter("ignore")
-            if kind.is_constant_form:
-                self.fit = self.model.fit_constrained(((0, 1), 0))
-            elif kind.is_mul_only_form:
-                self.fit = self.model.fit_constrained(((1, 0), 0))
-            elif kind.is_add_only_form:
-                self.fit = self.model.fit_constrained(((0, 1), 1))
+                self.model = sm.GLM(y, x)
+                with warnings.catch_warnings():
+                    # To ignore a harmless warning from statsmodels. – Dylan
+                    warnings.simplefilter("ignore")
+                    if kind.is_constant_form:
+                        self.fit = self.model.fit_constrained(((0, 1), 0))
+                    elif kind.is_mul_only_form:
+                        self.fit = self.model.fit_constrained(((1, 0), 0))
+                    elif kind.is_add_only_form:
+                        self.fit = self.model.fit_constrained(((0, 1), 1))
+                    else:
+                        self.fit = self.model.fit()
+            except sm_exc.PerfectSeparationError:
+                logger.warn(f"Perfect separation error for {self.template}f with data:\n{self.data}")
+                continue
             else:
-                self.fit = self.model.fit()
+                break
+
 
     @property
     def x_name(self) -> str:
@@ -117,14 +135,14 @@ class NoiseTolerantTemplateModel(abc.ABC):
         if len(a_cands_ixs) == 0:
             # The confidence interval is _between_ two candidates, find its upper/lower candidate bounds.
             a_ix = np.searchsorted(a_space, (aconf_l + aconf_u) / 2)
-            a_cands_ixs = [max(0, a_ix - 1), a_ix]
+            a_cands_ixs = [max(0, a_ix - 1), min(a_ix, len(a_space) - 1)]
         a_cands = a_space[a_cands_ixs]
 
         b_cands_ixs = np.where(np.logical_and(bconf_l <= b_space, b_space <= bconf_u))[0]
         if len(b_cands_ixs) == 0:
             # The confidence interval is _between_ two candidates, find its upper/lower candidate bounds.
             b_ix = np.searchsorted(b_space, (bconf_l + bconf_u) / 2)
-            b_cands_ixs = [max(0, b_ix - 1), b_ix]
+            b_cands_ixs = [max(0, b_ix - 1), min(b_ix, len(b_space) - 1)]
         b_cands = b_space[b_cands_ixs]
 
         return pd.DataFrame([(a, b) for a in a_cands for b in b_cands], columns=['a', 'b'])
