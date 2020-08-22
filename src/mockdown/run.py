@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import cProfile as profile
+
 import logging
 import time
 import timeit
@@ -124,7 +126,6 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     # 1. Load Examples
     examples = [loader.load_dict(ex_data) for ex_data in examples_data]
-    print(examples[0])
 
     # Check that examples are isomorphic.
     if debug and len(examples) > 0:
@@ -132,10 +133,16 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
             example.is_isomorphic(examples[0], include_names=True)
 
     # 2. Instantiate Templates
-    instantiator = instantiator_factory(examples)
-
     instantiation_start = datetime.now()
-    templates = instantiator.instantiate()
+    pr = profile.Profile()
+    pr.enable()
+    try:
+        instantiator = instantiator_factory(examples)
+        templates = instantiator.instantiate()
+    finally:
+        pr.disable()
+        pr.dump_stats('inst-profile.pstat')
+
     instantiation_end = datetime.now()
     logger.info(f"Instantiation finished in {instantiation_end - instantiation_start}s.")
 
@@ -143,7 +150,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     tb = '\t'
     logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', templates))}")
 
-    if options.get('debug_instantiation'):
+    # if options.get('debug_instantiation'):
+    if True:
         print(len(templates))
         return {
             'constraints': [tpl.to_dict() for tpl in templates],

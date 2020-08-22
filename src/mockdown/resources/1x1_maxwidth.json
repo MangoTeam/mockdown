@@ -1,0 +1,49 @@
+{
+  "_comment": "One centered child container, 10px top/bottom margins, 100% width up to a max width of 150px",
+  "examples": [
+    {
+      "_comment": "Default 100x100.",
+      "name": "root",
+      "rect": [0, 0, 100, 100],
+      "children": [
+        {
+          "name": "container",
+          "rect": [0, 10, 100, 90]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched twice as wide.",
+      "name": "root",
+      "rect": [0, 0, 200, 100],
+      "children": [
+        {
+          "name": "container",
+          "rect": [25, 10, 175, 90]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched thrice as wide.",
+      "name": "root",
+      "rect": [0, 0, 300, 100],
+      "children": [
+        {
+          "name": "container",
+          "rect": [75, 10, 225, 90]
+        }
+      ]
+    },
+    {
+      "_comment": "Stretched twice as tall.",
+      "name": "root",
+      "rect": [0, 0, 100, 200],
+      "children": [
+        {
+          "name": "container",
+          "rect": [0, 10, 100, 190]
+        }
+      ]
+    }
+  ]
+}

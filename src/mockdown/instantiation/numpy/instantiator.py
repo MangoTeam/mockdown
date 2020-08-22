@@ -5,6 +5,7 @@ import itertools as it
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
+import swifter  # type.ignore
 from more_itertools import flatten
 
 from mockdown.constraint import IConstraint, ConstraintKind
@@ -37,25 +38,26 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
         anchor_mat_np = np.zeros((N, N), dtype=object)
         for (r, c) in it.product(np.arange(0, N), np.arange(0, N)):
             # print(r,c)
+            # todo: flatten object out into nicer pandas dtypes?
             anchor_mat_np[r, c] = (anchors[r], anchors[c])
         self.anchor_mat = anchor_mat = pd.DataFrame(anchor_mat_np, columns=index, index=index)
 
         # 2. Encode size/position/horizontal/vertical etc as matrices.
-        self.is_size_vec = anchor_vec.map(lambda a: a.id.attribute.is_size()).astype(np.int8)
+        self.is_size_vec = anchor_vec.swifter.apply(lambda a: a.id.attribute.is_size()).astype(np.int8)
         self.both_size_mat = pd.DataFrame(np.outer(self.is_size_vec, self.is_size_vec), columns=index, index=index)
 
-        self.is_pos_vec = anchor_vec.map(lambda a: a.id.attribute.is_position()).astype(np.int8)
+        self.is_pos_vec = anchor_vec.swifter.apply(lambda a: a.id.attribute.is_position()).astype(np.int8)
         self.both_pos_mat = pd.DataFrame(np.outer(self.is_pos_vec, self.is_pos_vec), columns=index, index=index)
 
-        self.is_h_vec = anchor_vec.map(lambda a: a.id.attribute.is_horizontal()).astype(np.int8)
-        self.is_v_vec = anchor_vec.map(lambda a: a.id.attribute.is_vertical()).astype(np.int8)
+        self.is_h_vec = anchor_vec.swifter.apply(lambda a: a.id.attribute.is_horizontal()).astype(np.int8)
+        self.is_v_vec = anchor_vec.swifter.apply(lambda a: a.id.attribute.is_vertical()).astype(np.int8)
 
         self.both_h_mat = pd.DataFrame(np.outer(self.is_h_vec, self.is_h_vec), columns=index, index=index)
         self.both_v_mat = pd.DataFrame(np.outer(self.is_v_vec, self.is_v_vec), columns=index, index=index)
 
         # Note: this matrix is _not_ symmetric and that's the way we want it!
-        self.same_attr_mat = anchor_mat.applymap(lambda p: p[0].attribute == p[1].attribute).astype(np.int8)
-        self.dual_attr_mat = anchor_mat.applymap(lambda p: Attribute.is_dual_pair(p[0].attribute, p[1].attribute)).astype(np.int8)
+        self.same_attr_mat = anchor_mat.swifter.applymap(lambda p: p[0].attribute == p[1].attribute).astype(np.int8)
+        self.dual_attr_mat = anchor_mat.swifter.applymap(lambda p: Attribute.is_dual_pair(p[0].attribute, p[1].attribute)).astype(np.int8)
 
         self.hv_mat = pd.DataFrame(np.outer(self.is_h_vec, self.is_v_vec), columns=index, index=index)
 
@@ -65,11 +67,12 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
             for example
             in examples
         ))
-        self.visible_mat = anchor_mat.applymap(lambda p: (p[0].id, p[1].id) in visibilities).astype(np.int8)
+        # pprint(visibilities)
+        self.visible_mat = anchor_mat.swifter.applymap(lambda p: (p[0].id, p[1].id) in visibilities).astype(np.int8)
         self.visible_mat |= self.visible_mat.transpose()
 
         # 4. Encode view-level facts, such as visibilities (these involve quantification over a view's anchors).
-        self.same_view_mat = anchor_mat.applymap(lambda p: p[0].view == p[1].view) \
+        self.same_view_mat = anchor_mat.swifter.applymap(lambda p: p[0].view == p[1].view) \
             .astype(np.int8) \
             .groupby(axis=0, level=0).any() \
             .groupby(axis=1, level=0).any()
@@ -83,8 +86,8 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
             .groupby(axis=1, level=0).any()
 
         # 5. Encode parent/child, sibling, and same-view relationships as matrices.
-        self.parent_mat = anchor_mat.applymap(lambda p: p[0].view.is_parent_of(p[1].view)).astype(np.int8)
-        self.sibling_mat = anchor_mat.applymap(lambda p: p[0].view.is_sibling_of(p[1].view)).astype(np.int8)
+        self.parent_mat = anchor_mat.swifter.applymap(lambda p: p[0].view.is_parent_of(p[1].view)).astype(np.int8)
+        self.sibling_mat = anchor_mat.swifter.applymap(lambda p: p[0].view.is_sibling_of(p[1].view)).astype(np.int8)
 
     def instantiate(self) -> Sequence[IConstraint]:
         pd.set_option('display.width', None)
