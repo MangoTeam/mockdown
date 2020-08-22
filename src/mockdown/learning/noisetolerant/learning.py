@@ -1,14 +1,15 @@
 import abc
 import logging
 import operator
+import warnings
 from fractions import Fraction
-from math import floor, ceil
-from typing import List, Sequence, Optional, Iterable, Tuple
+from typing import List, Sequence, Optional, Tuple
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 import statsmodels.api as sm  # type: ignore
 import sympy as sym
+from pathos.pools import ProcessPool
 
 from mockdown.constraint import IConstraint
 from mockdown.learning.noisetolerant.types import NoiseTolerantLearningConfig
@@ -32,15 +33,18 @@ class NoiseTolerantLearning(IConstraintLearning):
         self.config = config
 
     def learn(self) -> List[List[ConstraintCandidate]]:
-        def gen_candidates() -> Iterable[List[ConstraintCandidate]]:
-            for template in self.templates:
-                data = self.find_template_data(template)
-                model = NoiseTolerantTemplateModel(template, data, self.config)
-                yield model.learn() if not model.reject() else []
+        if len(self.templates) >= 100:
+            p = ProcessPool()
+            return list(p.map(self.learn_one, self.templates))
+        else:
+            return list(map(self.learn_one, self.templates))
 
-        return list(gen_candidates())
+    def learn_one(self, template) -> List[ConstraintCandidate]:
+        data = self._template_data(template)
+        model = NoiseTolerantTemplateModel(template, data, self.config)
+        return model.learn() if not model.reject() else []
 
-    def find_template_data(self, template: IConstraint) -> pd.DataFrame:
+    def _template_data(self, template: IConstraint) -> pd.DataFrame:
         """Extract the data for a given template from the samples."""
         if template.kind.is_constant_form:
             columns = [template.y_id]
@@ -71,14 +75,17 @@ class NoiseTolerantTemplateModel(abc.ABC):
         y = y.add(y_noise, axis=0)
 
         self.model = sm.GLM(y, x)
-        if kind.is_constant_form:
-            self.fit = self.model.fit_constrained(((0, 1), 0))
-        elif kind.is_mul_only_form:
-            self.fit = self.model.fit_constrained(((1, 0), 0))
-        elif kind.is_add_only_form:
-            self.fit = self.model.fit_constrained(((0, 1), 1))
-        else:
-            self.fit = self.model.fit()
+        with warnings.catch_warnings():
+            # To ignore a harmless warning from statsmodels. – Dylan
+            warnings.simplefilter("ignore")
+            if kind.is_constant_form:
+                self.fit = self.model.fit_constrained(((0, 1), 0))
+            elif kind.is_mul_only_form:
+                self.fit = self.model.fit_constrained(((1, 0), 0))
+            elif kind.is_add_only_form:
+                self.fit = self.model.fit_constrained(((0, 1), 1))
+            else:
+                self.fit = self.model.fit()
 
     @property
     def x_name(self) -> str:

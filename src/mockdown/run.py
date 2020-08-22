@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import timeit
+from cProfile import Profile
 from datetime import datetime
 from multiprocessing import Process, Queue
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type, TypeVar
@@ -165,8 +166,12 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     logger.debug(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}({c.score})', sorted(candidates)))}")
 
     # 4. Pruning.
+    pr = Profile()
+    pr.enable()
     prune = pruner_factory(examples, bounds_dict, unambig)
     pruned_constraints, _, _ = prune(candidates)
+    pr.disable()
+    pr.dump_stats('pruning-profile.pstat')
 
     logger.debug(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
 
