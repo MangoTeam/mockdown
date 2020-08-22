@@ -134,14 +134,14 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     # 2. Instantiate Templates
     instantiation_start = datetime.now()
-    pr = profile.Profile()
-    pr.enable()
-    try:
-        instantiator = instantiator_factory(examples)
-        templates = instantiator.instantiate()
-    finally:
-        pr.disable()
-        pr.dump_stats('inst-profile.pstat')
+    # pr = profile.Profile()
+    # pr.enable()
+    # try:
+    instantiator = instantiator_factory(examples)
+    templates = instantiator.instantiate()
+    # finally:
+    #     pr.disable()
+    #     pr.dump_stats('inst-profile.pstat')
 
     instantiation_end = datetime.now()
     logger.info(f"Instantiation finished in {instantiation_end - instantiation_start}s.")
@@ -150,9 +150,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     tb = '\t'
     logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', templates))}")
 
-    # if options.get('debug_instantiation'):
-    if True:
-        print(len(templates))
+    if options.get('debug_instantiation'):
         return {
             'constraints': [tpl.to_dict() for tpl in templates],
             'axioms': []
@@ -175,6 +173,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     # 4. Pruning.
     prune = pruner_factory(examples, bounds_dict, unambig)
     pruned_constraints, _, _ = prune(constraints)
+
+    logger.debug(f"CONSTRAINTS:\n{nl.join(map(lambda t: f'{tb}{t}', pruned_constraints))}")
 
     result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],
