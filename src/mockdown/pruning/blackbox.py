@@ -419,13 +419,7 @@ class BlackBoxPruner(BasePruningMethod, Generic[NT]):
             for box in self.example:
                 for anchor in box.anchors:
                     defaults[str(anchor.id)] = to_frac(anchor.value)
-            return (constraints, defaults, defaults)
-
-        def add_box16w_hack(weights: Dict[IConstraint, float]) -> Dict[IConstraint, float]:
-            for constr, weight in weights.items():
-                if constr.y_id.view_name == 'box15' and constr.kind == ConstraintKind.SIZE_CONSTANT:
-                    weights[constr] = 1000000
-            return weights
+            return ([], defaults, defaults)
 
         x_names: Dict[str, IConstraint] = {}
         y_names: Dict[str, IConstraint] = {}
@@ -436,6 +430,9 @@ class BlackBoxPruner(BasePruningMethod, Generic[NT]):
             biases = self.reward_parent_relative(biases)
         # biases = add_box16w_hack(biases)
         # biases = {k: 1 for k in biases}
+
+        print('biases:')
+        print(biases)
 
         confs = conformance_range(self.min_conf, self.max_conf, scale=5)
 
@@ -555,10 +552,8 @@ class HierarchicalPruner(BasePruningMethod):
 
     def relevant_constraint(self, focus: IView[NT], c: IConstraint) -> bool:
 
-        if c.op != operator.eq: return False
-
         def variables(cn: IConstraint) -> Set[str]:
-            return set({cn.y_id.view_name}) or set({cn.x_id.view_name} if cn.x_id is not None else {})
+            return set({cn.y_id.view_name}) | set({cn.x_id.view_name} if cn.x_id is not None else {})
 
         cvs = variables(c)
 
@@ -754,9 +749,9 @@ class HierarchicalPruner(BasePruningMethod):
                     clo, chi = child_confs[child.name]['min'], child_confs[child.name]['max']
 
                 worklist.append((child, [fe.children[ci] for fe in focus_examples], clo, chi))
-            if self.log_level == LogLevel.ALL:
-                with open('constraints.json', 'a') as debugout:
-                    print([short_str(c) for c in focus_output], file=debugout)
+            # if self.log_level == LogLevel.ALL:
+            with open('constraints.json', 'a') as debugout:
+                print([short_str(c) for c in focus_output], file=debugout)
 
         print('done with hierarchical pruning! finishing up...')
         if integrate: 

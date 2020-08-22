@@ -7,6 +7,12 @@ import sympy as sym
 from mockdown.constraint import IConstraint
 from mockdown.types import NT, unreachable
 
+from mockdown.model import View, IAnchorID
+
+# def local_anchors(v: View) -> Iterable[IAnchorID]:
+#     for box in [v, *v.children]:
+#         for anchor in box.anchors:
+#             yield anchor
 
 def anchor_equiv(c1: IConstraint, c2: IConstraint) -> bool:
     """

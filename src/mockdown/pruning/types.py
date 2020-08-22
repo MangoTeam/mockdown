@@ -118,8 +118,10 @@ class BasePruningMethod(IPruningMethod):
         return output
 
     def build_biases(self, cands: List[ConstraintCandidate]) -> Dict[IConstraint, float]:
-        scores = {x.constraint : int(100 * x.score) for x in cands}
-        return {constr : 10 if score <= 1 else score for constr, score in scores.items()}
+        tiny = 0.000000001
+        scores = {x.constraint : max(tiny, x.score) for x in cands}
+        min_score = min([x for _,x in scores.items()])
+        return {constr : score/min_score + tiny for constr, score in scores.items()}
 
     def add_containment_axioms(self, solver: z3.Optimize, confIdx: int, parent: IView[NT], x_dim: bool) -> None:
         pl, pr = anchor_id_to_z3_var(parent.left_anchor.id, confIdx), anchor_id_to_z3_var(parent.right_anchor.id,
