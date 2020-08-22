@@ -106,19 +106,19 @@ class NoiseTolerantTemplateModel(abc.ABC):
         aconf_l, aconf_u = self.a_confint()
         bconf_l, bconf_u = self.b_confint()
 
-        # side    returned index i satisfies
-        # left    a[i - 1] < v <= a[i]
-        # right   a[i - 1] <= v < a[i]
+        a_cands_ixs = np.where(np.logical_and(aconf_l <= a_space, a_space <= aconf_u))[0]
+        if len(a_cands_ixs) == 0:
+            # The confidence interval is _between_ two candidates, find its upper/lower candidate bounds.
+            a_ix = np.searchsorted(a_space, (aconf_l + aconf_u) / 2)
+            a_cands_ixs = [max(0, a_ix - 1), a_ix]
+        a_cands = a_space[a_cands_ixs]
 
-        a_l_idx = np.searchsorted(a_space, aconf_l, 'left')
-        a_u_idx = np.searchsorted(a_space, aconf_u, 'right')
-        b_l_idx = np.searchsorted(b_space, bconf_l, 'left')
-        b_u_idx = np.searchsorted(b_space, bconf_u, 'right')
-
-        # TODO: Handle case of finding only a single value
-
-        a_cands = a_space[max(0, a_l_idx - 1):min(a_u_idx + 1, len(a_space))]
-        b_cands = b_space[max(0, b_l_idx - 1):min(b_u_idx + 1, len(b_space))]
+        b_cands_ixs = np.where(np.logical_and(bconf_l <= b_space, b_space <= bconf_u))[0]
+        if len(b_cands_ixs) == 0:
+            # The confidence interval is _between_ two candidates, find its upper/lower candidate bounds.
+            b_ix = np.searchsorted(b_space, (bconf_l + bconf_u) / 2)
+            b_cands_ixs = [max(0, b_ix - 1), b_ix]
+        b_cands = b_space[b_cands_ixs]
 
         return pd.DataFrame([(a, b) for a in a_cands for b in b_cands], columns=['a', 'b'])
 
@@ -170,14 +170,14 @@ class NoiseTolerantTemplateModel(abc.ABC):
         self._log_accepted()
         return False
 
-    def a_confint(self) -> Tuple[Fraction, Fraction]:
+    def a_confint(self) -> Tuple[float, float]:
         max_d = self.config.max_denominator
         al, au = self.fit.conf_int(alpha=self.config.a_alpha).iloc[1]
-        return Fraction(al).limit_denominator(max_d), Fraction(au).limit_denominator(max_d)
+        return al, au
 
-    def b_confint(self) -> Tuple[int, int]:
+    def b_confint(self) -> Tuple[float, float]:
         bl, bu = self.fit.conf_int(alpha=self.config.b_alpha).iloc[0]
-        return floor(bl), ceil(bu)
+        return bl, bu
 
     def a_prior(self, a: np.ndarray) -> float:
         return self.config.depth_prior[np.searchsorted(self.config.a_space, a)]

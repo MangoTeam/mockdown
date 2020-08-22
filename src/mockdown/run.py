@@ -8,6 +8,7 @@ from multiprocessing import Process, Queue
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type, TypeVar
 
 import sympy as sym
+from more_itertools import flatten
 
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import PrologConstraintInstantiator, NumpyConstraintInstantiator, IConstraintInstantiator
@@ -124,7 +125,6 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     # 1. Load Examples
     examples = [loader.load_dict(ex_data) for ex_data in examples_data]
-    print(examples[0])
 
     # Check that examples are isomorphic.
     if debug and len(examples) > 0:
@@ -155,18 +155,16 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'simple': SimpleLearningConfig(),
         'noisetolerant': NoiseTolerantLearningConfig(
             sample_count=len(examples),
-            max_offset=max((max(ex.width, ex.height) for ex in examples))
+            max_offset=max((max(ex.width, ex.height) for ex in examples)) + 10  # some wiggle room.
         )
     }[options.get('learning_method', 'simple')]
 
     learning = learning_factory(samples=examples, templates=templates, config=learning_config)
-    constraints = [candidate.constraint
-                   for candidates in learning.learn()
-                   for candidate in candidates]
+    candidates = list(flatten(learning.learn()))
 
     # 4. Pruning.
     prune = pruner_factory(examples, bounds_dict, unambig)
-    pruned_constraints, _, _ = prune(constraints)
+    pruned_constraints, _, _ = prune(candidates)
 
     result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],
