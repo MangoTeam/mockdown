@@ -75,6 +75,7 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
     MockdownResults]:
+
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
