@@ -1,13 +1,12 @@
 import logging
+import os
 from typing import Any, Dict
 
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.staticfiles import StaticFiles
-from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
-from timing_asgi.integrations import StarletteScopeToName  # type: ignore
+from starlette.staticfiles import StaticFiles\
 
 from mockdown.run import run_timeout as run_mockdown_timeout
 
@@ -38,15 +37,19 @@ def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) 
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
     app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
 
-    class StdoutTimingClient(TimingClient):  # type: ignore
-        def timing(self, metric_name, timing, tags=None) -> None:  # type: ignore
-            print(metric_name, timing, tags)
+    if os.name != 'nt':
+        from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
+        from timing_asgi.integrations import StarletteScopeToName  # type: ignore
 
-    app.add_middleware(
-        TimingMiddleware,
-        client=StdoutTimingClient(),
-        metric_namer=StarletteScopeToName(prefix="mockdown", starlette_app=app)
-    )
+        class StdoutTimingClient(TimingClient):  # type: ignore
+            def timing(self, metric_name, timing, tags=None) -> None:  # type: ignore
+                print(metric_name, timing, tags)
+
+        app.add_middleware(
+            TimingMiddleware,
+            client=StdoutTimingClient(),
+            metric_namer=StarletteScopeToName(prefix="mockdown", starlette_app=app)
+        )
 
     return app
 
