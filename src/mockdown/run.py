@@ -10,7 +10,7 @@ import sympy as sym
 from more_itertools import flatten
 
 from mockdown.constraint.axioms import make_axioms
-from mockdown.instantiation import PrologConstraintInstantiator, NumpyConstraintInstantiator
+from mockdown.instantiation import NumpyConstraintInstantiator, get_prolog_instantiator_factory
 from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerantLearningConfig
 from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
@@ -100,7 +100,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     }[options.get('numeric_type', 'N')]
 
     instantiator_factory = {
-        'prolog': PrologConstraintInstantiator,
+        'prolog': get_prolog_instantiator_factory(),
         'numpy': NumpyConstraintInstantiator
     }[options.get('instantiation_method', 'numpy')]
 
