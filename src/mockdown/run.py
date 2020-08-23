@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from cProfile import Profile
 from datetime import datetime
+import multiprocessing as mp
 from multiprocessing import Queue, Pool, TimeoutError, get_context
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
