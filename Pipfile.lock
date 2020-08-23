@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "27284556dd79235a1a3293ef54b3373874c5408123c7910b78c7024940f7e419"
+            "sha256": "cea662fd6598350283d767da1df4e5d33f542e72a39fbca6def9fe09b4a37b6c"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -238,6 +238,14 @@
                 "sha256:f115cec4201e1465cd58b9866b0b0e7b941caafec129869057405bfe5b5e3991"
             ],
             "version": "==0.5.1"
+        },
+        "pebble": {
+            "hashes": [
+                "sha256:e2cfc81bf1e627ff6314f4e1ca0c3414779d408594f807d702d088c19ff5070b",
+                "sha256:fbe82c94ddcd08144bc4afc5512767e03a9ebdbbdfba31568f44179e4dd20d1e"
+            ],
+            "index": "pypi",
+            "version": "==4.5.3"
         },
         "pox": {
             "hashes": [

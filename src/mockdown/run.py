@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 from cProfile import Profile
 from datetime import datetime
-from multiprocessing import Queue, Pool, TimeoutError, get_context
+from multiprocessing import Queue, Pool, TimeoutError
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import sympy as sym
 from more_itertools import flatten
+import pebble
 
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import NumpyConstraintInstantiator, get_prolog_instantiator_factory
@@ -15,7 +16,6 @@ from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerant
 from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
-from mockdown.timeout import with_timeout
 from mockdown.types import Tuple4, PROFILE
 
 logger = logging.getLogger(__name__)
@@ -61,19 +61,15 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
     # return with_timeout(timeout)(run)(*args, **kwargs)
 
-    with Pool(1) as pool:
+    with pebble.ProcessPool(1) as pool:
+        task = pool.schedule(run, args, kwargs, timeout=timeout)
+
         try:
-            res = pool.apply_async(run, args, kwargs)
-            return res.get(timeout=timeout)
+            return task.result()
         except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
-            raise te
-        except:
-            logger.warn(f"Some other terrible thing happened.")
-            raise
-        finally:
-            pool.close()
-            pool.join()
+            return None
+            # raise te
 
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[

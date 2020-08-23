@@ -30,6 +30,7 @@ sympy = "*"
 treelib = "*"
 numpy = "*"
 pathos = "*"
+pebble = "*"
 
 [requires]
 python_version = "3.8"
