@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from cProfile import Profile
 from datetime import datetime
-from multiprocessing import Queue, Pool, TimeoutError
+from multiprocessing import Queue, Pool, TimeoutError, get_context
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import sympy as sym
@@ -15,6 +15,7 @@ from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerant
 from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
+from mockdown.timeout import with_timeout
 from mockdown.types import Tuple4, PROFILE
 
 logger = logging.getLogger(__name__)
@@ -58,18 +59,23 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     if not timeout:
         return run(*args, **kwargs)
 
-    with Pool(1) as pool:
-        try:
-            res = pool.apply_async(run, args, kwargs)
-            return res.get(timeout=timeout)
-        except TimeoutError as te:
-            logger.warn(f"Synthesis timed out after {timeout}s.")
-            raise te
-        except:
-            logger.warn(f"Some other terrible thing happened.")
-            raise
-        finally:
-            pool.close()
+    return with_timeout(timeout)(run)(*args, **kwargs)
+
+    # get_context
+    #
+    # with Pool(1) as pool:
+    #     try:
+    #         res = pool.apply_async(run, args, kwargs)
+    #         return res.get(timeout=timeout)
+    #     except TimeoutError as te:
+    #         logger.warn(f"Synthesis timed out after {timeout}s.")
+    #         raise te
+    #     except:
+    #         logger.warn(f"Some other terrible thing happened.")
+    #         raise
+    #     finally:
+    #         pool.close()
+    #         pool.join()
 
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
