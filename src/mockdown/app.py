@@ -24,10 +24,7 @@ async def synthesize(request: Request) -> JSONResponse:
     logger.info("===== SYNTH START =====")
     result = run_mockdown_timeout(input_data, options=options, timeout=timeout)
     logger.info("===== SYNTH END =======")
-    if result:
-        return JSONResponse(result)
-    else:
-        raise Exception('timeout')
+    return JSONResponse(result)
 
 
 def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) -> Starlette:
