@@ -63,19 +63,25 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
     with Pool(1) as pool:
         try:
-            res = pool.apply_async(run, args, kwargs)
+            res = pool.apply_async(_run_wrapper, args, kwargs)
             return res.get(timeout=timeout)
         except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
-            pool.terminate()  # with extreme prejudice
-            pool.join()
-            raise te
-        except:
+            return None
+        except Exception as e:
             logger.warn(f"Some other terrible thing happened.")
-            raise
+            return None
         finally:
             pool.close()
+            pool.terminate()  # with extreme prejudice
             pool.join()
+
+
+def _run_wrapper(*args, **kwargs):
+    try:
+        run(*args, **kwargs)
+    except Exception as e:
+        raise Exception(e.message)
 
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
