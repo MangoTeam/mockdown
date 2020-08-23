@@ -65,6 +65,9 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
         except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
             raise te
+        except:
+            logger.warn(f"Some other terrible thing happened.")
+            raise
         finally:
             pool.close()
 
