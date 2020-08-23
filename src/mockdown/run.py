@@ -62,9 +62,9 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
         try:
             res = pool.apply_async(run, args, kwargs)
             return res.get(timeout=timeout)
-        except TimeoutError:
+        except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
-            return None
+            raise te
         finally:
             pool.close()
 
