@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from cProfile import Profile
 from datetime import datetime
-from multiprocessing import Queue, TimeoutError
+import multiprocessing as mp
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import pebble
@@ -61,15 +61,19 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
     # return with_timeout(timeout)(run)(*args, **kwargs)
 
-    with pebble.ThreadPool(1) as pool:
+    queue = mp.Queue()
+    kwargs.update({'result_queue': queue})
 
-        try:
-            task = pool.schedule(run, args, kwargs)
-            return task.result(timeout=timeout)
-        except TimeoutError as te:
-            logger.warn(f"Synthesis timed out after {timeout}s.")
-            return None
-            # raise te
+    p = mp.Process(target=run, args=args, kwargs=kwargs)
+    p.start()
+    p.join(timeout)
+    if p.is_alive():
+        p.terminate()  # with extreme prejudice
+        p.join()
+        logger.warn(f"Synthesis timed out after {timeout}s.")
+        return None
+
+    return queue.get()
 
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
