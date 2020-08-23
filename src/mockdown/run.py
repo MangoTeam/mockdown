@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 from cProfile import Profile
 from datetime import datetime
-from multiprocessing import Queue, Pool, TimeoutError
+from multiprocessing import Queue, TimeoutError
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
+import pebble
 import sympy as sym
 from more_itertools import flatten
-import pebble
 
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import NumpyConstraintInstantiator, get_prolog_instantiator_factory
@@ -61,11 +61,11 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
     # return with_timeout(timeout)(run)(*args, **kwargs)
 
-    with pebble.ProcessPool(1) as pool:
-        task = pool.schedule(run, args, kwargs, timeout=timeout)
+    with pebble.ThreadPool(1) as pool:
 
         try:
-            return task.result()
+            task = pool.schedule(run, args, kwargs)
+            return task.result(timeout=timeout)
         except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
             return None
