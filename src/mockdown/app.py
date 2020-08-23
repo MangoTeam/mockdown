@@ -37,19 +37,19 @@ def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) 
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
     app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
 
-    if os.name != 'nt':
-        from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
-        from timing_asgi.integrations import StarletteScopeToName  # type: ignore
-
-        class StdoutTimingClient(TimingClient):  # type: ignore
-            def timing(self, metric_name, timing, tags=None) -> None:  # type: ignore
-                print(metric_name, timing, tags)
-
-        app.add_middleware(
-            TimingMiddleware,
-            client=StdoutTimingClient(),
-            metric_namer=StarletteScopeToName(prefix="mockdown", starlette_app=app)
-        )
+    # if os.name != 'nt':
+    #     from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
+    #     from timing_asgi.integrations import StarletteScopeToName  # type: ignore
+    #
+    #     class StdoutTimingClient(TimingClient):  # type: ignore
+    #         def timing(self, metric_name, timing, tags=None) -> None:  # type: ignore
+    #             print(metric_name, timing, tags)
+    #
+    #     app.add_middleware(
+    #         TimingMiddleware,
+    #         client=StdoutTimingClient(),
+    #         metric_namer=StarletteScopeToName(prefix="mockdown", starlette_app=app)
+    #     )
 
     return app
 

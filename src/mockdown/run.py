@@ -71,9 +71,6 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
         except:
             logger.warn(f"Some other terrible thing happened.")
             raise
-        finally:
-            pool.close()
-            pool.join()
 
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
