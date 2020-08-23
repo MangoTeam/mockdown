@@ -23,7 +23,7 @@ def with_timeout(max_time):
             thread.start()
             thread.join(max_time)
 
-            if thread.isAlive():
+            if thread.is_alive():
                 raise TimeoutError("Processing took longer than %s seconds" % max_time)
 
             output = queue.get_nowait()
