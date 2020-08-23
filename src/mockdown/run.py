@@ -72,8 +72,11 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
             logger.warn(f"Some other terrible thing happened.")
             return None
         finally:
+            print("Pool's closed.")
             pool.close()
+            print("Terminating pool with extreme prejudice.")
             pool.terminate()  # with extreme prejudice
+            print("Joining pool.")
             pool.join()
 
 
