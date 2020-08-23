@@ -54,6 +54,9 @@ class MockdownResults(TypedDict):
 def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     timeout = kwargs.pop('timeout', None)
 
+    logger = mp.log_to_stderr()
+    logger.setLevel(logging.DEBUG)
+
     # PyCharm's debugger doesn't like subprocesses.
     # When debugging use a timeout of None or 0.
     if not timeout:
