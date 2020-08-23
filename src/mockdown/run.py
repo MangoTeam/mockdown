@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from cProfile import Profile
 from datetime import datetime
-from multiprocessing import Process, Queue
+from multiprocessing import Queue, Pool, TimeoutError
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import sympy as sym
@@ -58,18 +58,15 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     if not timeout:
         return run(*args, **kwargs)
 
-    queue = Queue()
-    kwargs.update({'result_queue': queue})
-
-    p = Process(target=run, args=args, kwargs=kwargs)
-    p.start()
-    p.join(timeout)
-    if p.is_alive():
-        p.kill()
-        logger.warn(f"Synthesis timed out after {timeout}s.")
-        return None
-
-    return queue.get()
+    with Pool(1) as pool:
+        try:
+            res = pool.apply_async(run, args, kwargs)
+            return res.get(timeout=timeout)
+        except TimeoutError:
+            logger.warn(f"Synthesis timed out after {timeout}s.")
+            return None
+        finally:
+            pool.close()
 
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
