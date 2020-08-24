@@ -16,7 +16,7 @@ from mockdown.model import IView
 Kind = ConstraintKind
 
 DEFAULT_TOLERANCE = 0.01  # maximum difference of 1%
-MAX_DENOMINATOR = 1000
+MAX_DENOMINATOR = 100
 
 
 @dataclass(frozen=True)
