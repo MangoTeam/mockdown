@@ -30,6 +30,7 @@ class MockdownInput(TypedDict):
 
 
 class MockdownOptions(TypedDict, total=False):
+    input_format: Literal['default', 'bench']
     numeric_type: Literal["N", "Z", "Q", "R"]
 
     instantiation_method: Literal['prolog', 'numpy']
@@ -75,7 +76,6 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
     MockdownResults]:
-
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
@@ -84,7 +84,13 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     """
     debug = options.get('debug', False)
 
-    examples_data = input_data["examples"]
+    input_format = options.get('input_format', 'default')
+
+    if input_format == 'default':
+        examples_data = input_data["examples"]
+    elif input_format == 'bench':
+        examples_data = input_data["train"]
+
     bounds = options.get('pruning_bounds', (None, None, None, None))
     bounds_dict = {
         'min_w': bounds[0],
@@ -125,7 +131,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     unambig = options.get('unambig', False)
 
-    loader = ViewLoader(number_type=number_type, debug_noise=debug_noise)
+    loader = ViewLoader(number_type=number_type, input_format=input_format, debug_noise=debug_noise)
 
     # 1. Load Examples
     examples = [loader.load_dict(ex_data) for ex_data in examples_data]

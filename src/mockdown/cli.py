@@ -25,6 +25,12 @@ def cli() -> None:
 @click.command()
 @click.argument('input', type=click.File('r'))
 @click.argument('output', type=click.File('w'))
+@click.option('-if',
+              '--input-format',
+              type=click.Choice(['default', 'bench'], case_sensitive=False),
+              default='default',
+              show_default=True,
+              help="Input format: either default, or bench_cache/*.json format")
 @click.option('-nt',
               '--numeric-type',
               type=click.Choice(['N', 'R', 'Q', 'Z'], case_sensitive=False),
@@ -78,6 +84,7 @@ def cli() -> None:
               help="Timeout after which synthesis will be aborted.")
 def run(input: TextIO,
         output: TextIO,
+        input_format: Literal['default', 'bench'],
         numeric_type: Literal["N", "Z", "Q", "R"],
         instantiation_method: Literal['prolog', 'numpy'],
         learning_method: Literal['prolog', 'noisetolerant'],
@@ -90,6 +97,7 @@ def run(input: TextIO,
     input_data = json.load(input)
     input.close()
     results = run_mockdown_timeout(input_data, options=dict(
+        input_format=input_format,
         numeric_type=numeric_type,
         instantiation_method=instantiation_method,
         learning_method=learning_method,
