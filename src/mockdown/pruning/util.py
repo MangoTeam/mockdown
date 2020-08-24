@@ -55,6 +55,8 @@ def to_frac(x: Union[NT, Fraction]) -> Fraction:
         return Fraction(int(x.p), int(x.q))
     elif isinstance(x, sym.Expr):
         return Fraction(float(x.evalf()))
+    elif isinstance(x, int):
+        return Fraction(x)
     else:
         unreachable(x)
 
