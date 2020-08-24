@@ -66,8 +66,7 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     p.start()
     p.join(timeout)
     if p.is_alive():
-        p.terminate()
-        p.kill()  # just to be sure...
+        p.kill()
         logger.warn(f"Synthesis timed out after {timeout}s.")
         return None
 
