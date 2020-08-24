@@ -68,9 +68,11 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
             return executor.submit(run, *args, **kwargs).result(timeout=timeout)
         except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
+            executor.shutdown(wait=False)
             raise te
         except:
             logger.warn(f"Some other terrible thing happened.")
+            executor.shutdown(wait=False)
             raise
 
 
