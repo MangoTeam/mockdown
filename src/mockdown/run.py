@@ -63,9 +63,15 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
     # return with_timeout(timeout)(run)(*args, **kwargs)
 
+    def run_wrapper(*args, **kwargs):
+        try:
+            run(*args, **kwargs)
+        except:
+            raise
+
     with ThreadPoolExecutor(1) as executor:
         try:
-            return executor.submit(run, *args, **kwargs).result(timeout=timeout)
+            return executor.submit(run_wrapper, *args, **kwargs).result(timeout=timeout)
         except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
             executor.shutdown(wait=False)
