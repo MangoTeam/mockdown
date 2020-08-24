@@ -190,8 +190,10 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     if PROFILE:
         pr = Profile()
         pr.enable()
+
     prune = pruner_factory(examples, bounds_dict, unambig)
     pruned_constraints, _, _ = prune(candidates)
+
     if PROFILE:
         pr.disable()
         pr.dump_stats('profile-pruning.pstat')

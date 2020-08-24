@@ -16,7 +16,7 @@ from mockdown.constraint import IConstraint
 from mockdown.learning.noisetolerant.types import NoiseTolerantLearningConfig
 from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
-from mockdown.types import unopt
+from mockdown.types import unopt, PROFILE
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class NoiseTolerantLearning(IConstraintLearning):
         self.config = config
 
     def learn(self) -> List[List[ConstraintCandidate]]:
-        if False: # len(self.templates) >= 100 and not PROFILE:  # profiler can't see inside multiprocessing
+        if len(self.templates) >= 100 and not PROFILE:  # profiler can't see inside multiprocessing
             with ProcessPool() as pool:
                 return list(pool.map(self.learn_one, self.templates))
         else:
@@ -103,7 +103,6 @@ class NoiseTolerantTemplateModel(abc.ABC):
                 continue
             else:
                 break
-
 
     @property
     def x_name(self) -> str:
