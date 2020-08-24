@@ -395,6 +395,8 @@ class BlackBoxPruner(BasePruningMethod, Generic[NT]):
                     raise Exception('unexpected solver output')
                     
             else:
+                with open("unsat-%s.smt2" % self.example.name, 'w') as debugout:
+                    print(solver.sexpr(), file=debugout)
                 raise Exception('cant find a solution')
 
     def reward_parent_relative(self, biases: Dict[IConstraint, float]) -> Dict[IConstraint, float]:
@@ -431,8 +433,8 @@ class BlackBoxPruner(BasePruningMethod, Generic[NT]):
         # biases = add_box16w_hack(biases)
         # biases = {k: 1 for k in biases}
 
-        print('biases:')
-        print(biases)
+        # print('biases:')
+        # print(biases)
 
         confs = conformance_range(self.min_conf, self.max_conf, scale=5)
 
