@@ -7,17 +7,16 @@ from typing import List, Sequence, Optional, Tuple
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
+import pathos
 import statsmodels.api as sm  # type: ignore
 import statsmodels.tools.sm_exceptions as sm_exc
 import sympy as sym
-from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import Pool
 
 from mockdown.constraint import IConstraint
 from mockdown.learning.noisetolerant.types import NoiseTolerantLearningConfig
 from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.model import IView
-from mockdown.types import unopt, PROFILE
+from mockdown.types import unopt
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ class NoiseTolerantLearning(IConstraintLearning):
 
     def learn(self) -> List[List[ConstraintCandidate]]:
         if True: # len(self.templates) >= 100 and not PROFILE:  # profiler can't see inside multiprocessing
-            with Pool() as pool:
+            with pathos.Pool() as pool:
                 return list(pool.map(self.learn_one, self.templates))
         else:
             return list(map(self.learn_one, self.templates))
