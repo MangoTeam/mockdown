@@ -4,6 +4,7 @@ import logging
 from cProfile import Profile
 from datetime import datetime
 from multiprocessing import Process, Queue
+from pprint import pprint
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import sympy as sym
@@ -81,7 +82,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     It is in its own file to prevent import cycles between cli and app!
     """
-    logger.warn(f"Running with options: {options}")
+    logger.info(f"Running with options: {options}")
 
     debug = options.get('debug', False)
 
@@ -158,7 +159,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     logger.debug(len(templates))
     # logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', sorted(templates)))}")
-    logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{t.y_id}{tb}{t.x_id}{tb}{t.kind}', sorted(templates)))}")
+    logger.info(f"TEMPLATES:\n{nl.join(map(lambda t: f'{t.y_id}{tb}{t.x_id}{tb}{t.kind}', sorted(templates)))}")
 
     if options.get('debug_instantiation'):
         print(len(templates))
@@ -185,7 +186,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         pr.disable()
         pr.dump_stats('profile-learning.pstat')
 
-    logger.debug(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}({c.score})', sorted(candidates)))}")
+    logger.info(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}{c.score}', sorted(candidates)))}")
 
     # 4. Pruning.
     if PROFILE:
@@ -199,7 +200,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         pr.disable()
         pr.dump_stats('profile-pruning.pstat')
 
-    logger.debug(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
+    logger.info(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
 
     result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],

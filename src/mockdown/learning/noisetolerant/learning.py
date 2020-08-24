@@ -160,7 +160,7 @@ class NoiseTolerantTemplateModel(abc.ABC):
         candidates['score'] = candidates['glm_score'] * candidates['pri_score']
         candidates['log_score'] = np.log(candidates['score'])
 
-        logger.info(f"CANDIDATES:\n{candidates}")
+        logger.debug(f"CANDIDATES:\n{candidates}")
 
         return list(candidates.apply(lambda row: ConstraintCandidate(
             self.template.subst(a=sym.Rational(row['a']), b=sym.Rational(row['b'])),
@@ -170,14 +170,14 @@ class NoiseTolerantTemplateModel(abc.ABC):
         x, y = self.x_data, self.y_data
 
         if np.var(x) == 0 and not np.std(y) < self.config.cutoff_spread:
-            logger.info(
+            logger.debug(
                 f"REJECTED: `{self.template}`, no x variance and stdev of y is too high: "
                 f"{np.std(y)} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
 
         if np.var(y) == 0 and not np.std(x) < self.config.cutoff_spread:
-            logger.info(
+            logger.debug(
                 f"REJECTED: `{self.template}`, no y variance and stdev of x is too high: "
                 f"{np.std(x)} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
@@ -186,7 +186,7 @@ class NoiseTolerantTemplateModel(abc.ABC):
         # Are the residuals small?
         resid_std = np.std(self.fit.resid_response)
         if resid_std > self.config.cutoff_spread:
-            logger.info(
+            logger.debug(
                 f"REJECTED: `{self.template}`, stdev of residuals too high: {resid_std} > {self.config.cutoff_spread}")
             logger.debug(f"Data:\n{self.data}")
             return True
@@ -214,6 +214,6 @@ class NoiseTolerantTemplateModel(abc.ABC):
         bl, bu = self.b_confint()
         b_bounds_str = f"= {bl}" if bl == bu else f"∈ [{bl}, {bu}]"
 
-        logger.info(f"ACCEPTED: `{self.template}`")
+        logger.debug(f"ACCEPTED: `{self.template}`")
         logger.debug(f"DATA:\n{self.data}")
-        logger.info(f"BOUNDS: a {a_bounds_str}, b {b_bounds_str}")
+        logger.debug(f"BOUNDS: a {a_bounds_str}, b {b_bounds_str}")
