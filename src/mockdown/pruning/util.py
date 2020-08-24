@@ -57,6 +57,8 @@ def to_frac(x: Union[NT, Fraction]) -> Fraction:
         return Fraction(float(x.evalf()))
     elif isinstance(x, int):
         return Fraction(x)
+    elif isinstance(x, float):
+        return Fraction(x)
     else:
         unreachable(x)
 

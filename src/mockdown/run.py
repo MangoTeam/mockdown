@@ -81,6 +81,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     It is in its own file to prevent import cycles between cli and app!
     """
+    logger.warn(f"Running with options: {options}")
+
     debug = options.get('debug', False)
 
     input_format = options.get('input_format', 'default')

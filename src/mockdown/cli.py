@@ -96,13 +96,23 @@ def run(input: TextIO,
     # Note, this return value is intercepted by `process_result` above!
     input_data = json.load(input)
     input.close()
+
+    bounds = [None, None, None, None]
+    for i, bound in enumerate(pruning_bounds):
+        try:
+            bounds[i] = float(bound)
+        except ValueError:
+            continue
+
+    print(bounds)
+
     results = run_mockdown_timeout(input_data, options=dict(
         input_format=input_format,
         numeric_type=numeric_type,
         instantiation_method=instantiation_method,
         learning_method=learning_method,
         pruning_method=pruning_method,
-        pruning_bounds=tuple((int(s) if s.isnumeric() else None for s in pruning_bounds)),
+        pruning_bounds=tuple(bounds),
         debug_noise=debug_noise,
         debug_instantiation=debug_instantiation
     ), timeout=timeout)
