@@ -6,8 +6,7 @@ from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.staticfiles import StaticFiles \
- \
+from starlette.staticfiles import StaticFiles
 from mockdown.run import run_timeout as run_mockdown_timeout
 
 logger = logging.getLogger(__name__)
