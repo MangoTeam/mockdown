@@ -1,13 +1,12 @@
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.staticfiles import StaticFiles\
-
+from starlette.staticfiles import StaticFiles
 from mockdown.run import run_timeout as run_mockdown_timeout
 
 logger = logging.getLogger(__name__)
@@ -30,12 +29,14 @@ async def synthesize(request: Request) -> JSONResponse:
         raise Exception('timeout')
 
 
-def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) -> Starlette:
+def create_app(*, static_dir: Optional[str] = None, static_path: Optional[str] = None,
+               **_kwargs: Dict[str, Any]) -> Starlette:
     app = Starlette(debug=True)
     app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'],
                        allow_credentials=True)
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
-    # app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
+    if static_dir is not None and static_path is not None:
+        app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
 
     # if os.name != 'nt':
     #     from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
@@ -53,4 +54,5 @@ def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) 
 
     return app
 
-default_app = create_app(static_dir='static/', static_path='/')
+
+default_app = create_app()
