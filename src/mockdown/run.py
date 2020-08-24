@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 from cProfile import Profile
+from concurrent.futures import TimeoutError
+from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
-from multiprocessing import Queue, Pool
-from concurrent.futures import ProcessPoolExecutor, TimeoutError
+from multiprocessing import Queue
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import sympy as sym
@@ -61,9 +62,9 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
     # return with_timeout(timeout)(run)(*args, **kwargs)
 
-    with Pool() as pool:
+    with ThreadPoolExecutor(1) as executor:
         try:
-            return pool.apply_async(run, args, kwargs).get(timeout=timeout)
+            return executor.submit(run, *args, **kwargs).result(timeout=timeout)
         except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
             raise te

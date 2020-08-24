@@ -35,7 +35,7 @@ class NoiseTolerantLearning(IConstraintLearning):
         self.config = config
 
     def learn(self) -> List[List[ConstraintCandidate]]:
-        if len(self.templates) >= 100 and not PROFILE:  # profiler can't see inside multiprocessing
+        if True: # len(self.templates) >= 100 and not PROFILE:  # profiler can't see inside multiprocessing
             with Pool() as pool:
                 return list(pool.map(self.learn_one, self.templates))
         else:
