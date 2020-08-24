@@ -10,7 +10,8 @@ import pandas as pd  # type: ignore
 import statsmodels.api as sm  # type: ignore
 import statsmodels.tools.sm_exceptions as sm_exc
 import sympy as sym
-from pathos.pools import ProcessPool
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
 
 from mockdown.constraint import IConstraint
 from mockdown.learning.noisetolerant.types import NoiseTolerantLearningConfig
@@ -35,8 +36,8 @@ class NoiseTolerantLearning(IConstraintLearning):
 
     def learn(self) -> List[List[ConstraintCandidate]]:
         if len(self.templates) >= 100 and not PROFILE:  # profiler can't see inside multiprocessing
-            with ProcessPool() as p:
-                return list(p.map(self.learn_one, self.templates))
+            with Pool() as pool:
+                return list(pool.map(self.learn_one, self.templates))
         else:
             return list(map(self.learn_one, self.templates))
 

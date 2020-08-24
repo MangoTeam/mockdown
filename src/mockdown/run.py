@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from cProfile import Profile
 from datetime import datetime
-from multiprocessing import Queue, Pool, TimeoutError, get_context
+from multiprocessing import Queue, Pool
+from concurrent.futures import ProcessPoolExecutor, TimeoutError
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import sympy as sym
@@ -15,7 +16,6 @@ from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerant
 from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
-from mockdown.timeout import with_timeout
 from mockdown.types import Tuple4, PROFILE
 
 logger = logging.getLogger(__name__)
@@ -61,10 +61,9 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
 
     # return with_timeout(timeout)(run)(*args, **kwargs)
 
-    with Pool(1) as pool:
+    with Pool() as pool:
         try:
-            res = pool.apply_async(run, args, kwargs)
-            return res.get(timeout=timeout)
+            return pool.apply_async(run, args, kwargs).get(timeout=timeout)
         except TimeoutError as te:
             logger.warn(f"Synthesis timed out after {timeout}s.")
             raise te
@@ -177,6 +176,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     if PROFILE:
         pr.disable()
         pr.dump_stats('profile-learning.pstat')
+
+    raise Exception("foo")
 
     logger.debug(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}({c.score})', sorted(candidates)))}")
 

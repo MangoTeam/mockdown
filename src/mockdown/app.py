@@ -35,7 +35,7 @@ def create_app(*, static_dir: str, static_path: str, **_kwargs: Dict[str, Any]) 
     app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'],
                        allow_credentials=True)
     app.add_route('/api/synthesize', synthesize, methods=['POST'])
-    app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
+    # app.mount(static_path, app=StaticFiles(directory=static_dir), name='static')
 
     # if os.name != 'nt':
     #     from timing_asgi import TimingClient, TimingMiddleware  # type: ignore
