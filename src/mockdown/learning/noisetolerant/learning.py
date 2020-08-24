@@ -7,7 +7,7 @@ from typing import List, Sequence, Optional, Tuple
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-import pathos
+from pathos.pools import ProcessPool
 import statsmodels.api as sm  # type: ignore
 import statsmodels.tools.sm_exceptions as sm_exc
 import sympy as sym
@@ -35,7 +35,7 @@ class NoiseTolerantLearning(IConstraintLearning):
 
     def learn(self) -> List[List[ConstraintCandidate]]:
         if True: # len(self.templates) >= 100 and not PROFILE:  # profiler can't see inside multiprocessing
-            with pathos.Pool() as pool:
+            with ProcessPool() as pool:
                 return list(pool.map(self.learn_one, self.templates))
         else:
             return list(map(self.learn_one, self.templates))
