@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import logging
 from cProfile import Profile
-from concurrent.futures import TimeoutError
-from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
-from multiprocessing import Queue
+from multiprocessing import Process, Queue
 from typing import List, Dict, TypedDict, Literal, Optional, Any, Type
 
 import sympy as sym
@@ -61,25 +59,19 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     if not timeout:
         return run(*args, **kwargs)
 
-    # return with_timeout(timeout)(run)(*args, **kwargs)
+    queue = Queue()
+    kwargs.update({'result_queue': queue})
 
-    def run_wrapper(*args, **kwargs):
-        try:
-            run(*args, **kwargs)
-        except:
-            raise
+    p = Process(target=run, args=args, kwargs=kwargs)
+    p.start()
+    p.join(timeout)
+    if p.is_alive():
+        p.terminate()
+        p.kill()  # just to be sure...
+        logger.warn(f"Synthesis timed out after {timeout}s.")
+        return None
 
-    with ThreadPoolExecutor(1) as executor:
-        try:
-            return executor.submit(run_wrapper, *args, **kwargs).result(timeout=timeout)
-        except TimeoutError as te:
-            logger.warn(f"Synthesis timed out after {timeout}s.")
-            executor.shutdown(wait=False)
-            raise te
-        except:
-            logger.warn(f"Some other terrible thing happened.")
-            executor.shutdown(wait=False)
-            raise
+    return queue.get()
 
 
 def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
