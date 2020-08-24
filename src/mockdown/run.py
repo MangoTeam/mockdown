@@ -177,8 +177,6 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         pr.disable()
         pr.dump_stats('profile-learning.pstat')
 
-    raise Exception("foo")
-
     logger.debug(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}({c.score})', sorted(candidates)))}")
 
     # 4. Pruning.
