@@ -38,7 +38,7 @@ class ViewLoader(IViewLoader[NT]):
                 unreachable(self.input_format)
 
             if self.debug_noise:
-                rect = tuple(rect + self.debug_noise * np.random.randn(4))
+                rect = tuple(rect + self.debug_noise * np.random.rand(4))
 
             if 'children' not in d or len(d['children']) == 0:
                 return ViewBuilder(name=name, rect=rect)

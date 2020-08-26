@@ -13,7 +13,7 @@ from more_itertools import flatten
 from mockdown.constraint.axioms import make_axioms
 from mockdown.instantiation import NumpyConstraintInstantiator, get_prolog_instantiator_factory
 from mockdown.learning.noisetolerant import NoiseTolerantLearning, NoiseTolerantLearningConfig
-from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig
+from mockdown.learning.simple import SimpleLearning, SimpleLearningConfig, HeuristicLearning
 from mockdown.model import ViewLoader
 from mockdown.pruning import BlackBoxPruner, HierarchicalPruner, MarginPruner, DynamicPruner
 from mockdown.types import Tuple4, PROFILE
@@ -34,7 +34,7 @@ class MockdownOptions(TypedDict, total=False):
 
     instantiation_method: Literal['prolog', 'numpy']
 
-    learning_method: Literal['simple', 'noisetolerant']
+    learning_method: Literal['simple', 'heuristic', 'noisetolerant']
 
     pruning_method: Literal['none', 'baseline', 'hierarchical', 'dynamic', 'margins']
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
@@ -116,6 +116,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     learning_factory = {
         'simple': SimpleLearning,
+        'heuristic': HeuristicLearning,
         'noisetolerant': NoiseTolerantLearning
     }[options.get('learning_method', 'simple')]
 
@@ -171,6 +172,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     # 3. Learn Constants.
     learning_config: Any = {
         'simple': SimpleLearningConfig(),
+        'heuristic': SimpleLearningConfig(),
         'noisetolerant': NoiseTolerantLearningConfig(
             sample_count=len(examples),
             max_offset=max((max(ex.width, ex.height) for ex in examples)) + 10  # some wiggle room.
@@ -200,7 +202,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         pr.disable()
         pr.dump_stats('profile-pruning.pstat')
 
-    logger.info(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
+    logger.info(f"KEPT:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
+    logger.info(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(set([x.constraint for x in candidates]) - set(pruned_constraints))))}")
 
     result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],

@@ -45,7 +45,7 @@ def cli() -> None:
               help="Instantiation method to use: prolog or numpy.")
 @click.option('-lm',
               '--learning-method',
-              type=click.Choice(['simple', 'noisetolerant'], case_sensitive=False),
+              type=click.Choice(['simple', 'heuristic', 'noisetolerant'], case_sensitive=False),
               default='simple',
               show_default=True,
               help="Learning method to use: simple or noisetolerant.")

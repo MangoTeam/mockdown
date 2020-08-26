@@ -12,6 +12,7 @@ from mockdown.learning.errors import ConstraintFalsified
 from mockdown.learning.types import IConstraintLearning, ConstraintCandidate
 from mockdown.learning.util import widen_bound
 from mockdown.model import IView
+from more_itertools import first_true
 
 Kind = ConstraintKind
 
@@ -144,3 +145,100 @@ class SimpleLearning(IConstraintLearning):
                 raise Exception("Unsupported IConstraint implementation.")
 
         return [[ConstraintCandidate(constraint, 0)] for constraint in constraints]
+
+
+
+class HeuristicLearning(SimpleLearning):
+    def __init__(self,
+                 templates: List[IConstraint],
+                 samples: List[IView[sym.Number]],
+                 config: Optional[SimpleLearningConfig] = None):
+        super().__init__(templates, samples, config)
+
+
+    def build_biases(self, constraints: List[IConstraint]) -> Dict[IConstraint, float]:
+        scores = {c: 1.0 for c in constraints}
+
+        # reward specific constraints
+        for c in constraints:
+            score = 1.0
+            # aspect ratios and size constraint are specific the more samples behind them
+            if c.kind is ConstraintKind.SIZE_ASPECT_RATIO:
+                score = 1 if c.is_falsified else 100
+            elif c.kind is ConstraintKind.SIZE_RATIO:
+                score = 100
+            elif c.kind.is_position_kind or c.kind is ConstraintKind.SIZE_OFFSET:
+
+                if c.op == operator.eq:
+
+                    diff = abs(c.b)
+                    # map > 100 => 10
+                    # 0 => 1000
+                    # everything else linearly
+                    upper = 25
+                    lower = 0
+                    if diff > upper:
+                        score = 10
+                    else:
+                        score = (-990) / upper * diff + 1000
+                else:
+                    score = 10  # penalize leq/geq
+
+            elif c.kind is ConstraintKind.SIZE_CONSTANT:
+
+                if c.op == operator.eq:
+                    score = 1000
+                else:
+                    score = 10  # penalize leq/geq
+
+            scores[c] = int(score * self.whole_score(c)) 
+        return scores
+
+    def whole_score(self, c: IConstraint) -> int:
+        score = 1
+        if c.x_id:
+            if c.a.p < 25:
+                score *= 10
+            if c.a.p < 10:
+                score *= 10
+            if c.a.p > 100:
+                # we probably don't want this...
+                return 1
+        if c.b.p < 25:
+            score *= 10
+        if c.b.p < 10:
+            score *= 10
+        if c.b.p > 100:
+            # we probably don't want this...
+            return score
+        return score
+
+    def filter_constraints(self, constraints: List[IConstraint], elim_uneq: bool = True) -> List[IConstraint]:
+        constraints = [c for c in constraints if c.kind != ConstraintKind.SIZE_ASPECT_RATIO]
+        constraints = self.combine_bounds(constraints)
+        if elim_uneq: constraints = list(filter(lambda c: c.op == operator.eq, constraints))
+        return constraints
+
+    def combine_bounds(self, constraints: List[IConstraint]) -> List[IConstraint]:
+        output: Set[IConstraint] = set()
+        for c in constraints:
+            other = first_true(iterable=constraints, pred=lambda t: anchor_equiv(c, t) and c.op != t.op, default=c)
+            if other != c and abs(other.b - c.b) < 5:
+                output.add(replace(c, op=operator.eq, b=(other.b + c.b) / 2, priority=PRIORITY_STRONG))
+            else:
+                output.add(c)
+        return list(output)
+    
+    def learn(self):
+        cands = super().learn()
+        constraints = self.filter_constraints([x.constraint for y in cands for x in y])
+        biases = self.build_biases(constraints)
+        
+        return [[ConstraintCandidate(c, biases[c])] for c in constraints]
+
+
+def anchor_equiv(c1: IConstraint, c2: IConstraint) -> bool:
+    """
+    Equivalence modulo anchors.
+    """
+    return c1.y_id == c2.y_id and c1.x_id == c2.x_id
