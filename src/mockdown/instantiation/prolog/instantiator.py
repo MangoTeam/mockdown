@@ -1,6 +1,7 @@
 from typing import Sequence, Set
 
 from mockdown.constraint import IConstraint
+from mockdown.instantiation.normalization import normalize_multiplier
 from mockdown.instantiation.types import IConstraintInstantiator
 from mockdown.instantiation.prolog.logic import valid_constraints
 from mockdown.instantiation.visibility import visible_pairs
@@ -38,6 +39,6 @@ class PrologConstraintInstantiator(IConstraintInstantiator[NT]):
         for constraint_set in constraint_sets:
             all_constraints = all_constraints.union(constraint_set)
 
-        return list(sorted(all_constraints))
+        return list(sorted(map(normalize_multiplier, all_constraints)))
 
 

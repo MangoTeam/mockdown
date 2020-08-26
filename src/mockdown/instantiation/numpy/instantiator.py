@@ -9,6 +9,7 @@ from more_itertools import flatten
 
 from mockdown.constraint import IConstraint, ConstraintKind
 from mockdown.constraint.factory import ConstraintFactory
+from mockdown.instantiation.normalization import normalize_multiplier
 from mockdown.instantiation.types import IConstraintInstantiator
 from mockdown.instantiation.visibility import visible_pairs
 from mockdown.model import IView, Attribute
@@ -145,4 +146,4 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
                     op=operator.eq
                 )
 
-        return list(gen_templates())
+        return list(map(normalize_multiplier, gen_templates()))
