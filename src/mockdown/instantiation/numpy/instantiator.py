@@ -146,4 +146,6 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
                     op=operator.eq
                 )
 
-        return list(map(normalize_multiplier, gen_templates()))
+        # return list(map(normalize_multiplier, gen_templates()))
+        return list(gen_templates())
+

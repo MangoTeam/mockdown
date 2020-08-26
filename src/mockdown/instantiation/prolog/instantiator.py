@@ -39,6 +39,7 @@ class PrologConstraintInstantiator(IConstraintInstantiator[NT]):
         for constraint_set in constraint_sets:
             all_constraints = all_constraints.union(constraint_set)
 
-        return list(sorted(map(normalize_multiplier, all_constraints)))
+        # return list(sorted(map(normalize_multiplier, all_constraints)))
+        return list(all_constraints)
 
 

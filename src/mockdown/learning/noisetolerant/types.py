@@ -23,8 +23,8 @@ class NoiseTolerantLearningConfig:
     max_denominator: int = 100
     expected_depth: int = 5
 
-    a_alpha: float = 0.05
-    b_alpha: float = 0.05
+    a_alpha: float = 0.025
+    b_alpha: float = 0.025
 
     @property  # type: ignore
     @lru_cache  # type: ignore
