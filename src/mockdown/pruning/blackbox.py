@@ -22,6 +22,9 @@ from mockdown.pruning.types import ISizeBounds, BasePruningMethod
 from mockdown.pruning.util import short_str, to_frac
 from mockdown.types import unreachable, NT
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 def is_x_constr(c: IConstraint) -> bool:
 
@@ -413,7 +416,9 @@ class BlackBoxPruner(BasePruningMethod, Generic[NT]):
         # print('after combining:')
         # print([short_str(c) for c in constraints])
 
-        if self.log_level != LogLevel.NONE: print('candidates: ', len(constraints))
+        # if self.log_level != LogLevel.NONE: print('candidates: ', len(constraints))
+
+        logger.info('@scaling_candidates ' + str(len(constraints)))
 
 
         if (len(constraints) == 0): 

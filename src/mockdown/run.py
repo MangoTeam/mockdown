@@ -156,11 +156,11 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         pr.disable()
         pr.dump_stats('profile-instantiation.pstat')
     instantiation_end = datetime.now()
-    logger.info(f"Instantiation finished in {instantiation_end - instantiation_start}s.")
+    # logger.info(f"Instantiation finished in {instantiation_end - instantiation_start}s.")
 
     logger.debug(len(templates))
     # logger.debug(f"TEMPLATES:\n{nl.join(map(lambda t: f'{tb}{t}', sorted(templates)))}")
-    logger.info(f"TEMPLATES:\n{nl.join(map(lambda t: f'{t.y_id}{tb}{t.x_id}{tb}{t.kind}', sorted(templates)))}")
+    # logger.info(f"TEMPLATES:\n{nl.join(map(lambda t: f'{t.y_id}{tb}{t.x_id}{tb}{t.kind}', sorted(templates)))}")
 
     if options.get('debug_instantiation'):
         print(len(templates))
@@ -188,7 +188,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         pr.disable()
         pr.dump_stats('profile-learning.pstat')
 
-    logger.info(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}{c.score}', sorted(candidates)))}")
+    # logger.info(f"CANDIDATES:\n{nl.join(map(lambda c: f'{c.constraint}{tb}{c.score}', sorted(candidates)))}")
 
     # 4. Pruning.
     if PROFILE:
@@ -202,8 +202,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         pr.disable()
         pr.dump_stats('profile-pruning.pstat')
 
-    logger.info(f"KEPT:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
-    logger.info(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(set([x.constraint for x in candidates]) - set(pruned_constraints))))}")
+    # logger.info(f"KEPT:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
+    # logger.info(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(set([x.constraint for x in candidates]) - set(pruned_constraints))))}")
 
     result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],
