@@ -82,6 +82,12 @@ def cli() -> None:
               default=None,
               show_default=True,
               help="Timeout after which synthesis will be aborted.")
+@click.option('-n',
+              '--num-examples',
+              type=int,
+              default=None,
+              show_default=True,
+              help="Timeout after which synthesis will be aborted.")
 def run(input: TextIO,
         output: TextIO,
         input_format: Literal['default', 'bench'],
@@ -92,7 +98,8 @@ def run(input: TextIO,
         pruning_bounds: Tuple4[str],
         debug_noise: float,
         debug_instantiation: bool,
-        timeout: Optional[int]) -> None:
+        timeout: Optional[int],
+        num_examples: Optional[int]) -> None:
     # Note, this return value is intercepted by `process_result` above!
     input_data = json.load(input)
     input.close()
@@ -114,7 +121,8 @@ def run(input: TextIO,
         pruning_method=pruning_method,
         pruning_bounds=tuple(bounds),
         debug_noise=debug_noise,
-        debug_instantiation=debug_instantiation
+        debug_instantiation=debug_instantiation,
+        num_examples=num_examples
     ), timeout=timeout)
 
     click.echo(json.dumps(

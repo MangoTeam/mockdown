@@ -42,6 +42,8 @@ class MockdownOptions(TypedDict, total=False):
     debug_noise: float
     debug_instantiation: bool
 
+    num_examples: Optional[int] = None  # None means all
+
     include_axioms: bool
     debug: bool
     unambig: bool  # what does this mean?...
@@ -92,6 +94,10 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         examples_data = input_data["examples"]
     elif input_format == 'bench':
         examples_data = input_data["train"]
+
+    if num_examples := options.get('num_examples', None):
+        logger.warn(f"Only using the first {num_examples} examples in input data.")
+        examples_data = examples_data[:num_examples]
 
     bounds = options.get('pruning_bounds', (None, None, None, None))
     bounds_dict = {
@@ -202,8 +208,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         pr.disable()
         pr.dump_stats('profile-pruning.pstat')
 
-    # logger.info(f"KEPT:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
-    # logger.info(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(set([x.constraint for x in candidates]) - set(pruned_constraints))))}")
+    logger.info(f"KEPT:\n{nl.join(map(lambda c: f'{c}', sorted(pruned_constraints)))}")
+    logger.info(f"PRUNED:\n{nl.join(map(lambda c: f'{c}', sorted(set([x.constraint for x in candidates]) - set(pruned_constraints))))}")
 
     result: MockdownResults = {
         'constraints': [cn.to_dict() for cn in pruned_constraints],

@@ -101,15 +101,22 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
         # 2. Parent-relative size.
         parent_relative_size_mat = self.parent_mat & self.both_size_mat & (self.both_h_mat | self.both_v_mat)
 
-        # 2. Absolute sizes.
+        # 2. Sibling-relative size.
+        sibrel_size_h_mat = self.v_vis_view_mat.mul(
+            self.both_h_mat & self.sibling_mat & self.both_size_mat & self.same_attr_mat, level=0)
+        sibrel_size_v_mat = self.h_vis_view_mat.mul(
+            self.both_h_mat & self.sibling_mat & self.both_size_mat & self.same_attr_mat, level=0)
+        sibling_relative_size_mat = sibrel_size_h_mat | sibrel_size_v_mat
+
+        # 3. Absolute sizes.
         absolute_size_vec = self.is_size_vec
 
-        # 3. Offset positions.
+        # 4. Offset positions.
         offset_pos_pc_mat = self.parent_mat & self.both_pos_mat & self.same_attr_mat & self.visible_mat
         offset_pos_sib_mat = self.sibling_mat & self.both_pos_mat & self.dual_attr_mat & self.visible_mat
         offset_pos_mat = offset_pos_pc_mat | offset_pos_sib_mat
 
-        # 4. Align positions.
+        # 5. Align positions.
         align_h_mat = self.v_vis_view_mat.mul(self.both_h_mat & self.sibling_mat & self.both_pos_mat & self.same_attr_mat, level=0)
         align_v_mat = self.h_vis_view_mat.mul(self.both_v_mat & self.sibling_mat & self.both_pos_mat & self.same_attr_mat, level=0)
         align_pos_mat = align_h_mat | align_v_mat
@@ -130,6 +137,14 @@ class NumpyConstraintInstantiator(IConstraintInstantiator[NT]):
                     x_id=pair[1].id,
                     op=operator.eq
                 )
+            #
+            # for pair in self.anchor_mat[sibling_relative_size_mat.astype(np.bool)].stack(level=[0, 1]):
+            #     yield ConstraintFactory.create(
+            #         kind=ConstraintKind.SIZE_RATIO,
+            #         y_id=pair[0].id,
+            #         x_id=pair[1].id,
+            #         op=operator.eq
+            #     )
 
             for pair in self.anchor_mat.iloc[:, 0][absolute_size_vec.astype(np.bool)]:
                 yield ConstraintFactory.create(
