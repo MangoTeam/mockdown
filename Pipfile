@@ -30,6 +30,7 @@ sympy = "*"
 treelib = "*"
 numpy = "*"
 pathos = "*"
+selenium = "*"
 
 [requires]
 python_version = "3.8"

@@ -11,6 +11,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from mockdown.app import create_app
 from mockdown.run import run_timeout as run_mockdown_timeout, MockdownResults
+from mockdown.scraping import Scraper
 from mockdown.types import Tuple4
 
 LOGLEVEL = os.environ.get('LOGLEVEL', 'WARN').upper()
@@ -70,6 +71,12 @@ def cli() -> None:
               show_default=True,
               metavar="STDEV",
               help="Scale of (Gaussian) noise to apply to input. (For testing/debugging purposes)")
+@click.option('-dv',
+              '--debug-visibilities',
+              is_flag=True,
+              type=bool,
+              default=False,
+              help="If true, detected visibilities are returned, and no instantiation, learning or pruning is performed.")
 @click.option('-di',
               '--debug-instantiation',
               is_flag=True,
@@ -97,6 +104,7 @@ def run(input: TextIO,
         pruning_method: Literal['none', 'baseline', 'hierarchical'],
         pruning_bounds: Tuple4[str],
         debug_noise: float,
+        debug_visibilities: bool,
         debug_instantiation: bool,
         timeout: Optional[int],
         num_examples: Optional[int]) -> None:
@@ -121,6 +129,7 @@ def run(input: TextIO,
         pruning_method=pruning_method,
         pruning_bounds=tuple(bounds),
         debug_noise=debug_noise,
+        debug_visibilities=debug_visibilities,
         debug_instantiation=debug_instantiation,
         num_examples=num_examples
     ), timeout=timeout)
@@ -160,6 +169,17 @@ def display(input_views: TextIO, input_constraints: TextIO) -> None:
 
 
 @click.command()
+@click.argument('url')
+@click.option('-r', '--root',
+              type=str,
+              default="body",
+              help="Selector for the root element from which to begin scraping.")
+def scrape(url: str, root: str) -> None:
+    scraper = Scraper(root_selector=root)
+    scraper.scrape(url)
+
+
+@click.command()
 @click.option('--static-dir', default='static/', help="Path to static content directory.")
 @click.option('--static-path', default='/', help="URL prefix to serve static content from.")
 def serve(static_dir: str, static_path: str) -> None:
@@ -172,6 +192,7 @@ def serve(static_dir: str, static_path: str) -> None:
 cli.add_command(run)
 cli.add_command(serve)
 cli.add_command(display)
+cli.add_command(scrape)
 
 if __name__ == '__main__':
     cli()

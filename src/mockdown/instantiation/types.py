@@ -1,8 +1,8 @@
 from abc import abstractmethod
-from typing import Protocol, Collection, Sequence, Set
+from typing import Protocol, Collection, Sequence, Set, Tuple
 
 from mockdown.constraint import IConstraint
-from mockdown.model import IView
+from mockdown.model import IView, IAnchor
 from mockdown.types import NT
 
 
@@ -14,6 +14,10 @@ class IConstraintInstantiator(Protocol[NT]):
 
     @abstractmethod
     def __init__(self, examples: Sequence[IView[NT]]):
+        ...
+
+    @abstractmethod
+    def detect_visibilities(self) -> Sequence[Tuple[IAnchor, IAnchor]]:
         ...
 
     @abstractmethod

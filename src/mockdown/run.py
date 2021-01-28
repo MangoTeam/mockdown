@@ -40,6 +40,7 @@ class MockdownOptions(TypedDict, total=False):
     pruning_bounds: Tuple4[Optional[int]]  # min_w min_h max_w max_h
 
     debug_noise: float
+    debug_visibilities: bool
     debug_instantiation: bool
 
     num_examples: Optional[int] = None  # None means all
@@ -76,8 +77,8 @@ def run_timeout(*args, **kwargs) -> Optional[MockdownResults]:
     return queue.get()
 
 
-def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) -> Optional[
-    MockdownResults]:
+def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optional[Queue] = None) \
+        -> Optional[MockdownResults]:
     """
     This command's guts are pulled out here so they can be called from Python
     directly, as well as from the CLI.
@@ -87,7 +88,6 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     logger.info(f"Running with options: {options}")
 
     debug = options.get('debug', False)
-
     input_format = options.get('input_format', 'default')
 
     if input_format == 'default':
@@ -137,7 +137,6 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
     }[options.get('pruning_method', 'none')]
 
     debug_noise = options.get('debug_noise', 0)
-
     unambig = options.get('unambig', False)
 
     loader = ViewLoader(number_type=number_type, input_format=input_format, debug_noise=debug_noise)
@@ -152,6 +151,13 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
 
     # 2. Instantiate Templates
     instantiator = instantiator_factory(examples)
+
+    if options.get('debug_visibilities'):
+        return {
+            'constraints': [],
+            'axioms': [],
+            'visibilities': instantiator.detect_visibilities()
+        }
 
     instantiation_start = datetime.now()
     if PROFILE:

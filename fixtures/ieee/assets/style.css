@@ -1,0 +1,212 @@
+:root {
+    --ieee-blue-light: #17445a;
+    --ieee-blue-dark: #14303e;
+  }
+
+@font-face {
+    font-family: "IBM Plex Serif";
+    src: url(IBMPlexSerif-Bold.ttf);
+}
+
+@font-face {
+    font-family: "Lato";
+    src: url(Lato-Regular.ttf);
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Lato";
+    src: url(Lato-Bold.ttf);
+    font-weight: bold;
+    font-style: normal;
+}
+
+html, body {
+    margin: 0;
+}
+
+body {
+    max-width: 100%;    
+    background-color: #f8f8f8;
+
+    font-family: sans-serif;
+    line-height: 1.5;
+}
+
+h1 {
+    font-family: "IBM Plex Serif";
+    font-size: 35px;
+}
+
+h2 {
+    font-family: "IBM Plex Serif";
+    font-size: 20px;
+}
+
+#header {
+    width: 100%;
+    height: 70px;
+    background-color: var(--ieee-blue-light);
+}
+
+#header-contents {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+
+    height: 100%;
+    padding: 0 30px;
+}
+
+#hero {
+    height: 400px;
+    background-color: var(--ieee-blue-dark);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#hero-title {
+    color: #ffdd7c;
+    text-shadow: black 2px 2px 4px;
+    line-height: 45px;
+}
+
+#hero-search {
+    display: flex;
+    flex-direction: row;
+
+    width: 780px;
+    height: 35px;
+    background-color: white;
+    margin-top: 40px;
+}
+
+#search-bar {
+    flex-grow: 1;
+}
+
+#search-button {
+    flex-grow: 0;
+    flex-basis: 60px;
+
+    background-color: #e4a42c;
+}
+
+#search-button > span {
+    width: 100%;
+    text-align: center;
+    line-height: 35px;
+}
+
+#hero-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-content: center;    
+
+    height: 30px;
+    margin-top: 40px;
+}
+
+.hero-button {
+    width: 200px;
+    height: 35px;
+    line-height: 35px;
+
+    margin: 0 30px;
+    border-radius: 3px;
+
+    color: white;
+    background-color: var(--ieee-blue-light);
+
+    text-transform: uppercase;
+    text-align: center;
+
+    font-family: "Lato";
+    font-weight: bold;
+    font-size: 13px;
+}
+
+#authors-container {
+    margin: 30px 60px;
+}
+
+#authors-title {
+    font-family: "IBM Plex Serif";
+}
+
+#authors {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-content: center;
+    align-items: stretch;
+
+    margin-top: 30px;
+}
+
+.author {
+    flex-basis: 33%;
+    flex-grow: 1;
+    /* width: 0; */
+    /* height: 300px; */
+    margin-right: 30px;
+    padding: 30px;
+    border: 1px solid #DDDDDD;
+    box-sizing: border-box;
+
+    background-color: white;
+}
+
+.author:last-child {
+    margin-right: 0px;
+}
+
+.author-info {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+
+    width: 250px;
+    height: 80px;
+}
+
+.author-info > img {
+    border-radius: 40px;
+    margin-right: 20px;
+
+    width: 80px;
+    height: 80px;
+}
+
+.author-info > h2 {
+    line-height: 80px;
+    white-space: nowrap;
+    text-overflow: fade;
+}
+
+.author-blurb {
+    width: 250px;
+    height: 50px;
+
+    margin-top: 20px;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.author-blurb > span {
+    text-overflow: fade;
+}
+
+.author-follow {
+    color: #006699;
+    border: 1px solid #006699;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 3px;
+}
