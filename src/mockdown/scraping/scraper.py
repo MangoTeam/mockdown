@@ -4,9 +4,6 @@ import sympy as sym
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 
-from mockdown.model import IView, ViewBuilder, ViewLoader
-from mockdown.types import NT
-
 from logging import getLogger
 
 log = getLogger(__name__)
@@ -14,15 +11,14 @@ log = getLogger(__name__)
 # Exclusions taken from Tree.js in auto-mock.
 # TODO: Ask John about some inclusions (select?).
 DEFAULT_EXCLUDED_SELECTORS = [
-    'p',
-    'h1',
-    'h2',
-    'h3',
-    'h4',
-    'h5',
-    'h6',
-    'hr',
-    'select'
+    'p > *',
+    'h1 > *',
+    'h2 > *',
+    'h3 > *',
+    'h4 > *',
+    'h5 > *',
+    'h6 > *',
+    'select > *',
 ]
 
 # language=JavaScript
@@ -30,22 +26,24 @@ PAYLOAD = """
     const rootElement = arguments[0];
     const excludedSelectors = arguments[1];
     
-    var seen = {};
+    var seenPrefixes = {};
     
     function mangle(el) {
-        let name = `${el.tagName.toLowerCase()}`;
+        let prefix = `${el.tagName.toLowerCase()}`;
         
         if (el.id) {
-            name += `#${el.id}`;
+            prefix += `#${el.id}`;
         }
         if (el.className) { 
-            name += `.${String(el.className).replace(/\\s+/g, '.')}`; 
+            prefix += `.${String(el.className).replace(/\\s+/g, '.')}`; 
         }
         
-        let timesSeen = seen[name] || 0;
-        seen[name] = ++timesSeen;
+        // Ensure duplicate prefixes get unique numeric suffixes.
+        let timesSeen = seenPrefixes[prefix] || 0;
+        seenPrefixes[prefix] = ++timesSeen;
         
-        return `[${name}@${timesSeen}]`;
+        // Store the mangled name for this element and return it.
+        return `[${prefix}@${timesSeen}]`;
     }
     
     function isVisible(rect) {
@@ -56,17 +54,37 @@ PAYLOAD = """
         return excludedSelectors.some((sel) => el.matches(sel));
     }
     
-    function scrape(el, seen) {
+    function isContained(child, parent) {
+        /* Is rect1 contained in rect2? */
+        return child.left   >= parent.left 
+            && child.top    >= parent.top
+            && child.right  <= parent.right
+            && child.bottom <= parent.bottom;
+    }
+    
+    function isDisjoint(rect1, rect2) {
+        /* Is rect1 disjoint from rect2? */
+        throw Error("not implemented");
+    }
+    
+    function scrape(el, parent) {
         const children = Array.from(el.children);
         const rect = el.getBoundingClientRect();
-
+        
         if (isExcluded(el)) return [];
         if (!isVisible(rect)) return [];
+        if (parent) {
+            const parentRect = parent.getBoundingClientRect();
+            if (!isContained(rect, parentRect)) {
+                console.warn(`${mangle(el)} is not contained in ${mangle(parent)}!`)
+                return [];  // todo: too strict?
+            }
+        }
 
         // A bunch of duplication, but it's convenient for debugging.
         const data = {
             name: mangle(el),
-            children: children.flatMap(c => scrape(c)),
+            children: children.flatMap(c => scrape(c, el)),
             rect: [
                 rect.left + window.scrollX,
                 rect.top + window.scrollY,
@@ -77,7 +95,7 @@ PAYLOAD = """
         return data;
     }
     
-    return scrape(rootElement);
+    return scrape(rootElement, undefined);
 """
 
 
@@ -89,7 +107,7 @@ class Scraper:
         self.root_selector = root_selector
 
         caps = webdriver.DesiredCapabilities.CHROME
-        caps['loggingPrefs'] = {'browser': 'ALL'}
+        caps['goog:loggingPrefs'] = {'browser': 'ALL'}
 
         opts = webdriver.ChromeOptions()
         opts.headless = True
@@ -101,7 +119,7 @@ class Scraper:
             log.error("Hey there. You need to install a driver such as chromedriver or geckodriver.")
             raise wde
 
-    def scrape(self, url: str) -> IView[NT]:
+    def scrape(self, url: str) -> dict:
         try:
             self.driver.set_window_size(1920, 1080)
             self.driver.get(url)
@@ -109,12 +127,9 @@ class Scraper:
             el = self.driver.find_element_by_css_selector(self.root_selector)
             data = self.driver.execute_script(PAYLOAD, el, DEFAULT_EXCLUDED_SELECTORS)
 
-            loader = ViewLoader(number_type=sym.Number)
-            tree = loader.load_dict(data)
-
-            log.debug(json.dumps(data, indent=2))
-            # log.info(tree)
-            return tree;
+            return data
         finally:
             for entry in self.driver.get_log('browser'):
-                log.debug(entry)
+                if entry['source'] == 'console-api':
+                    log.info(entry['message'])
+

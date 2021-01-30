@@ -170,13 +170,20 @@ def display(input_views: TextIO, input_constraints: TextIO) -> None:
 
 @click.command()
 @click.argument('url')
+@click.argument('output', type=click.File('w'))
 @click.option('-r', '--root',
               type=str,
               default="body",
               help="Selector for the root element from which to begin scraping.")
-def scrape(url: str, root: str) -> None:
+def scrape(url: str, output: TextIO, root: str) -> None:
     scraper = Scraper(root_selector=root)
-    scraper.scrape(url)
+    results = scraper.scrape(url)
+
+    click.echo(json.dumps(
+        results,
+        ensure_ascii=False,
+        indent=2,
+    ), file=output)
 
 
 @click.command()
