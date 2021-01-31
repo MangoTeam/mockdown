@@ -1,34 +1,57 @@
+{% macro view_box(view) -%}
+    <div class="md-view" data-name="{{ view.name }}" style="
+            --left: {{ view.rect[0] }}px;
+            --top: {{ view.rect[1] }}px;
+            --right: {{ view.rect[2] }}px;
+            --bottom: {{ view.rect[3] }}px;
+            "/>
+    {% for child in view.children %}
+        {{ view_box(child) }}
+    {% endfor %}
+    </div>
+{%- endmacro %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Mockdown Display</title>
     <style type="text/css" rel="stylesheet">
-        .md-view {
-            content: attr(data-name);
-            background-color: red;
+        body {
+            margin: 0;
+        }
 
-            position: absolute;
+        #underlay {
+            border: 0;
+        }
+
+        .md-view {
+            box-sizing: border-box;
+            content: attr(data-name);
+
+            position: fixed;
             left: var(--left);
             top: var(--top);
             right: var(--right);
             bottom: var(--bottom);
 
-            border: 1px solid black;
+            width: calc(var(--right) - var(--left));
+            height: calc(var(--bottom) - var(--top));
+
+            border: 1px solid red;
         }
     </style>
 </head>
 <body>
-    <div class="md-view" data-name="foo" style="
-        --left: 0;
-        --top: 0;
-        --right: 100px;
-        --bottom: 100px;
-    "></div>
+    {#    {% if underlay %}#}
+    <iframe id="underlay" width="{{ root_width }}" height="{{ root_height }}" src="{{ origin }}">
+    </iframe>
+    {#    {% endif %}#}
+
+    {{ view_box(root_view) }}
 
     <script type="application/javascript">
         const kiwi = {{ kiwi_js_src }};
-
 
     </script>
 </body>

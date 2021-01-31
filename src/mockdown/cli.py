@@ -3,7 +3,7 @@ import logging
 import os
 import tempfile
 import webbrowser
-from typing import TextIO, Literal, Optional
+from typing import TextIO, Literal, Optional, Tuple
 
 import click
 import uvicorn  # type: ignore
@@ -142,10 +142,36 @@ def run(input: TextIO,
 
 
 @click.command()
-@click.argument('input_views', type=click.File('r'))
-@click.argument('input_constraints', type=click.File('r'))
-def display(input_views: TextIO, input_constraints: TextIO) -> None:
-    tmp = tempfile.NamedTemporaryFile(mode='w', prefix='fnord-', suffix='.html', delete=False)
+@click.argument('url')
+@click.argument('output', type=click.File('w'))
+@click.option('-r', '--root',
+              type=str,
+              default="body",
+              show_default=True,
+              help="Selector for the root element from which to begin scraping.")
+@click.option('-d', '--dims',
+              nargs=2,
+              type=int,
+              default=[1920, 1080],
+              show_default=True,
+              help="Window dimensions to scrape at.")
+def scrape(url: str, output: TextIO, root: str, dims: Tuple[int, int]) -> None:
+    scraper = Scraper(root_selector=root)
+    results = scraper.scrape(url, dims)
+
+    click.echo(json.dumps(
+        results,
+        ensure_ascii=False,
+        indent=2,
+    ), file=output)
+
+
+@click.command()
+@click.argument('input', type=click.File('r'))
+def display(input: TextIO) -> None:
+    # Load view JSON.
+    input_data = json.load(input)
+    input.close()
 
     loader = PackageLoader('mockdown.display', 'templates')
     env = Environment(
@@ -157,33 +183,23 @@ def display(input_views: TextIO, input_constraints: TextIO) -> None:
     kiwi_js_src = loader.get_source(env, 'js/flightlessbird.all.js')[0]
 
     template = env.get_template('default.html.jinja2')
-
     html = template.render(
-        kiwi_js_src=kiwi_js_src
+        kiwi_js_src=kiwi_js_src,
+
+        root_view=input_data['examples'][0],
+        root_width=input_data['meta']['scrape']['width'],
+        root_height=input_data['meta']['scrape']['height'],
+
+        origin=input_data['meta']['scrape']['origin']
     )
+
+    # Write the result to a temporary file, and open it in the user's web browser.
+    tmp = tempfile.NamedTemporaryFile(mode='w', prefix='fnord-', suffix='.html', delete=False)
     tmp.write(html)
     tmp.flush()
     tmp.close()
 
     webbrowser.open(f"file://{tmp.name}")
-
-
-@click.command()
-@click.argument('url')
-@click.argument('output', type=click.File('w'))
-@click.option('-r', '--root',
-              type=str,
-              default="body",
-              help="Selector for the root element from which to begin scraping.")
-def scrape(url: str, output: TextIO, root: str) -> None:
-    scraper = Scraper(root_selector=root)
-    results = scraper.scrape(url)
-
-    click.echo(json.dumps(
-        results,
-        ensure_ascii=False,
-        indent=2,
-    ), file=output)
 
 
 @click.command()

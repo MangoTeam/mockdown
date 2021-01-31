@@ -1,4 +1,5 @@
 import json
+from typing import Tuple
 
 import sympy as sym
 from selenium import webdriver
@@ -26,9 +27,16 @@ PAYLOAD = """
     const rootElement = arguments[0];
     const excludedSelectors = arguments[1];
     
+    // This has to be a WeakMap, as in a normal object, DOM node keys will be
+    // coerced to strings, which are not unique and will cause collisions.
+    var seenElements = new WeakMap();
     var seenPrefixes = {};
     
     function mangle(el) {
+        if (seenElements.has(el)) {
+            return seenElements.get(el);
+        }
+    
         let prefix = `${el.tagName.toLowerCase()}`;
         
         if (el.id) {
@@ -43,7 +51,9 @@ PAYLOAD = """
         seenPrefixes[prefix] = ++timesSeen;
         
         // Store the mangled name for this element and return it.
-        return `[${prefix}@${timesSeen}]`;
+        const name = `[${prefix}@${timesSeen}]`;
+        seenElements.set(el, name);
+        return name;
     }
     
     function isVisible(rect) {
@@ -63,8 +73,10 @@ PAYLOAD = """
     }
     
     function isDisjoint(rect1, rect2) {
-        /* Is rect1 disjoint from rect2? */
-        throw Error("not implemented");
+        return rect1.left   > rect2.right  // R1 is completely right of R2.
+            || rect1.right  < rect2.left   // R1 is completely left of R2.
+            || rect1.top    > rect2.bottom // R1 is completely below R2.
+            || rect1.bottom < rect2.top    // R1 is completely above R2.
     }
     
     function scrape(el, parent) {
@@ -75,8 +87,8 @@ PAYLOAD = """
         if (!isVisible(rect)) return [];
         if (parent) {
             const parentRect = parent.getBoundingClientRect();
-            if (!isContained(rect, parentRect)) {
-                console.warn(`${mangle(el)} is not contained in ${mangle(parent)}!`)
+            if (isDisjoint(rect, parentRect)) {
+                console.warn(`${mangle(el)} is disjoint from ${mangle(parent)}!`)
                 return [];  // todo: too strict?
             }
         }
@@ -97,6 +109,8 @@ PAYLOAD = """
     
     return scrape(rootElement, undefined);
 """
+
+SANITIZED_KEY_ORDER = ('name', 'rect', 'children')
 
 
 class Scraper:
@@ -119,17 +133,43 @@ class Scraper:
             log.error("Hey there. You need to install a driver such as chromedriver or geckodriver.")
             raise wde
 
-    def scrape(self, url: str) -> dict:
+    def scrape(self, url: str, dims: Tuple[int, int]) -> dict:
+        width, height = dims
+
         try:
-            self.driver.set_window_size(1920, 1080)
+            self.driver.set_window_size(width, height)
             self.driver.get(url)
 
             el = self.driver.find_element_by_css_selector(self.root_selector)
             data = self.driver.execute_script(PAYLOAD, el, DEFAULT_EXCLUDED_SELECTORS)
 
-            return data
+            cleaned_data = self.clean_output(data)
+
+            return {
+                'meta': {
+                    'scrape': {
+                        'origin': url,
+                        'width': width,
+                        'height': height
+                    }
+                },
+                'examples': [cleaned_data]
+            }
         finally:
             for entry in self.driver.get_log('browser'):
                 if entry['source'] == 'console-api':
                     log.info(entry['message'])
 
+    def clean_output(self, data, order=SANITIZED_KEY_ORDER):
+        """
+        Recursively reorders the keys in the output JSON. In particular, puts `children` last.
+        While this adds a little computational time, it's invaluable for inspection and debugging.
+
+        Contents remain unchanged.
+        """
+        # children = [sanitize_output(child) for child in data['children']]
+        return {
+            k: [self.clean_output(c, order) for c in data[k]] if k == 'children' else data[k]
+            for k
+            in order
+        }
