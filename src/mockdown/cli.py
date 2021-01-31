@@ -152,12 +152,13 @@ def run(input: TextIO,
 @click.option('-d', '--dims',
               nargs=2,
               type=int,
-              default=[1920, 1080],
+              default=[1280, 800],
               show_default=True,
               help="Window dimensions to scrape at.")
 def scrape(url: str, output: TextIO, root: str, dims: Tuple[int, int]) -> None:
-    scraper = Scraper(root_selector=root)
-    results = scraper.scrape(url, dims)
+    scraper = Scraper()
+    results = scraper.scrape(url, dims, root_selector=root)
+    scraper.cleanup()
 
     click.echo(json.dumps(
         results,
@@ -190,7 +191,9 @@ def display(input: TextIO) -> None:
         root_width=input_data['meta']['scrape']['width'],
         root_height=input_data['meta']['scrape']['height'],
 
-        origin=input_data['meta']['scrape']['origin']
+        origin=input_data['meta']['scrape']['origin'],
+
+        capture=input_data['captures'][0]
     )
 
     # Write the result to a temporary file, and open it in the user's web browser.

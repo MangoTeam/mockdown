@@ -19,7 +19,7 @@ DEFAULT_EXCLUDED_SELECTORS = [
     'h4 > *',
     'h5 > *',
     'h6 > *',
-    'select > *',
+    'select > *'
 ]
 
 # language=JavaScript
@@ -117,9 +117,7 @@ class Scraper:
     root_selector: str
     driver: webdriver.Chrome
 
-    def __init__(self, root_selector="body"):
-        self.root_selector = root_selector
-
+    def __init__(self):
         caps = webdriver.DesiredCapabilities.CHROME
         caps['goog:loggingPrefs'] = {'browser': 'ALL'}
 
@@ -133,15 +131,19 @@ class Scraper:
             log.error("Hey there. You need to install a driver such as chromedriver or geckodriver.")
             raise wde
 
-    def scrape(self, url: str, dims: Tuple[int, int]) -> dict:
+    def scrape(self,
+               url: str,
+               dims: Tuple[int, int],
+               root_selector="body") -> dict:
         width, height = dims
 
         try:
             self.driver.set_window_size(width, height)
             self.driver.get(url)
 
-            el = self.driver.find_element_by_css_selector(self.root_selector)
+            el = self.driver.find_element_by_css_selector(root_selector)
             data = self.driver.execute_script(PAYLOAD, el, DEFAULT_EXCLUDED_SELECTORS)
+            screenshot = "data:image/png;base64," + self.driver.get_screenshot_as_base64()
 
             cleaned_data = self.clean_output(data)
 
@@ -150,10 +152,11 @@ class Scraper:
                     'scrape': {
                         'origin': url,
                         'width': width,
-                        'height': height
+                        'height': height,
                     }
                 },
-                'examples': [cleaned_data]
+                'examples': [cleaned_data],
+                'captures': [screenshot]
             }
         finally:
             for entry in self.driver.get_log('browser'):
@@ -173,3 +176,6 @@ class Scraper:
             for k
             in order
         }
+
+    def cleanup(self):
+        self.driver.quit()
