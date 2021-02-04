@@ -80,7 +80,7 @@ class NoiseTolerantTemplateModel(abc.ABC):
         """
         while True:
             try:
-                x_noise = np.random.randn(self.config.sample_count, 2) * 1e-5
+                x_noise = np.random.randn(self.config.sample_count) * 1e-5
                 x_smudged = x.add(x_noise, axis=0)
 
                 y_noise = np.random.randn(self.config.sample_count) * 1e-5
