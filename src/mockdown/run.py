@@ -124,7 +124,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'simple': SimpleLearning,
         'heuristic': HeuristicLearning,
         'noisetolerant': NoiseTolerantLearning
-    }[options.get('learning_method', 'simple')]
+    }[options.get('learning_method', 'noisetolerant')]
 
     # print('using learning method:', options.get('learning_method', 'simple'))
 
@@ -134,7 +134,7 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'hierarchical': HierarchicalPruner,
         'margins': MarginPruner,
         'dynamic': DynamicPruner
-    }[options.get('pruning_method', 'none')]
+    }[options.get('pruning_method', 'hierarchical')]
 
     debug_noise = options.get('debug_noise', 0)
     unambig = options.get('unambig', False)

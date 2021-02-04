@@ -17,10 +17,6 @@ class IConstraintInstantiator(Protocol[NT]):
         ...
 
     @abstractmethod
-    def detect_visibilities(self) -> Sequence[Tuple[IAnchor, IAnchor]]:
-        ...
-
-    @abstractmethod
     def instantiate(self) -> Sequence[IConstraint]:
         """
         Given a set of examples, instantiate a set of constraints to train.

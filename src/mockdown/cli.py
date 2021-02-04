@@ -94,7 +94,7 @@ def cli() -> None:
               type=int,
               default=None,
               show_default=True,
-              help="Timeout after which synthesis will be aborted.")
+              help="Number of examples to use.")
 def run(input: TextIO,
         output: TextIO,
         input_format: Literal['default', 'bench'],
