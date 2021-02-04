@@ -81,12 +81,12 @@ class NoiseTolerantTemplateModel(abc.ABC):
         while True:
             try:
                 x_noise = np.random.randn(self.config.sample_count, 2) * 1e-5
-                x = x.add(x_noise, axis=0)
+                x_smudged = x.add(x_noise, axis=0)
 
                 y_noise = np.random.randn(self.config.sample_count) * 1e-5
-                y = y.add(y_noise, axis=0)
+                y_smudged = y.add(y_noise, axis=0)
 
-                self.model = sm.GLM(y, x)
+                self.model = sm.GLM(y_smudged, x_smudged)
                 with warnings.catch_warnings():
                     # To ignore a harmless warning from statsmodels. – Dylan
                     warnings.simplefilter("ignore")
