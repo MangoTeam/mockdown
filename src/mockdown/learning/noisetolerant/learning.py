@@ -71,6 +71,23 @@ class NoiseTolerantTemplateModel(abc.ABC):
         y = self.y_data
         kind = self.template.kind
 
+        sc = self.config.sample_count
+        # If we only have one example, append the sensible default which preserves
+        # the simple learning behavior. This is not well-defined (or necessary) when
+        # we have been given two samples.
+        if self.config.sample_count == 1:
+            if kind.is_constant_form:
+                x.loc[sc] = [1, 0]
+                y.loc[sc] = y.loc[0]
+            elif kind.is_mul_only_form:
+                x.loc[sc] = [1, 0]
+                y.loc[sc] = 0
+            elif kind.is_add_only_form:
+                x.loc[sc] = [1, 0]
+                y.loc[sc] = y.loc[0] - x[self.x_name].loc[0]
+            else:  # full y = a x + b form...
+                raise Exception("A general form constraint should not be instantiated for only one example!")
+
         """
         This is an absolutely horrendous hack. Basically, due to numerical error, sometimes
         the noise here isn't quite enough, and statsmodels will throw a PerfectSeparationError.
@@ -129,10 +146,10 @@ class NoiseTolerantTemplateModel(abc.ABC):
                 break
 
     def _smudge_data(self, x, y):
-        x_noise = np.random.randn(self.config.sample_count) * 1e-5
+        x_noise = np.random.randn(len(x)) * 1e-5
         x_smudged = x.add(x_noise, axis=0)
 
-        y_noise = np.random.randn(self.config.sample_count) * 1e-5
+        y_noise = np.random.randn(len(y)) * 1e-5
         y_smudged = y.add(y_noise, axis=0)
 
         return x_smudged, y_smudged
