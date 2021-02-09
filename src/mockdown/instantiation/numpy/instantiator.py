@@ -1,7 +1,6 @@
-import operator
-from pprint import pprint
-from typing import Sequence
 import itertools as it
+import operator
+from typing import Sequence
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
@@ -9,7 +8,6 @@ from more_itertools import flatten
 
 from mockdown.constraint import IConstraint, ConstraintKind
 from mockdown.constraint.factory import ConstraintFactory
-from mockdown.instantiation.normalization import normalize_multiplier
 from mockdown.instantiation.types import IConstraintInstantiator
 from mockdown.instantiation.visibility import visible_pairs
 from mockdown.model import IView, Attribute

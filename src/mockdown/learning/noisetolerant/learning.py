@@ -65,6 +65,8 @@ class NoiseTolerantTemplateModel(abc.ABC):
         self.data = data
         self.config = config
 
+        # todo: add synthetic extra data point in 1-ex case.
+
         x = sm.add_constant(self.x_data, has_constant='add')
         y = self.y_data
         kind = self.template.kind
@@ -80,14 +82,36 @@ class NoiseTolerantTemplateModel(abc.ABC):
         """
         while True:
             try:
-                x_noise = np.random.randn(self.config.sample_count) * 1e-5
-                x_smudged = x.add(x_noise, axis=0)
-
-                y_noise = np.random.randn(self.config.sample_count) * 1e-5
-                y_smudged = y.add(y_noise, axis=0)
+                x_smudged, y_smudged = self._smudge_data(x, y)
 
                 self.model = sm.GLM(y_smudged, x_smudged)
                 with warnings.catch_warnings():
+                    """
+                    What's up with these fit_constrained calls?
+                    
+                    fit_constraints((R, q)) solves such that R params = q.
+                    The order of R is (k, a_1, ..., a_n), where the regression is a_1*x_1 + ... a_n*x_n + k.
+                    
+                    For our purposes (y = a x + b) R corresponds to (b, a).
+                    
+                    For a constant form (y = b) it must hold that:
+                        - (0 * b) + (1 * a) = 0
+                    That is:
+                        - 0 * b = 0 (trivially always holds, unconstrained)
+                        - 1 * a = 0 (multiplier must be zero.)
+                      
+                    For a multiplicative form (y = a x) it must hold that: 
+                        - (1 * b) + (0 * a) = 0
+                    That is:
+                        - 1 * b = 0 (constant must be zero.)
+                        - 0 * a = 0 (trivially always holds, unconstrained)
+                        
+                    for an additive form (y = a x + b) it must hold that:
+                        - (0 * b) + (1 * a) = 1
+                    That is: 
+                        - 1 * a = 1 (multiplier must be 1)
+                    
+                    """
                     # To ignore a harmless warning from statsmodels. – Dylan
                     warnings.simplefilter("ignore")
                     if kind.is_constant_form:
@@ -96,13 +120,22 @@ class NoiseTolerantTemplateModel(abc.ABC):
                         self.fit = self.model.fit_constrained(((1, 0), 0))
                     elif kind.is_add_only_form:
                         self.fit = self.model.fit_constrained(((0, 1), 1))
-                    else:
+                    else:  # full y = a x + b form...
                         self.fit = self.model.fit()
             except sm_exc.PerfectSeparationError:
                 logger.warn(f"Perfect separation error for {self.template}f with data:\n{self.data}")
                 continue
             else:
                 break
+
+    def _smudge_data(self, x, y):
+        x_noise = np.random.randn(self.config.sample_count) * 1e-5
+        x_smudged = x.add(x_noise, axis=0)
+
+        y_noise = np.random.randn(self.config.sample_count) * 1e-5
+        y_smudged = y.add(y_noise, axis=0)
+
+        return x_smudged, y_smudged
 
     @property
     def x_name(self) -> str:
@@ -195,7 +228,7 @@ class NoiseTolerantTemplateModel(abc.ABC):
         return False
 
     def a_confint(self) -> Tuple[float, float]:
-        max_d = self.config.max_denominator
+        # max_d = self.config.max_denominator
         al, au = self.fit.conf_int(alpha=self.config.a_alpha).iloc[1]
         return al, au
 

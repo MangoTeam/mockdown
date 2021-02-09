@@ -47,13 +47,13 @@ def cli() -> None:
 @click.option('-lm',
               '--learning-method',
               type=click.Choice(['simple', 'heuristic', 'noisetolerant'], case_sensitive=False),
-              default='simple',
+              default='noisetolerant',
               show_default=True,
               help="Learning method to use: simple or noisetolerant.")
 @click.option('-pm',
               '--pruning-method',
               type=click.Choice(['none', 'baseline', 'hierarchical'], case_sensitive=False),
-              default='none',
+              default='hierarchical',
               show_default=True,
               help="Pruning method to use: baseline or hierarchical.")
 @click.option('-pb',
@@ -170,8 +170,10 @@ def scrape(url: str, output: TextIO, root: str, dims: Tuple[int, int]) -> None:
 @click.command()
 @click.argument('input', type=click.File('r'))
 def display(input: TextIO) -> None:
+    import seaborn as sns
+
     # Load view JSON.
-    input_data = json.load(input)
+    input_data: dict = json.load(input)
     input.close()
 
     loader = PackageLoader('mockdown.display', 'templates')
@@ -183,18 +185,41 @@ def display(input: TextIO) -> None:
     # Kind of a hack. Using importlib.resources is probably more Pythonic but...
     kiwi_js_src = loader.get_source(env, 'js/flightlessbird.all.js')[0]
 
+    input_meta = input_data.get('meta', {})
+    scrape_meta = input_data.get('scrape', {})
+
+    # Utility for convenience.
+    # todo: move elsewhere
+    def get_meta(*keys: str, subject=input_meta, default=None):
+        if len(keys) == 0:
+            return input_meta
+
+        k, ks = keys[0], keys[1:]
+        result = input_meta.get(k, default)
+
+        if not ks:
+            return result
+        else:
+            return get_meta(*ks, subject=result, default=default)
+
+    examples = input_data['examples']
+
+    observed_bounds = {
+        'min_width': min(e['rect'][2] - e['rect'][0] for e in examples),
+        'max_width': max(e['rect'][2] - e['rect'][0] for e in examples),
+        'min_height': min(e['rect'][3] - e['rect'][1] for e in examples),
+        'max_height': max(e['rect'][3] - e['rect'][1] for e in examples),
+    }
+
+    context = {
+        'examples': examples,
+        'origin': get_meta('scrape', 'origin', default=None),
+        'colors': sns.color_palette('bright', len(examples)).as_hex(),
+        **observed_bounds
+    }
+
     template = env.get_template('default.html.jinja2')
-    html = template.render(
-        kiwi_js_src=kiwi_js_src,
-
-        root_view=input_data['examples'][0],
-        root_width=input_data['meta']['scrape']['width'],
-        root_height=input_data['meta']['scrape']['height'],
-
-        origin=input_data['meta']['scrape']['origin'],
-
-        capture=input_data['captures'][0]
-    )
+    html = template.render(**context)
 
     # Write the result to a temporary file, and open it in the user's web browser.
     tmp = tempfile.NamedTemporaryFile(mode='w', prefix='fnord-', suffix='.html', delete=False)

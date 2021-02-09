@@ -9,7 +9,6 @@ mypy="*"
 pylint = "*"
 pytest = "*"
 hypothesis = "*"
-seaborn = "*"
 ipympl = "*"
 
 [packages]
@@ -29,6 +28,7 @@ jinja2 = "*"
 sympy = "*"
 treelib = "*"
 numpy = "*"
+seaborn = "*"
 pathos = "*"
 selenium = "*"
 

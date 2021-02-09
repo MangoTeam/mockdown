@@ -132,8 +132,8 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
         'none': lambda x, y, ua: (lambda cands: ([cand.constraint for cand in cands], None, None)),
         'baseline': BlackBoxPruner,
         'hierarchical': HierarchicalPruner,
-        'margins': MarginPruner,
-        'dynamic': DynamicPruner
+        # 'margins': MarginPruner,
+        # 'dynamic': DynamicPruner
     }[options.get('pruning_method', 'hierarchical')]
 
     debug_noise = options.get('debug_noise', 0)

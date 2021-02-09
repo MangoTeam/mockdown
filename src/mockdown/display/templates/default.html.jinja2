@@ -1,12 +1,13 @@
-{% macro view_box(view) -%}
+{% macro view_box(view, color) -%}
     <div class="md-view" data-name="{{ view.name }}" style="
             --left: {{ view.rect[0] }}px;
             --top: {{ view.rect[1] }}px;
             --right: {{ view.rect[2] }}px;
             --bottom: {{ view.rect[3] }}px;
+            --color: {{ color }};
             "/>
     {% for child in view.children %}
-        {{ view_box(child) }}
+        {{ view_box(child, color) }}
     {% endfor %}
     </div>
 {%- endmacro %}
@@ -38,7 +39,7 @@
             width: calc(var(--right) - var(--left));
             height: calc(var(--bottom) - var(--top));
 
-            border: 1px solid red;
+            border: 1px solid var(--color);
         }
 
         .md-view:hover {
@@ -47,16 +48,17 @@
     </style>
 </head>
 <body>
-    {#    {% if underlay %}#}
+    {% if origin %}
     <iframe id="underlay" width="{{ root_width }}" height="{{ root_height }}" src="{{ origin }}">
     </iframe>
-    {#    {% endif %}#}
-{#    <img src="{{ capture }}" width="{{ root_width }}" height="{{ root_height }}">#}
+    {% endif %}
 
-    {{ view_box(root_view) }}
+    {% for example in examples %}
+        {{ view_box(example, colors[loop.index0]) }}
+    {% endfor %}
 
     <script type="application/javascript">
-        const kiwi = {{ kiwi_js_src }};
+        {#const kiwi = {{ constraint_engine_js }};#}
 
     </script>
 </body>
