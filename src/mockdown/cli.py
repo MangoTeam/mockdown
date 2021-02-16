@@ -83,6 +83,11 @@ def cli() -> None:
               type=bool,
               default=False,
               help="If true, instantiated templates are returned, and no learning or pruning is performed.")
+@click.option('-nsbp',
+              '--use-sbp/--no-sbp',
+              type=bool,
+              default=True,
+              help="If true, use the SB prior during noise-tolerant learning.")
 @click.option('-to',
               '--timeout',
               type=int,
@@ -106,6 +111,7 @@ def run(input: TextIO,
         debug_noise: float,
         debug_visibilities: bool,
         debug_instantiation: bool,
+        use_sbp: bool,
         timeout: Optional[int],
         num_examples: Optional[int]) -> None:
     # Note, this return value is intercepted by `process_result` above!
@@ -131,7 +137,8 @@ def run(input: TextIO,
         debug_noise=debug_noise,
         debug_visibilities=debug_visibilities,
         debug_instantiation=debug_instantiation,
-        num_examples=num_examples
+        num_examples=num_examples,
+        use_sbp=use_sbp
     ), timeout=timeout)
 
     click.echo(json.dumps(

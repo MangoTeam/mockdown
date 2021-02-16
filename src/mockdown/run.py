@@ -45,6 +45,8 @@ class MockdownOptions(TypedDict, total=False):
 
     num_examples: Optional[int] = None  # None means all
 
+    use_sbp: bool
+
     include_axioms: bool
     debug: bool
     unambig: bool  # what does this mean?...
@@ -181,12 +183,15 @@ def run(input_data: MockdownInput, options: MockdownOptions, result_queue: Optio
             'axioms': []
         }
 
+    print('sbp option:', options.get('use_sbp', True))
+
     # 3. Learn Constants.
     learning_config: Any = {
         'simple': SimpleLearningConfig(),
         'heuristic': SimpleLearningConfig(),
         'noisetolerant': NoiseTolerantLearningConfig(
             sample_count=len(examples),
+            use_sbp=options.get('use_sbp', True),
             max_offset=max((max(ex.width, ex.height) for ex in examples)) + 10  # some wiggle room.
         )
     }[options.get('learning_method', 'simple')]

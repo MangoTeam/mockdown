@@ -26,6 +26,8 @@ class NoiseTolerantLearningConfig:
     a_alpha: float = 0.025
     b_alpha: float = 0.025
 
+    use_sbp: bool = True
+
     @property  # type: ignore
     @lru_cache  # type: ignore
     def a_space(self) -> np.ndarray:

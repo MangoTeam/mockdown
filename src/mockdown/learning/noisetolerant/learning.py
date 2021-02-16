@@ -157,7 +157,11 @@ class NoiseTolerantTemplateModel(abc.ABC):
         candidates['pri_score'] = self.a_prior(candidates['a'])
         candidates['pri_score'] /= candidates['pri_score'].sum()
 
-        candidates['score'] = candidates['glm_score'] * candidates['pri_score']
+        if self.config.use_sbp:
+            candidates['score'] = candidates['glm_score'] * candidates['pri_score']
+        else: 
+            candidates['score'] = candidates['glm_score']
+            
         candidates['log_score'] = np.log(candidates['score'])
 
         logger.debug(f"CANDIDATES:\n{candidates}")
