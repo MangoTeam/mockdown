@@ -1,6 +1,6 @@
 # Mockdown
 
-This is the whole mockdown pipeline in Python, with a nice demo notebook.
+This is the whole mockdown pipeline in Python.
 
 ## Installation
 
